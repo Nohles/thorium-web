@@ -1,7 +1,7 @@
-import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
+import reactHooks from "eslint-plugin-react-hooks";
+import tseslint from "typescript-eslint";
 
 const eslintConfig = [
-  ...nextCoreWebVitals,
   {
     ignores: [
       "node_modules/**",
@@ -9,10 +9,11 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "dist/**",
-      "next-env.d.ts",
+      ".output/**",
       ".vercel/**",
       ".wrangler/**",
       ".rollup.cache/**",
+      "src/routeTree.gen.ts",
     ],
   },
   {
@@ -22,19 +23,15 @@ const eslintConfig = [
       "!src/**/__tests__/**",
       "!src/**/__mocks__/**"
     ],
+    languageOptions: {
+      parser: tseslint.parser,
+    },
+    plugins: {
+      "react-hooks": reactHooks,
+    },
     rules: {
-      // Keep rules-of-hooks as error
       "react-hooks/rules-of-hooks": "error",
-      // Set exhaustive-deps to warning
-      "react-hooks/exhaustive-deps": "warn",
-      // Disable other rules, as Next.JS lint config < 16 did
-      "react-hooks/exhaustive-deps-misuse": "off",
-      "react-hooks/stable-deps": "off",
-      "react-hooks/set-state-in-effect": "off",
-      "react-hooks/refs": "off",
-      "react-hooks/immutability": "off",
-      "react-hooks/globals": "off",
-      "react-hooks/use-memo": "off"
+      "react-hooks/exhaustive-deps": "warn"
     }
   },
 ];

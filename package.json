@@ -21,7 +21,11 @@
     "url": "https://github.com/edrlab/thorium-web/issues"
   },
   "version": "1.2.1",
+  "type": "module",
   "private": false,
+  "imports": {
+    "#/*": "./src/*"
+  },
   "files": [
     "./dist"
   ],
@@ -46,12 +50,11 @@
     "./webpub/styles": "./dist/components/WebPub/index.css"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "pnpm extract-locales && next build",
-    "build:analyze": "npx next experimental-analyze",
-    "start": "next start",
+    "dev": "vite dev --port 3000",
+    "build": "pnpm extract-locales && vite build",
+    "start": "node .output/server/index.mjs",
     "lint": "eslint .",
-    "deploy": "npx @cloudflare/next-on-pages && npx wrangler pages deploy",
+    "deploy": "pnpm build",
     "preinstall": "npx only-allow pnpm",
     "copy-locales": "cpx \"public/locales/**/*\" dist/locales",
     "copy-fonts": "cpx \"public/fonts/**/*\" dist/fonts",
@@ -93,7 +96,11 @@
     "i18next-browser-languagedetector": "^8.2.1",
     "i18next-http-backend": "^3.0.2",
     "motion": "^12.34.3",
-    "next": "16.1.6",
+    "@tanstack/react-devtools": "latest",
+    "@tanstack/react-router": "latest",
+    "@tanstack/react-router-devtools": "latest",
+    "@tanstack/react-router-ssr-query": "latest",
+    "@tanstack/react-start": "latest",
     "react": "^19.2.4",
     "react-aria": "^3.46.0",
     "react-aria-components": "^1.15.1",
@@ -102,9 +109,12 @@
     "react-modal-sheet": "^5.2.1",
     "react-redux": "^9.2.0",
     "react-resizable-panels": "^3.0.6",
-    "react-stately": "^3.44.0"
+    "react-stately": "^3.44.0",
+    "nitro": "npm:nitro-nightly@latest"
   },
   "devDependencies": {
+    "@tanstack/devtools-vite": "latest",
+    "@tanstack/router-plugin": "^1.132.0",
     "@svgr/webpack": "^8.1.0",
     "@types/css-modules": "^1.0.5",
     "@types/node": "^22.19.7",
@@ -113,10 +123,15 @@
     "cpx2": "^8.0.0",
     "esbuild-plugin-svgr": "^3.1.1",
     "eslint": "^9.39.2",
-    "eslint-config-next": "16.1.6",
+    "eslint-plugin-react-hooks": "^7.0.0",
     "glob": "^13.0.6",
     "immer": "11.1.2",
     "tsup": "^8.5.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.1",
+    "vite": "^7.3.1",
+    "vite-plugin-svgr": "^4.5.0",
+    "vite-tsconfig-paths": "^5.1.4",
+    "@vitejs/plugin-react": "^5.1.4"
   }
 }
