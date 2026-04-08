@@ -249,6 +249,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
 
   const [cursorIndex, setCursorIndex] = useState(initialIndex);
   const [sidebarDockMode, setSidebarDockMode] = useState<"left" | "right" | "window">("left");
+  const [isSidebarModeMenuOpen, setIsSidebarModeMenuOpen] = useState(false);
 
   const canGoPrev = useMemo(() => {
     if (pages.length === 0) return false;
@@ -354,6 +355,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
 
   const settingsTriggerRef = useRef<HTMLElement | null>(null);
   const tocTriggerRef = useRef<HTMLElement | null>(null);
+  const sidebarModeMenuRef = useRef<HTMLDivElement | null>(null);
 
   const showArrows =
     tapZones !== ComicTapZones.disabled &&
@@ -468,23 +470,80 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
     });
   }, [placeholderChapters]);
 
+  const mutedLabelStyle: React.CSSProperties = {
+    fontSize: 10,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    opacity: 0.68,
+    fontWeight: 700,
+  };
+
+  const sectionStyle: React.CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+    paddingBottom: 8,
+    borderBottom: "1px solid color-mix(in srgb, var(--th-theme-subdue, rgba(255,255,255,0.25)) 35%, transparent)",
+  };
+
+  const surfaceButtonStyle: React.CSSProperties = {
+    minHeight: 40,
+    borderRadius: 10,
+    border: "1px solid color-mix(in srgb, var(--th-theme-subdue, rgba(255,255,255,0.25)) 40%, transparent)",
+    background: "color-mix(in srgb, var(--th-theme-surface, rgba(0,0,0,0.85)) 85%, var(--th-theme-text, #fff) 15%)",
+    color: "var(--th-theme-text, #fff)",
+    fontWeight: 600,
+    padding: "0 10px",
+    cursor: "pointer",
+  };
+
+  const makeDockButtonStyle = (dock: "left" | "right" | "window"): React.CSSProperties => ({
+    ...surfaceButtonStyle,
+    minHeight: 32,
+    borderRadius: 8,
+    fontSize: 12,
+    fontWeight: 700,
+    background:
+      sidebarDockMode === dock
+        ? "var(--th-theme-text, #fff)"
+        : "color-mix(in srgb, var(--th-theme-surface, rgba(0,0,0,0.85)) 85%, transparent)",
+    color: sidebarDockMode === dock ? "var(--th-theme-background, #111)" : "var(--th-theme-text, #fff)",
+  });
+
+  useEffect(() => {
+    if (!isSidebarModeMenuOpen) return;
+
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (!sidebarModeMenuRef.current?.contains(target)) setIsSidebarModeMenuOpen(false);
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [isSidebarModeMenuOpen]);
+
   const sidebarContent = (
     <aside
       style={{
         width: 300,
         maxWidth: "80vw",
         height: "100%",
-        background: "var(--th-theme-surface, rgba(0,0,0,0.85))",
+        background: "var(--th-theme-surface, rgba(0,0,0,0.9))",
         color: "var(--th-theme-text, #fff)",
         borderInlineEnd:
-          sidebarDockMode === "left" ? "1px solid var(--th-theme-subdue, rgba(255,255,255,0.2))" : undefined,
+          sidebarDockMode === "left"
+            ? "1px solid color-mix(in srgb, var(--th-theme-subdue, rgba(255,255,255,0.25)) 55%, transparent)"
+            : undefined,
         borderInlineStart:
-          sidebarDockMode === "right" ? "1px solid var(--th-theme-subdue, rgba(255,255,255,0.2))" : undefined,
+          sidebarDockMode === "right"
+            ? "1px solid color-mix(in srgb, var(--th-theme-subdue, rgba(255,255,255,0.25)) 55%, transparent)"
+            : undefined,
         boxSizing: "border-box",
         display: "flex",
         flexDirection: "column",
-        gap: 10,
-        padding: 12,
+        gap: 12,
+        padding: 14,
         overflow: "auto",
         zIndex: sidebarDockMode === "window" ? 20 : 2,
         position: sidebarDockMode === "window" ? "absolute" : "relative",
@@ -492,50 +551,109 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
         right: undefined,
         top: sidebarDockMode === "window" ? 16 : undefined,
         maxHeight: sidebarDockMode === "window" ? "calc(100% - 32px)" : undefined,
-        border: sidebarDockMode === "window" ? "1px solid var(--th-theme-subdue, rgba(255,255,255,0.2))" : undefined,
-        borderRadius: sidebarDockMode === "window" ? 8 : 0,
+        border:
+          sidebarDockMode === "window"
+            ? "1px solid color-mix(in srgb, var(--th-theme-subdue, rgba(255,255,255,0.25)) 70%, transparent)"
+            : undefined,
+        borderRadius: sidebarDockMode === "window" ? 14 : 0,
+        boxShadow: sidebarDockMode === "window" ? "0 18px 40px rgba(0, 0, 0, 0.45)" : undefined,
+        backdropFilter: "blur(8px)",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, minHeight: 30 }}>
         <StatefulBackLink />
+        <div ref={sidebarModeMenuRef} style={{ display: "inline-flex", alignItems: "center", gap: 6, position: "relative" }}>
+          <button
+            type="button"
+            aria-label="Sidebar mode menu"
+            aria-haspopup="menu"
+            aria-expanded={isSidebarModeMenuOpen}
+            onClick={() => setIsSidebarModeMenuOpen((open) => !open)}
+            style={{
+              ...surfaceButtonStyle,
+              minHeight: 32,
+              width: 32,
+              minWidth: 32,
+              padding: 0,
+              borderRadius: 999,
+              fontSize: 16,
+              lineHeight: 1,
+            }}
+          >
+            &#8942;
+          </button>
+          {isSidebarModeMenuOpen && (
+            <div
+              role="menu"
+              aria-label="Select sidebar mode"
+              style={{
+                position: "absolute",
+                insetInlineEnd: 0,
+                top: "calc(100% + 6px)",
+                minWidth: 136,
+                padding: 6,
+                borderRadius: 10,
+                border: "1px solid color-mix(in srgb, var(--th-theme-subdue, rgba(255,255,255,0.25)) 55%, transparent)",
+                background: "var(--th-theme-surface, rgba(0,0,0,0.92))",
+                boxShadow: "0 12px 24px rgba(0,0,0,0.32)",
+                zIndex: 30,
+                display: "grid",
+                gap: 4,
+              }}
+            >
+              {([
+                { id: "left", label: "Dock left" },
+                { id: "right", label: "Dock right" },
+                { id: "window", label: "Windowed" },
+              ] as const).map((option) => (
+                <button
+                  key={option.id}
+                  role="menuitemradio"
+                  aria-checked={sidebarDockMode === option.id}
+                  type="button"
+                  onClick={() => {
+                    setSidebarDockMode(option.id);
+                    setIsSidebarModeMenuOpen(false);
+                  }}
+                  style={{
+                    ...surfaceButtonStyle,
+                    minHeight: 30,
+                    justifyContent: "flex-start",
+                    borderRadius: 8,
+                    paddingInline: 10,
+                    textAlign: "left",
+                    background:
+                      sidebarDockMode === option.id
+                        ? "var(--th-theme-text, #fff)"
+                        : "color-mix(in srgb, var(--th-theme-surface, rgba(0,0,0,0.9)) 94%, transparent)",
+                    color:
+                      sidebarDockMode === option.id ? "var(--th-theme-background, #111)" : "var(--th-theme-text, #fff)",
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
+          <span style={{ display: "inline-flex" }}>
+            <StatefulFullscreenTrigger variant={ThActionsTriggerVariant.button} />
+          </span>
+        </div>
       </div>
 
-      <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <section style={sectionStyle}>
         <div>
-          <div style={{ fontSize: 11, textTransform: "uppercase", opacity: 0.75 }}>Comic Title</div>
-          <div style={{ fontSize: 14, fontWeight: 700 }}>{comicTitle}</div>
+          <div style={mutedLabelStyle}>Comic Title</div>
+          <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.25 }}>{comicTitle}</div>
         </div>
         <div>
-          <div style={{ fontSize: 11, textTransform: "uppercase", opacity: 0.75 }}>CBZ File</div>
+          <div style={mutedLabelStyle}>CBZ File</div>
           <div style={{ fontSize: 13, opacity: 0.9, wordBreak: "break-word" }}>{cbzFileTitle}</div>
         </div>
-        <div style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-          <span style={{ fontSize: 12, opacity: 0.9 }}>Sidebar mode</span>
-          <button type="button" onClick={() => setSidebarDockMode("left")} aria-label="Dock left">
-            Left
-          </button>
-          <button type="button" onClick={() => setSidebarDockMode("right")} aria-label="Dock right">
-            Right
-          </button>
-          <button type="button" onClick={() => setSidebarDockMode("window")} aria-label="Windowed">
-            Windowed
-          </button>
-        </div>
-        <span style={{ display: "inline-flex", width: "fit-content" }}>
-          <StatefulFullscreenTrigger variant={ThActionsTriggerVariant.button} />
-        </span>
       </section>
 
-      <section
-        style={{ display: "flex", flexDirection: "column", gap: 4, borderTop: "1px solid var(--th-theme-subdue)", paddingTop: 8 }}
-      >
-        <div style={{ fontSize: 12, opacity: 0.8 }}>
-          {pages.length > 0 ? `${cursorIndex + 1} / ${pages.length}` : "No pages"}
-        </div>
-        <div style={{ fontSize: 11, textTransform: "uppercase", opacity: 0.75 }}>Page and Chapter</div>
-      </section>
+      
 
-      <section style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <label htmlFor="comic-page-select" style={{ fontWeight: 600, fontSize: 13 }}>
           Page
         </label>
@@ -545,7 +663,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
             aria-label="Previous page"
             onClick={goPrev}
             disabled={!canGoPrev}
-            style={{ height: 40, borderRadius: 4 }}
+            style={surfaceButtonStyle}
           >
             &#8249;
           </button>
@@ -554,7 +672,17 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
             aria-label="Select page"
             value={String(cursorIndex)}
             onChange={(event) => setCursorIndex(Number(event.target.value))}
-            style={{ width: "100%", minHeight: 40 }}
+            style={{
+              width: "100%",
+              minHeight: 40,
+              borderRadius: 10,
+              border: "1px solid color-mix(in srgb, var(--th-theme-subdue, rgba(255,255,255,0.25)) 40%, transparent)",
+              background:
+                "color-mix(in srgb, var(--th-theme-surface, rgba(0,0,0,0.85)) 84%, var(--th-theme-text, #fff) 16%)",
+              color: "var(--th-theme-text, #fff)",
+              paddingInline: 10,
+              fontWeight: 600,
+            }}
           >
             {pages.map((page) => (
               <option key={page.link.href} value={page.index}>
@@ -567,14 +695,14 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
             aria-label="Next page"
             onClick={goNext}
             disabled={!canGoNext}
-            style={{ height: 40, borderRadius: 4 }}
+            style={surfaceButtonStyle}
           >
             &#8250;
           </button>
         </div>
-      </section>
+ 
 
-      <section style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <section style={sectionStyle}>
         <label htmlFor="comic-chapter-select" style={{ fontWeight: 600, fontSize: 13 }}>
           Chapter
         </label>
@@ -584,7 +712,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
             aria-label="Previous chapter"
             onClick={goPrevChapter}
             disabled={!canGoPrevChapter}
-            style={{ height: 40, borderRadius: 4 }}
+            style={surfaceButtonStyle}
           >
             &#8249;
           </button>
@@ -593,7 +721,17 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
             aria-label="Select chapter"
             value={selectedChapter}
             onChange={(event) => setSelectedChapter(event.target.value)}
-            style={{ width: "100%", minHeight: 40 }}
+            style={{
+              width: "100%",
+              minHeight: 40,
+              borderRadius: 10,
+              border: "1px solid color-mix(in srgb, var(--th-theme-subdue, rgba(255,255,255,0.25)) 40%, transparent)",
+              background:
+                "color-mix(in srgb, var(--th-theme-surface, rgba(0,0,0,0.85)) 84%, var(--th-theme-text, #fff) 16%)",
+              color: "var(--th-theme-text, #fff)",
+              paddingInline: 10,
+              fontWeight: 600,
+            }}
           >
             {placeholderChapters.map((chapter) => (
               <option key={chapter.id} value={chapter.id}>
@@ -606,57 +744,59 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
             aria-label="Next chapter"
             onClick={goNextChapter}
             disabled={!canGoNextChapter}
-            style={{ height: 40, borderRadius: 4 }}
+            style={surfaceButtonStyle}
           >
             &#8250;
           </button>
         </div>
       </section>
 
-      <div style={{ borderTop: "1px solid var(--th-theme-subdue)", margin: "2px 0" }} />
+      <section style={{ ...sectionStyle, borderBottom: "none", paddingBottom: 0 }}>
+        <div style={mutedLabelStyle}>Common settings</div>
 
-      <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={{ fontSize: 11, textTransform: "uppercase", opacity: 0.75 }}>Common settings</div>
-
-        <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
-          Reading mode
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <button
             type="button"
             onClick={cycleReadingMode}
             aria-label="Cycle reading mode"
-            style={{ width: "100%", minHeight: 36 }}
+            title={`Reading mode`}
+            style={{ ...surfaceButtonStyle, width: "100%" }}
           >
             {readingModeLabels[selectedReadingMode]}
           </button>
-        </label>
+        </div>
 
-        <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
-          Image scale type
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <button
             type="button"
             onClick={cycleScaleType}
             aria-label="Cycle image scale type"
-            style={{ width: "100%", minHeight: 36 }}
+            title={`Image scale type`}
+            style={{ ...surfaceButtonStyle, width: "100%" }}
           >
             {scaleTypeLabels[selectedScaleType]}
           </button>
-        </label>
+        </div>
 
-        <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
-          Reading direction
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <button
             type="button"
             onClick={cycleDirection}
             aria-label="Cycle reading direction"
-            style={{ width: "100%", minHeight: 36 }}
+            title={`Reading direction`}
+            style={{ ...surfaceButtonStyle, width: "100%" }}
           >
             {directionLabels[selectedDirection]}
           </button>
-        </label>
+        </div>
 
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 13 }}>Settings menu</span>
-          <span ref={settingsTriggerRef as any} style={{ display: "inline-flex" }}>
+        <div style={{ display: "inline-flex", alignItems: "center" }}>
+          <span
+            ref={settingsTriggerRef as any}
+            style={{ display: "inline-flex" }}
+            title="Open settings menu"
+            aria-label="Open settings menu"
+          >
             <StatefulSettingsTrigger variant={ThActionsTriggerVariant.button} />
           </span>
         </div>
