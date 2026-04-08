@@ -13,6 +13,7 @@ import {
   ComicTapZones,
   defaultComicSettings,
   setComicActiveKey,
+  updateComicSettings,
 } from "@/lib/comicSettingsReducer";
 import { setHovering, toggleImmersive } from "@/lib/readerReducer";
 import { ThPluginRegistry } from "../Plugins/PluginRegistry";
@@ -22,15 +23,8 @@ import { StatefulSettingsTrigger } from "../Actions/Settings/StatefulSettingsTri
 import { StatefulSettingsContainer } from "../Actions/Settings/StatefulSettingsContainer";
 import { ThActionsTriggerVariant } from "@/core/Components/Actions/ThActionsBar";
 import { StatefulBackLink } from "../StatefulBackLink";
-import { StatefulTocTrigger } from "../Actions/Toc/StatefulTocTrigger";
-import { StatefulComicTocContainer } from "../Actions/Toc/StatefulComicTocContainer";
 import { StatefulFullscreenTrigger } from "../Actions/Fullscreen/StatefulFullscreenTrigger";
-import { ComicReaderProvider } from "./ComicReaderContext";
 import { ThNavigationButton } from "@/core/Components/Buttons/ThNavigationButton";
-
-import readerStyles from "../assets/styles/thorium-web.reader.app.module.css";
-import readerHeaderStyles from "../assets/styles/thorium-web.reader.header.module.css";
-import classNames from "classnames";
 
 type ComicPage = {
   index: number;
@@ -74,7 +68,10 @@ const useObjectUrl = (publication: Publication, link: Link | undefined) => {
           return;
         }
         const mime = link.type || "image/jpeg";
-        const blob = new Blob([bytes], { type: mime });
+        const byteArray = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+        const normalizedBytes = new Uint8Array(byteArray.byteLength);
+        normalizedBytes.set(byteArray);
+        const blob = new Blob([normalizedBytes], { type: mime });
         created = URL.createObjectURL(blob);
         setObjectUrl((prev) => {
           if (prev) URL.revokeObjectURL(prev);
@@ -251,6 +248,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
   }, [direction, pages.length]);
 
   const [cursorIndex, setCursorIndex] = useState(initialIndex);
+  const [sidebarDockMode, setSidebarDockMode] = useState<"left" | "right" | "window">("left");
 
   const canGoPrev = useMemo(() => {
     if (pages.length === 0) return false;
@@ -324,15 +322,17 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
       });
 
       if (action === "toggle") {
-        dispatch(toggleImmersive());
-        dispatch(setHovering(false));
+        if (sidebarDockMode === "window") {
+          dispatch(toggleImmersive());
+          dispatch(setHovering(false));
+        }
       } else if (action === "next") {
         goNext();
       } else {
         goPrev();
       }
     },
-    [direction, dispatch, goNext, goPrev, invertTapZones, tapZones]
+    [direction, dispatch, goNext, goPrev, invertTapZones, sidebarDockMode, tapZones]
   );
 
   const headerHidden = isImmersive;
@@ -366,58 +366,327 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
   const navLabelPrev = direction === ComicReadingDirection.rtl ? "Next" : "Previous";
   const navLabelNext = direction === ComicReadingDirection.rtl ? "Previous" : "Next";
 
-  return (
-    <ComicReaderProvider
-      value={{
-        pageCount: pages.length,
-        currentIndex: cursorIndex,
-        goToIndex: (index: number) =>
-          setCursorIndex(Math.max(0, Math.min(pages.length - 1, index))),
+  const showSidebar = !headerHidden;
+  const comicTitle = String(publication.metadata?.title || "Untitled Comic");
+  const cbzFileTitle = useMemo(() => {
+    const source = publication.baseURL || localDataKey || "";
+    if (!source) return "Unknown file";
+    const normalized = source.split(/[?#]/)[0] || source;
+    const parts = normalized.split("/");
+    const lastPart = parts[parts.length - 1] || normalized;
+    return lastPart || "Unknown file";
+  }, [localDataKey, publication.baseURL]);
+  const updateSettings = useCallback(
+    (patch: Partial<typeof defaultComicSettings>) => {
+      dispatch(updateComicSettings({ key: activeKey, patch }));
+    },
+    [activeKey, dispatch]
+  );
+
+  const selectedReadingMode = mode;
+  const selectedScaleType = scaleType;
+  const selectedDirection = direction;
+  const readingModeOptions = [
+    ComicReadingMode.singlePage,
+    ComicReadingMode.doublePage,
+    ComicReadingMode.continuousVertical,
+    ComicReadingMode.continuousHorizontal,
+    ComicReadingMode.webtoon,
+  ] as const;
+  const scaleTypeOptions = [
+    ComicScaleType.fitWidth,
+    ComicScaleType.fitHeight,
+    ComicScaleType.fitScreen,
+    ComicScaleType.originalSize,
+  ] as const;
+  const directionOptions = [ComicReadingDirection.ltr, ComicReadingDirection.rtl] as const;
+  const readingModeLabels: Record<ComicReadingMode, string> = {
+    [ComicReadingMode.default]: "Default",
+    [ComicReadingMode.singlePage]: "Single page",
+    [ComicReadingMode.doublePage]: "Double page",
+    [ComicReadingMode.continuousVertical]: "Continuous vertical",
+    [ComicReadingMode.continuousHorizontal]: "Continuous horizontal",
+    [ComicReadingMode.webtoon]: "Webtoon",
+  };
+  const scaleTypeLabels: Record<ComicScaleType, string> = {
+    [ComicScaleType.default]: "Default",
+    [ComicScaleType.fitWidth]: "Fit width",
+    [ComicScaleType.fitHeight]: "Fit height",
+    [ComicScaleType.fitScreen]: "Fit screen",
+    [ComicScaleType.originalSize]: "Original size",
+  };
+  const directionLabels: Record<ComicReadingDirection, string> = {
+    [ComicReadingDirection.ltr]: "Left to right",
+    [ComicReadingDirection.rtl]: "Right to left",
+  };
+  const getNextOption = useCallback(<T,>(current: T, options: readonly T[]) => {
+    const currentIndex = options.findIndex((option) => option === current);
+    const safeIndex = currentIndex < 0 ? 0 : currentIndex;
+    return options[(safeIndex + 1) % options.length];
+  }, []);
+  const cycleReadingMode = useCallback(() => {
+    const next = getNextOption(selectedReadingMode, readingModeOptions);
+    updateSettings({ readingMode: next });
+  }, [getNextOption, readingModeOptions, selectedReadingMode, updateSettings]);
+  const cycleScaleType = useCallback(() => {
+    const next = getNextOption(selectedScaleType, scaleTypeOptions);
+    updateSettings({ scaleType: next });
+  }, [getNextOption, scaleTypeOptions, selectedScaleType, updateSettings]);
+  const cycleDirection = useCallback(() => {
+    const next = getNextOption(selectedDirection, directionOptions);
+    updateSettings({ direction: next });
+  }, [directionOptions, getNextOption, selectedDirection, updateSettings]);
+  const placeholderChapters = useMemo(
+    () => [
+      { id: "chapter-1", label: "Chapter 1 (placeholder)" },
+      { id: "chapter-2", label: "Chapter 2 (placeholder)" },
+      { id: "chapter-3", label: "Chapter 3 (placeholder)" },
+    ],
+    []
+  );
+  const [selectedChapter, setSelectedChapter] = useState(placeholderChapters[0]?.id ?? "");
+  const selectedChapterIndex = Math.max(
+    0,
+    placeholderChapters.findIndex((chapter) => chapter.id === selectedChapter)
+  );
+  const canGoPrevChapter = selectedChapterIndex > 0;
+  const canGoNextChapter = selectedChapterIndex < placeholderChapters.length - 1;
+  const goPrevChapter = useCallback(() => {
+    setSelectedChapter((current) => {
+      const currentIndex = placeholderChapters.findIndex((chapter) => chapter.id === current);
+      const safeIndex = currentIndex < 0 ? 0 : currentIndex;
+      const nextIndex = Math.max(0, safeIndex - 1);
+      return placeholderChapters[nextIndex]?.id ?? current;
+    });
+  }, [placeholderChapters]);
+  const goNextChapter = useCallback(() => {
+    setSelectedChapter((current) => {
+      const currentIndex = placeholderChapters.findIndex((chapter) => chapter.id === current);
+      const safeIndex = currentIndex < 0 ? 0 : currentIndex;
+      const nextIndex = Math.min(placeholderChapters.length - 1, safeIndex + 1);
+      return placeholderChapters[nextIndex]?.id ?? current;
+    });
+  }, [placeholderChapters]);
+
+  const sidebarContent = (
+    <aside
+      style={{
+        width: 300,
+        maxWidth: "80vw",
+        height: "100%",
+        background: "var(--th-theme-surface, rgba(0,0,0,0.85))",
+        color: "var(--th-theme-text, #fff)",
+        borderInlineEnd:
+          sidebarDockMode === "left" ? "1px solid var(--th-theme-subdue, rgba(255,255,255,0.2))" : undefined,
+        borderInlineStart:
+          sidebarDockMode === "right" ? "1px solid var(--th-theme-subdue, rgba(255,255,255,0.2))" : undefined,
+        boxSizing: "border-box",
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+        padding: 12,
+        overflow: "auto",
+        zIndex: sidebarDockMode === "window" ? 20 : 2,
+        position: sidebarDockMode === "window" ? "absolute" : "relative",
+        left: sidebarDockMode === "window" ? 16 : undefined,
+        right: undefined,
+        top: sidebarDockMode === "window" ? 16 : undefined,
+        maxHeight: sidebarDockMode === "window" ? "calc(100% - 32px)" : undefined,
+        border: sidebarDockMode === "window" ? "1px solid var(--th-theme-subdue, rgba(255,255,255,0.2))" : undefined,
+        borderRadius: sidebarDockMode === "window" ? 8 : 0,
       }}
     >
-      <div
-        style={{
-          height: "100vh",
-          width: "100vw",
-          display: "flex",
-          flexDirection: "column",
-          background: "var(--th-theme-background, #fff)",
-          color: "var(--th-theme-text, #111)",
-        }}
-      >
-      {!headerHidden && (
-        <div className={classNames(readerStyles.topBar, readerHeaderStyles.header)}>
-          <div className={readerHeaderStyles.backlinkWrapper}>
-            <StatefulBackLink />
-          </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        <StatefulBackLink />
+      </div>
 
-          <div style={{ marginInline: "auto", fontSize: 12, opacity: 0.8 }}>
-            {pages.length > 0 ? `${cursorIndex + 1} / ${pages.length}` : "No pages"}
-          </div>
-
-          <div className={readerHeaderStyles.actionsWrapper}>
-            <span ref={settingsTriggerRef as any} style={{ display: "inline-flex" }}>
-              <StatefulSettingsTrigger variant={ThActionsTriggerVariant.icon} />
-            </span>
-            <span ref={tocTriggerRef as any} style={{ display: "inline-flex" }}>
-              <StatefulTocTrigger variant={ThActionsTriggerVariant.icon} />
-            </span>
-            <span style={{ display: "inline-flex" }}>
-              <StatefulFullscreenTrigger variant={ThActionsTriggerVariant.icon} />
-            </span>
-          </div>
+      <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div>
+          <div style={{ fontSize: 11, textTransform: "uppercase", opacity: 0.75 }}>Comic Title</div>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>{comicTitle}</div>
         </div>
-      )}
+        <div>
+          <div style={{ fontSize: 11, textTransform: "uppercase", opacity: 0.75 }}>CBZ File</div>
+          <div style={{ fontSize: 13, opacity: 0.9, wordBreak: "break-word" }}>{cbzFileTitle}</div>
+        </div>
+        <div style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+          <span style={{ fontSize: 12, opacity: 0.9 }}>Sidebar mode</span>
+          <button type="button" onClick={() => setSidebarDockMode("left")} aria-label="Dock left">
+            Left
+          </button>
+          <button type="button" onClick={() => setSidebarDockMode("right")} aria-label="Dock right">
+            Right
+          </button>
+          <button type="button" onClick={() => setSidebarDockMode("window")} aria-label="Windowed">
+            Windowed
+          </button>
+        </div>
+        <span style={{ display: "inline-flex", width: "fit-content" }}>
+          <StatefulFullscreenTrigger variant={ThActionsTriggerVariant.button} />
+        </span>
+      </section>
 
-      <div
-        ref={containerRef}
-        onPointerUp={onTap}
-        style={{
-          flex: 1,
-          position: "relative",
-          overflow: "hidden",
-        }}
+      <section
+        style={{ display: "flex", flexDirection: "column", gap: 4, borderTop: "1px solid var(--th-theme-subdue)", paddingTop: 8 }}
       >
+        <div style={{ fontSize: 12, opacity: 0.8 }}>
+          {pages.length > 0 ? `${cursorIndex + 1} / ${pages.length}` : "No pages"}
+        </div>
+        <div style={{ fontSize: 11, textTransform: "uppercase", opacity: 0.75 }}>Page and Chapter</div>
+      </section>
+
+      <section style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <label htmlFor="comic-page-select" style={{ fontWeight: 600, fontSize: 13 }}>
+          Page
+        </label>
+        <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 40px", gap: 8, alignItems: "center" }}>
+          <button
+            type="button"
+            aria-label="Previous page"
+            onClick={goPrev}
+            disabled={!canGoPrev}
+            style={{ height: 40, borderRadius: 4 }}
+          >
+            &#8249;
+          </button>
+          <select
+            id="comic-page-select"
+            aria-label="Select page"
+            value={String(cursorIndex)}
+            onChange={(event) => setCursorIndex(Number(event.target.value))}
+            style={{ width: "100%", minHeight: 40 }}
+          >
+            {pages.map((page) => (
+              <option key={page.link.href} value={page.index}>
+                Page {page.index + 1}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            aria-label="Next page"
+            onClick={goNext}
+            disabled={!canGoNext}
+            style={{ height: 40, borderRadius: 4 }}
+          >
+            &#8250;
+          </button>
+        </div>
+      </section>
+
+      <section style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <label htmlFor="comic-chapter-select" style={{ fontWeight: 600, fontSize: 13 }}>
+          Chapter
+        </label>
+        <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 40px", gap: 8, alignItems: "center" }}>
+          <button
+            type="button"
+            aria-label="Previous chapter"
+            onClick={goPrevChapter}
+            disabled={!canGoPrevChapter}
+            style={{ height: 40, borderRadius: 4 }}
+          >
+            &#8249;
+          </button>
+          <select
+            id="comic-chapter-select"
+            aria-label="Select chapter"
+            value={selectedChapter}
+            onChange={(event) => setSelectedChapter(event.target.value)}
+            style={{ width: "100%", minHeight: 40 }}
+          >
+            {placeholderChapters.map((chapter) => (
+              <option key={chapter.id} value={chapter.id}>
+                {chapter.label}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            aria-label="Next chapter"
+            onClick={goNextChapter}
+            disabled={!canGoNextChapter}
+            style={{ height: 40, borderRadius: 4 }}
+          >
+            &#8250;
+          </button>
+        </div>
+      </section>
+
+      <div style={{ borderTop: "1px solid var(--th-theme-subdue)", margin: "2px 0" }} />
+
+      <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ fontSize: 11, textTransform: "uppercase", opacity: 0.75 }}>Common settings</div>
+
+        <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
+          Reading mode
+          <button
+            type="button"
+            onClick={cycleReadingMode}
+            aria-label="Cycle reading mode"
+            style={{ width: "100%", minHeight: 36 }}
+          >
+            {readingModeLabels[selectedReadingMode]}
+          </button>
+        </label>
+
+        <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
+          Image scale type
+          <button
+            type="button"
+            onClick={cycleScaleType}
+            aria-label="Cycle image scale type"
+            style={{ width: "100%", minHeight: 36 }}
+          >
+            {scaleTypeLabels[selectedScaleType]}
+          </button>
+        </label>
+
+        <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
+          Reading direction
+          <button
+            type="button"
+            onClick={cycleDirection}
+            aria-label="Cycle reading direction"
+            style={{ width: "100%", minHeight: 36 }}
+          >
+            {directionLabels[selectedDirection]}
+          </button>
+        </label>
+
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 13 }}>Settings menu</span>
+          <span ref={settingsTriggerRef as any} style={{ display: "inline-flex" }}>
+            <StatefulSettingsTrigger variant={ThActionsTriggerVariant.button} />
+          </span>
+        </div>
+      </section>
+    </aside>
+  );
+
+  return (
+    <div
+      style={{
+        height: "100vh",
+        width: "100vw",
+        display: "flex",
+        flexDirection: "column",
+        background: "var(--th-theme-background, #fff)",
+        color: "var(--th-theme-text, #111)",
+      }}
+    >
+      <div style={{ flex: 1, position: "relative", display: "flex", overflow: "hidden" }}>
+        {showSidebar && sidebarDockMode === "left" && sidebarContent}
+
+        <div
+          ref={containerRef}
+          onPointerUp={onTap}
+          style={{
+            flex: 1,
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
         {showArrows && (
           <>
             <div
@@ -566,12 +835,14 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
             )}
           </div>
         )}
+        </div>
+
+        {showSidebar && sidebarDockMode === "right" && sidebarContent}
+        {showSidebar && sidebarDockMode === "window" && sidebarContent}
       </div>
 
       <StatefulSettingsContainer triggerRef={settingsTriggerRef} />
-      <StatefulComicTocContainer triggerRef={tocTriggerRef} />
     </div>
-    </ComicReaderProvider>
   );
 };
 
