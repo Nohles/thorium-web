@@ -24,6 +24,8 @@ const StatefulEpubReader = lazy(() => import("@/components/Epub").then(mod => ({
 
 const StatefulWebPubReader = lazy(() => import("@/components/WebPub").then(mod => ({ default: mod.ExperimentalWebPubStatefulReader })));
 
+const StatefulComicReader = lazy(() => import("@/components/Comic/StatefulComicReader").then(mod => ({ default: mod.StatefulComicReader })));
+
 export interface PositionStorage {
   get: () => Locator | undefined;
   set: (locator: Locator) => void | Promise<void>;
@@ -42,10 +44,11 @@ export interface ReaderPlugins {
   epub?: ThPluginFactory;
   webPub?: ThPluginFactory;
   audio?: ThPluginFactory;
+  comic?: ThPluginFactory;
 }
 
 export interface ReaderComponentProps {
-  profile: "epub" | "webPub" | "audio" | undefined | null;
+  profile: "epub" | "webPub" | "audio" | "comic" | undefined | null;
   publication: Publication;
   localDataKey: string | null;
   positionStorage?: PositionStorage;
@@ -58,6 +61,7 @@ export const StatefulReaderWrapper = ({ profile, plugins, ...props }: ReaderComp
   const pendingFactory = profile === "epub" ? plugins?.epub
     : profile === "webPub" ? plugins?.webPub
     : profile === "audio" ? plugins?.audio
+    : profile === "comic" ? plugins?.comic
     : undefined;
 
   useEffect(() => {
@@ -108,6 +112,8 @@ export const StatefulReaderWrapper = ({ profile, plugins, ...props }: ReaderComp
     case "audio":
       // TODO: Implement audio reader when available
       return <div className="container"><h1>Audio Reader Coming Soon</h1></div>;
+    case "comic":
+      return <Suspense><StatefulComicReader { ...props } plugins={ resolvedPlugins } /></Suspense>;
     case "webPub":
     default:
       return <Suspense><StatefulWebPubReader { ...props } plugins={ resolvedPlugins } /></Suspense>;
