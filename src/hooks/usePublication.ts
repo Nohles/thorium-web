@@ -58,7 +58,17 @@ const detectProfile = (manifest: Manifest): ReaderProfile => {
   if (!metadata) return "webPub"; // Default to webPub when no metadata
   
   const conformsTo = metadata.conformsTo;
-  if (!conformsTo) return "webPub"; // Default to webPub when no conformsTo
+  if (!conformsTo) {
+    // Robust fallback for mis-labeled manifests: treat image-only readingOrder as comics.
+    const items = manifest.readingOrder?.items ?? [];
+    if (
+      items.length > 0 &&
+      items.every((item) => typeof item.type === "string" && item.type.startsWith("image/"))
+    ) {
+      return "comic";
+    }
+    return "webPub"; // Default to webPub when no conformsTo
+  }
   
   // Handle both string and array formats
   const profiles = Array.isArray(conformsTo) ? conformsTo : [conformsTo];
@@ -68,6 +78,13 @@ const detectProfile = (manifest: Manifest): ReaderProfile => {
     profile === Profile.AUDIOBOOK
   )) {
     return "audio";
+  }
+  
+  // Check for comics profile (DIVINA)
+  if (profiles.some((profile: Profile) =>
+    profile === Profile.DIVINA
+  )) {
+    return "comic";
   }
   
   // Check for epub profile
