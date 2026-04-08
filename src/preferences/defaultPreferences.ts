@@ -351,6 +351,14 @@ export const defaultPreferences: ThPreferences<DefaultKeys> = createPreferences<
       ThSettingsKeys.textGroup,
       ThSettingsKeys.spacingGroup
     ],
+    comicOrder: [
+      ThSettingsKeys.comicReadingMode,
+      ThSettingsKeys.comicPageGap,
+      ThSettingsKeys.comicReadingDirection,
+      ThSettingsKeys.comicTapZones,
+      ThSettingsKeys.comicInvertTapZones,
+      ThSettingsKeys.comicScaleType,
+    ],
     keys: {
       [ThSettingsKeys.fontFamily]: {
         default: defaultFontCollection,

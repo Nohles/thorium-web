@@ -27,6 +27,14 @@ import { StatefulTextNormalize } from "../../Settings/Text/StatefulTextNormalize
 import { StatefulTheme } from "../../Epub/Settings/StatefulTheme";
 import { StatefulWordSpacing } from "../../Settings/Spacing/StatefulWordSpacing";
 import { StatefulZoom } from "../../Settings/StatefulZoom";
+import {
+  StatefulComicInvertTapZones,
+  StatefulComicPageGap,
+  StatefulComicReadingDirection,
+  StatefulComicReadingMode,
+  StatefulComicScaleType,
+  StatefulComicTapZones,
+} from "../../Settings/Comic";
 
 export const createDefaultPlugin = (): ThPlugin => {
   return {
@@ -118,6 +126,25 @@ export const createDefaultPlugin = (): ThPlugin => {
         },
         [ThSettingsKeys.zoom]: {
           Comp: StatefulZoom
+        }
+        ,
+        [ThSettingsKeys.comicReadingMode]: {
+          Comp: StatefulComicReadingMode
+        },
+        [ThSettingsKeys.comicPageGap]: {
+          Comp: StatefulComicPageGap
+        },
+        [ThSettingsKeys.comicReadingDirection]: {
+          Comp: StatefulComicReadingDirection
+        },
+        [ThSettingsKeys.comicTapZones]: {
+          Comp: StatefulComicTapZones
+        },
+        [ThSettingsKeys.comicInvertTapZones]: {
+          Comp: StatefulComicInvertTapZones
+        },
+        [ThSettingsKeys.comicScaleType]: {
+          Comp: StatefulComicScaleType
         }
       }
     }

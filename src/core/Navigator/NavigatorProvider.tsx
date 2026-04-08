@@ -26,3 +26,8 @@ export const useNavigatorContext = () => {
   }
   return context.navigator;
 }
+
+export const useOptionalNavigatorContext = () => {
+  const context = useContext(NavigatorContext);
+  return context?.navigator ?? null;
+}

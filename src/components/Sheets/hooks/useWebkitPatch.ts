@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-import { useNavigator } from "@/core/Navigator";
+import { useOptionalNavigator } from "@/core/Navigator";
 
 import { useAppSelector } from "@/lib";
 
@@ -22,12 +22,11 @@ export const useWebkitPatch = (isOpen: boolean) => {
   const isFXL = useAppSelector(state => state.publication.isFXL);
   const isScroll = isWebPub || (scroll && !isFXL);
 
-  const {
-    getCframes
-  } = useNavigator();
+  const navigator = useOptionalNavigator();
+  const getCframes = navigator?.getCframes as undefined | (() => any[]);
 
   useEffect(() => {
-    if (isScroll && !isOpen) {
+    if (isScroll && !isOpen && getCframes) {
       // We have to force a reflow on the iframe container to fix the issue.
       // Using the infamous Recalc technique (adding a style element with *{}) 
       // in the iframe contentDocument does not work.
