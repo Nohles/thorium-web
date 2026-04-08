@@ -352,6 +352,7 @@ export const defaultPreferences: ThPreferences<DefaultKeys> = createPreferences<
       ThSettingsKeys.spacingGroup
     ],
     comicOrder: [
+      ThSettingsKeys.theme,
       ThSettingsKeys.comicReadingMode,
       ThSettingsKeys.comicPageGap,
       ThSettingsKeys.comicReadingDirection,

@@ -12,6 +12,7 @@ import webPubSettingsReducer, { WebPubSettingsReducerState } from "./webPubSetti
 import comicSettingsReducer, { ComicSettingsReducerState } from "./comicSettingsReducer";
 
 import debounce from "debounce";
+import { ThSettingsKeys } from "@/preferences/models";
 
 interface ExternalReducerConfig {
   reducer: any;
@@ -95,6 +96,19 @@ const loadState = (storageKey: string = DEFAULT_STORAGE_KEY) => {
       
       if (state.actions) {
         state.actions = updateActionsState(state.actions);
+      }
+
+      // Ensure comic settings order includes theme for existing users
+      if (state.preferences?.settings) {
+        const comicOrder: string[] =
+          state.preferences.settings.comicOrder ||
+          [];
+        if (!comicOrder.includes(ThSettingsKeys.theme)) {
+          state.preferences.settings.comicOrder = [
+            ThSettingsKeys.theme,
+            ...comicOrder,
+          ];
+        }
       }
     }
     
