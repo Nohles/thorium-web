@@ -77,7 +77,12 @@ export const StatefulReaderWrapper = ({ profile, plugins, ...props }: ReaderComp
   const { preferences } = usePreferences();
   const themeObject = useAppSelector(state => state.theming.theme);
   const isFXL = useAppSelector(state => state.publication.isFXL);
-  const theme = profile === "epub" ? (isFXL ? themeObject.fxl : themeObject.reflow) : ThThemeKeys.light;
+  const theme =
+    profile === "epub"
+      ? (isFXL ? themeObject.fxl : themeObject.reflow)
+      : profile === "comic"
+        ? themeObject.fxl
+        : ThThemeKeys.light;
 
   const dispatch = useAppDispatch();
 

@@ -21,6 +21,16 @@ import { createDefaultPlugin } from "../Plugins/helpers/createDefaultPlugin";
 import { StatefulSettingsTrigger } from "../Actions/Settings/StatefulSettingsTrigger";
 import { StatefulSettingsContainer } from "../Actions/Settings/StatefulSettingsContainer";
 import { ThActionsTriggerVariant } from "@/core/Components/Actions/ThActionsBar";
+import { StatefulBackLink } from "../StatefulBackLink";
+import { StatefulTocTrigger } from "../Actions/Toc/StatefulTocTrigger";
+import { StatefulComicTocContainer } from "../Actions/Toc/StatefulComicTocContainer";
+import { StatefulFullscreenTrigger } from "../Actions/Fullscreen/StatefulFullscreenTrigger";
+import { ComicReaderProvider } from "./ComicReaderContext";
+import { ThNavigationButton } from "@/core/Components/Buttons/ThNavigationButton";
+
+import readerStyles from "../assets/styles/thorium-web.reader.app.module.css";
+import readerHeaderStyles from "../assets/styles/thorium-web.reader.header.module.css";
+import classNames from "classnames";
 
 type ComicPage = {
   index: number;
@@ -343,44 +353,59 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
   }, [current, direction, mode, nextPage, prevPage]);
 
   const settingsTriggerRef = useRef<HTMLElement | null>(null);
+  const tocTriggerRef = useRef<HTMLElement | null>(null);
+
+  const showArrows =
+    tapZones !== ComicTapZones.disabled &&
+    mode !== ComicReadingMode.continuousVertical &&
+    mode !== ComicReadingMode.webtoon;
+
+  const arrowSize = "var(--th-arrow-size, 40px)";
+  const arrowOffset = "var(--th-arrow-offset, 5px)";
+
+  const navLabelPrev = direction === ComicReadingDirection.rtl ? "Next" : "Previous";
+  const navLabelNext = direction === ComicReadingDirection.rtl ? "Previous" : "Next";
 
   return (
-    <div
-      style={{
-        height: "100vh",
-        width: "100vw",
-        display: "flex",
-        flexDirection: "column",
-        background: "var(--th-color-bg, #fff)",
-        color: "var(--th-color-text, #111)",
+    <ComicReaderProvider
+      value={{
+        pageCount: pages.length,
+        currentIndex: cursorIndex,
+        goToIndex: (index: number) =>
+          setCursorIndex(Math.max(0, Math.min(pages.length - 1, index))),
       }}
     >
+      <div
+        style={{
+          height: "100vh",
+          width: "100vw",
+          display: "flex",
+          flexDirection: "column",
+          background: "var(--th-theme-background, #fff)",
+          color: "var(--th-theme-text, #111)",
+        }}
+      >
       {!headerHidden && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "12px 16px",
-            borderBottom: "1px solid rgba(0,0,0,0.08)",
-            gap: 12,
-          }}
-        >
-          <span ref={settingsTriggerRef as any} style={{ display: "inline-flex" }}>
-            <StatefulSettingsTrigger variant={ThActionsTriggerVariant.icon} />
-          </span>
+        <div className={classNames(readerStyles.topBar, readerHeaderStyles.header)}>
+          <div className={readerHeaderStyles.backlinkWrapper}>
+            <StatefulBackLink />
+          </div>
 
-          <button type="button" onClick={goPrev} disabled={!canGoPrev}>
-            Previous
-          </button>
-
-          <div style={{ fontSize: 12, opacity: 0.8 }}>
+          <div style={{ marginInline: "auto", fontSize: 12, opacity: 0.8 }}>
             {pages.length > 0 ? `${cursorIndex + 1} / ${pages.length}` : "No pages"}
           </div>
 
-          <button type="button" onClick={goNext} disabled={!canGoNext}>
-            Next
-          </button>
+          <div className={readerHeaderStyles.actionsWrapper}>
+            <span ref={settingsTriggerRef as any} style={{ display: "inline-flex" }}>
+              <StatefulSettingsTrigger variant={ThActionsTriggerVariant.icon} />
+            </span>
+            <span ref={tocTriggerRef as any} style={{ display: "inline-flex" }}>
+              <StatefulTocTrigger variant={ThActionsTriggerVariant.icon} />
+            </span>
+            <span style={{ display: "inline-flex" }}>
+              <StatefulFullscreenTrigger variant={ThActionsTriggerVariant.icon} />
+            </span>
+          </div>
         </div>
       )}
 
@@ -393,6 +418,47 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
           overflow: "hidden",
         }}
       >
+        {showArrows && (
+          <>
+            <div
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: arrowOffset,
+                transform: "translateY(-50%)",
+                zIndex: 5,
+                pointerEvents: "auto",
+              }}
+            >
+              <ThNavigationButton
+                direction="left"
+                aria-label={navLabelPrev}
+                isDisabled={!canGoPrev}
+                onPress={goPrev}
+                style={{ width: arrowSize, height: arrowSize }}
+              />
+            </div>
+            <div
+              style={{
+                position: "absolute",
+                top: "50%",
+                right: arrowOffset,
+                transform: "translateY(-50%)",
+                zIndex: 5,
+                pointerEvents: "auto",
+              }}
+            >
+              <ThNavigationButton
+                direction="right"
+                aria-label={navLabelNext}
+                isDisabled={!canGoNext}
+                onPress={goNext}
+                style={{ width: arrowSize, height: arrowSize }}
+              />
+            </div>
+          </>
+        )}
+
         {mode === ComicReadingMode.continuousVertical || mode === ComicReadingMode.webtoon ? (
           <div
             style={{
@@ -503,7 +569,9 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
       </div>
 
       <StatefulSettingsContainer triggerRef={settingsTriggerRef} />
+      <StatefulComicTocContainer triggerRef={tocTriggerRef} />
     </div>
+    </ComicReaderProvider>
   );
 };
 

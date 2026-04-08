@@ -215,11 +215,16 @@ export const usePublication = ({
     setIsRTL(rtl);
     dispatch(setRTL(rtl));
 
-    // FXL detection (only relevant for epub)
+    // FXL detection
+    // - epub: detect from metadata
+    // - comic (DIVINA): treat as fixed layout for theming + UI behavior parity
     if (profile === "epub") {
       const fxl = publication.metadata.effectiveLayout === Layout.fixed;
       setIsFXL(fxl);
       dispatch(setFXL(fxl));
+    } else if (profile === "comic") {
+      setIsFXL(true);
+      dispatch(setFXL(true));
     }
 
     // Font language resolution

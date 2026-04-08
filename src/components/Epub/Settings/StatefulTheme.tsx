@@ -34,12 +34,14 @@ export const StatefulTheme = () => {
   const radioGroupWrapperRef = useRef<HTMLDivElement | null>(null);
 
   const isFXL = useAppSelector(state => state.publication.isFXL);
+  const readerProfile = useAppSelector(state => state.reader.profile);
+  const effectiveIsFXL = isFXL || readerProfile === "comic";
   const direction = useAppSelector(state => state.reader.direction);
   const isRTL = direction === ThLayoutDirection.rtl;
-  const themeArray = isFXL ? fxlThemeKeys : reflowThemeKeys;
+  const themeArray = effectiveIsFXL ? fxlThemeKeys : reflowThemeKeys;
 
   const themeObject = useAppSelector(state => state.theming.theme);
-  const theme = isFXL ? themeObject.fxl : themeObject.reflow;
+  const theme = effectiveIsFXL ? themeObject.fxl : themeObject.reflow;
   const colorScheme = useAppSelector(state => state.theming.colorScheme);
 
   const themeItems = useRef<(ThemeKeyType | "auto")[]>(
@@ -88,10 +90,10 @@ export const StatefulTheme = () => {
     await submitPreferences(themeProps);
 
     dispatch(setTheme({ 
-      key: isFXL ? "fxl" : "reflow", 
+      key: effectiveIsFXL ? "fxl" : "reflow", 
       value: value
     }));
-  }, [isFXL, preferences.theming.themes.keys, preferences.theming.themes.systemThemes, submitPreferences, dispatch, colorScheme]);
+  }, [effectiveIsFXL, preferences.theming.themes.keys, preferences.theming.themes.systemThemes, submitPreferences, dispatch, colorScheme]);
 
   // It’s easier to inline styles from preferences for these
   // than spamming the entire app with all custom properties right now
