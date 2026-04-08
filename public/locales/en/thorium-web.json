@@ -103,6 +103,50 @@
           "trigger": "More spacing options"
         }
       }
+    },
+    "comic": {
+      "readingMode": {
+        "label": "Reading mode",
+        "default": "Default",
+        "singlePage": "Single page",
+        "doublePage": "Double page",
+        "continuousVertical": "Continuous vertical",
+        "continuousHorizontal": "Continuous horizontal",
+        "webtoon": "Webtoon"
+      },
+      "pageGap": {
+        "label": "Page gap"
+      },
+      "readingDirection": {
+        "label": "Reading direction",
+        "ltr": "Left to right",
+        "rtl": "Right to left"
+      },
+      "tapZones": {
+        "label": "Tap zones",
+        "default": "Default",
+        "edge": "Edge",
+        "kindle": "Kindle",
+        "lShape": "L-shape",
+        "rightAndLeft": "Right and left",
+        "disabled": "Disabled"
+      },
+      "invertTapZones": {
+        "label": "Invert tap zones",
+        "default": "Default",
+        "none": "None",
+        "horizontal": "Horizontal",
+        "vertical": "Vertical",
+        "both": "Both"
+      },
+      "scaleType": {
+        "label": "Scale type",
+        "default": "Default",
+        "fitWidth": "Fit width",
+        "fitHeight": "Fit height",
+        "fitScreen": "Fit screen",
+        "originalSize": "Original size"
+      }
     }
   }
 }

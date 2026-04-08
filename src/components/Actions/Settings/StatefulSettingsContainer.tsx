@@ -46,7 +46,8 @@ export const StatefulSettingsContainer = ({
     reflowSettingsKeys,
     subPanelSpacingSettingsKeys,
     subPanelTextSettingsKeys,
-    webPubSettingsKeys
+    webPubSettingsKeys,
+    comicSettingsKeys
   } = usePreferenceKeys();
   const { preferences } = usePreferences();
   const { t } = useI18n();
@@ -59,12 +60,14 @@ export const StatefulSettingsContainer = ({
   const dispatch = useAppDispatch();
 
   const settingItems = useMemo(() => {
-    return profile === "webPub" 
-      ? webPubSettingsKeys 
+    return profile === "webPub"
+      ? webPubSettingsKeys
+      : profile === "comic"
+        ? comicSettingsKeys
       : isFXL 
         ? fxlSettingsKeys 
         : reflowSettingsKeys
-  }, [profile, isFXL, fxlSettingsKeys, reflowSettingsKeys, webPubSettingsKeys]);
+  }, [profile, isFXL, fxlSettingsKeys, reflowSettingsKeys, webPubSettingsKeys, comicSettingsKeys]);
   
   const docking = useDocking(ThActionsKeys.settings);
   const sheetType = docking.sheetType;

@@ -23,6 +23,12 @@ export interface ThSettingsRadioPref<T extends string> {
 
 export enum ThSettingsKeys {
   columns = "columns",
+  comicInvertTapZones = "comicInvertTapZones",
+  comicPageGap = "comicPageGap",
+  comicReadingDirection = "comicReadingDirection",
+  comicReadingMode = "comicReadingMode",
+  comicScaleType = "comicScaleType",
+  comicTapZones = "comicTapZones",
   fontFamily = "fontFamily",
   fontWeight = "fontWeight",
   hyphens = "hyphens",

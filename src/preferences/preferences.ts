@@ -233,6 +233,7 @@ export interface ThPreferences<K extends CustomizableKeys = {}> {
     reflowOrder: Array<SettingsKey<K>>;
     fxlOrder: Array<SettingsKey<K>>;
     webPubOrder: Array<SettingsKey<K>>;
+    comicOrder: Array<SettingsKey<K>>;
     keys: ThSettingsKeyTypes<K>;
     text: ThSettingsGroupPref<TextSettingsKey<K>>;
     spacing: ThSettingsGroupPref<SpacingSettingsKey<K>> & { presets?: ThSettingsSpacingPresets<K> };

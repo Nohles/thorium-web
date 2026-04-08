@@ -53,7 +53,7 @@
     "dev": "vite dev --port 3000",
     "build": "pnpm extract-locales && vite build",
     "start": "node .output/server/index.mjs",
-    "preview": "pnpm build && npx vite preview",
+    "preview": "npx vite preview",
     "lint": "eslint .",
     "deploy": "pnpm build",
     "preinstall": "npx only-allow pnpm",
