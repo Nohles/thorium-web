@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ReadIdentifierRouteImport } from './routes/read/$identifier'
+import { Route as ReadTestIndexRouteImport } from './routes/read/test/index'
 import { Route as ReadManifestManifestRouteImport } from './routes/read/manifest/$manifest'
 import { Route as ReadExperimentalIdentifierRouteImport } from './routes/read/experimental/$identifier'
 
@@ -22,6 +23,11 @@ const IndexRoute = IndexRouteImport.update({
 const ReadIdentifierRoute = ReadIdentifierRouteImport.update({
   id: '/read/$identifier',
   path: '/read/$identifier',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReadTestIndexRoute = ReadTestIndexRouteImport.update({
+  id: '/read/test/',
+  path: '/read/test/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReadManifestManifestRoute = ReadManifestManifestRouteImport.update({
@@ -41,12 +47,14 @@ export interface FileRoutesByFullPath {
   '/read/$identifier': typeof ReadIdentifierRoute
   '/read/experimental/$identifier': typeof ReadExperimentalIdentifierRoute
   '/read/manifest/$manifest': typeof ReadManifestManifestRoute
+  '/read/test/': typeof ReadTestIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/read/$identifier': typeof ReadIdentifierRoute
   '/read/experimental/$identifier': typeof ReadExperimentalIdentifierRoute
   '/read/manifest/$manifest': typeof ReadManifestManifestRoute
+  '/read/test': typeof ReadTestIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -54,6 +62,7 @@ export interface FileRoutesById {
   '/read/$identifier': typeof ReadIdentifierRoute
   '/read/experimental/$identifier': typeof ReadExperimentalIdentifierRoute
   '/read/manifest/$manifest': typeof ReadManifestManifestRoute
+  '/read/test/': typeof ReadTestIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -62,18 +71,21 @@ export interface FileRouteTypes {
     | '/read/$identifier'
     | '/read/experimental/$identifier'
     | '/read/manifest/$manifest'
+    | '/read/test/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/read/$identifier'
     | '/read/experimental/$identifier'
     | '/read/manifest/$manifest'
+    | '/read/test'
   id:
     | '__root__'
     | '/'
     | '/read/$identifier'
     | '/read/experimental/$identifier'
     | '/read/manifest/$manifest'
+    | '/read/test/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -81,6 +93,7 @@ export interface RootRouteChildren {
   ReadIdentifierRoute: typeof ReadIdentifierRoute
   ReadExperimentalIdentifierRoute: typeof ReadExperimentalIdentifierRoute
   ReadManifestManifestRoute: typeof ReadManifestManifestRoute
+  ReadTestIndexRoute: typeof ReadTestIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -97,6 +110,13 @@ declare module '@tanstack/react-router' {
       path: '/read/$identifier'
       fullPath: '/read/$identifier'
       preLoaderRoute: typeof ReadIdentifierRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/read/test/': {
+      id: '/read/test/'
+      path: '/read/test'
+      fullPath: '/read/test/'
+      preLoaderRoute: typeof ReadTestIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/read/manifest/$manifest': {
@@ -121,6 +141,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReadIdentifierRoute: ReadIdentifierRoute,
   ReadExperimentalIdentifierRoute: ReadExperimentalIdentifierRoute,
   ReadManifestManifestRoute: ReadManifestManifestRoute,
+  ReadTestIndexRoute: ReadTestIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
