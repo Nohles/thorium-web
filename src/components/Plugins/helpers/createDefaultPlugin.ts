@@ -29,11 +29,21 @@ import { StatefulWordSpacing } from "../../Settings/Spacing/StatefulWordSpacing"
 import { StatefulZoom } from "../../Settings/StatefulZoom";
 import {
   StatefulComicInvertTapZones,
+  StatefulComicImagePreloadAmount,
   StatefulComicPageGap,
+  StatefulComicProgressBarPosition,
+  StatefulComicProgressBarSize,
+  StatefulComicProgressBarType,
   StatefulComicReadingDirection,
   StatefulComicReadingMode,
+  StatefulComicReadingModePreview,
   StatefulComicScaleType,
+  StatefulComicScrollAmountPercent,
+  StatefulComicStretchSmallPages,
   StatefulComicTapZones,
+  StatefulComicTapZonePreview,
+  StatefulComicWidthLimitEnabled,
+  StatefulComicWidthLimitPercent,
 } from "../../Settings/Comic";
 
 export const createDefaultPlugin = (): ThPlugin => {
@@ -131,6 +141,15 @@ export const createDefaultPlugin = (): ThPlugin => {
         [ThSettingsKeys.comicReadingMode]: {
           Comp: StatefulComicReadingMode
         },
+        [ThSettingsKeys.comicProgressBarType]: {
+          Comp: StatefulComicProgressBarType
+        },
+        [ThSettingsKeys.comicProgressBarSizePx]: {
+          Comp: StatefulComicProgressBarSize
+        },
+        [ThSettingsKeys.comicProgressBarPosition]: {
+          Comp: StatefulComicProgressBarPosition
+        },
         [ThSettingsKeys.comicPageGap]: {
           Comp: StatefulComicPageGap
         },
@@ -145,6 +164,27 @@ export const createDefaultPlugin = (): ThPlugin => {
         },
         [ThSettingsKeys.comicScaleType]: {
           Comp: StatefulComicScaleType
+        },
+        [ThSettingsKeys.comicStretchSmallPages]: {
+          Comp: StatefulComicStretchSmallPages
+        },
+        [ThSettingsKeys.comicWidthLimitEnabled]: {
+          Comp: StatefulComicWidthLimitEnabled
+        },
+        [ThSettingsKeys.comicWidthLimitPercent]: {
+          Comp: StatefulComicWidthLimitPercent
+        },
+        [ThSettingsKeys.comicScrollAmountPercent]: {
+          Comp: StatefulComicScrollAmountPercent
+        },
+        [ThSettingsKeys.comicReadingModePreview]: {
+          Comp: StatefulComicReadingModePreview
+        },
+        [ThSettingsKeys.comicTapZonePreview]: {
+          Comp: StatefulComicTapZonePreview
+        },
+        [ThSettingsKeys.comicImagePreloadAmount]: {
+          Comp: StatefulComicImagePreloadAmount
         }
       }
     }
