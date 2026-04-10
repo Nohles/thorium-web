@@ -146,6 +146,54 @@
         "fitHeight": "Fit height",
         "fitScreen": "Fit screen",
         "originalSize": "Original size"
+      },
+      "overlayMode": {
+        "label": "Overlay mode",
+        "auto": "Auto",
+        "pinned": "Pinned"
+      },
+      "showPageNumber": {
+        "label": "Show page number"
+      },
+      "staticNavigation": {
+        "label": "Static navigation"
+      },
+      "progressBar": {
+        "type": "Progress bar type",
+        "hidden": "Hidden",
+        "standard": "Standard",
+        "size": "Progress bar size (px)",
+        "position": {
+          "label": "Progress bar position",
+          "auto": "Auto",
+          "bottom": "Bottom",
+          "left": "Left",
+          "right": "Right"
+        }
+      },
+      "stretchSmallPages": {
+        "label": "Stretch small pages"
+      },
+      "widthLimit": {
+        "enabled": "Enable width limit",
+        "percent": "Width limit (%)"
+      },
+      "scrollAmount": {
+        "label": "Scroll amount (%)"
+      },
+      "autoScroll": {
+        "enabled": "Enable auto-scroll",
+        "speed": "Auto-scroll speed (seconds)",
+        "smooth": "Smooth auto-scroll"
+      },
+      "readingModePreview": {
+        "label": "Show reading mode preview"
+      },
+      "tapZonePreview": {
+        "label": "Show tap zone preview"
+      },
+      "imagePreloadAmount": {
+        "label": "Image preload amount"
       }
     }
   }

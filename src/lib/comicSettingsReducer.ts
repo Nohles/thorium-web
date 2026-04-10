@@ -39,6 +39,23 @@ export enum ComicScaleType {
   originalSize = "originalSize",
 }
 
+export enum ComicOverlayMode {
+  auto = "auto",
+  pinned = "pinned",
+}
+
+export enum ComicProgressBarType {
+  hidden = "hidden",
+  standard = "standard",
+}
+
+export enum ComicProgressBarPosition {
+  auto = "auto",
+  bottom = "bottom",
+  left = "left",
+  right = "right",
+}
+
 export interface ComicSettings {
   readingMode: ComicReadingMode;
   pageGapPx: number;
@@ -46,6 +63,22 @@ export interface ComicSettings {
   tapZones: ComicTapZones;
   invertTapZones: ComicInvertTapZones;
   scaleType: ComicScaleType;
+  overlayMode: ComicOverlayMode;
+  showPageNumber: boolean;
+  staticNavigation: boolean;
+  progressBarType: ComicProgressBarType;
+  progressBarSizePx: number;
+  progressBarPosition: ComicProgressBarPosition;
+  stretchSmallPages: boolean;
+  widthLimitEnabled: boolean;
+  widthLimitPercent: number;
+  scrollAmountPercent: number;
+  autoScrollEnabled: boolean;
+  autoScrollSpeedSeconds: number;
+  autoScrollSmooth: boolean;
+  readingModePreview: boolean;
+  tapZonePreview: boolean;
+  imagePreloadAmount: number;
 }
 
 export const defaultComicSettings: ComicSettings = {
@@ -55,6 +88,22 @@ export const defaultComicSettings: ComicSettings = {
   tapZones: ComicTapZones.default,
   invertTapZones: ComicInvertTapZones.default,
   scaleType: ComicScaleType.default,
+  overlayMode: ComicOverlayMode.auto,
+  showPageNumber: true,
+  staticNavigation: false,
+  progressBarType: ComicProgressBarType.standard,
+  progressBarSizePx: 4,
+  progressBarPosition: ComicProgressBarPosition.auto,
+  stretchSmallPages: false,
+  widthLimitEnabled: false,
+  widthLimitPercent: 50,
+  scrollAmountPercent: 95,
+  autoScrollEnabled: false,
+  autoScrollSpeedSeconds: 5,
+  autoScrollSmooth: true,
+  readingModePreview: true,
+  tapZonePreview: true,
+  imagePreloadAmount: 5,
 };
 
 export interface ComicSettingsReducerState {

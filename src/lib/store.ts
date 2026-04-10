@@ -10,6 +10,7 @@ import publicationReducer, { PublicationReducerState } from "./publicationReduce
 import preferencesReducer, { PreferencesReducerState } from "./preferencesReducer";
 import webPubSettingsReducer, { WebPubSettingsReducerState } from "./webPubSettingsReducer";
 import comicSettingsReducer, { ComicSettingsReducerState } from "./comicSettingsReducer";
+import comicPositionReducer, { ComicPositionReducerState } from "./comicPositionReducer";
 
 import debounce from "debounce";
 import { ThSettingsKeys } from "@/preferences/models";
@@ -29,6 +30,7 @@ export type RootState = {
   preferences: PreferencesReducerState;
   webPubSettings: WebPubSettingsReducerState;
   comicSettings: ComicSettingsReducerState;
+  comicPosition: ComicPositionReducerState;
   [key: string]: any; // For external reducers
 };
 
@@ -77,7 +79,8 @@ const loadState = (storageKey: string = DEFAULT_STORAGE_KEY) => {
         theming: undefined,
         preferences: undefined,
         webPubSettings: undefined,
-        comicSettings: undefined
+        comicSettings: undefined,
+        comicPosition: undefined
       };
     }
     
@@ -120,7 +123,8 @@ const loadState = (storageKey: string = DEFAULT_STORAGE_KEY) => {
       theming: undefined,
       preferences: undefined,
       webPubSettings: undefined,
-      comicSettings: undefined
+      comicSettings: undefined,
+      comicPosition: undefined
     };
   }
 };
@@ -139,6 +143,7 @@ const saveState = (state: any, storageKey?: string, externalReducers: Record<str
     if (state.preferences) stateToPersist.preferences = state.preferences;
     if (state.webPubSettings) stateToPersist.webPubSettings = state.webPubSettings;
     if (state.comicSettings) stateToPersist.comicSettings = state.comicSettings;
+    if (state.comicPosition) stateToPersist.comicPosition = state.comicPosition;
     
     // External reducers to persist
     Object.entries(externalReducers).forEach(([key, config]) => {
@@ -165,6 +170,7 @@ export const makeStore = (storageKey?: string, externalReducers: Record<string, 
     preferences: preferencesReducer,
     webPubSettings: webPubSettingsReducer,
     comicSettings: comicSettingsReducer,
+    comicPosition: comicPositionReducer,
     ...Object.entries(externalReducers).reduce((acc, [key, config]) => ({
       ...acc,
       [key]: config.reducer
@@ -182,6 +188,7 @@ export const makeStore = (storageKey?: string, externalReducers: Record<string, 
     preferences: persistedState.preferences,
     webPubSettings: persistedState.webPubSettings,
     comicSettings: persistedState.comicSettings,
+    comicPosition: persistedState.comicPosition,
     // Include persisted state for external reducers that have it
     ...Object.entries(externalReducers).reduce((acc, [key, config]) => {
       if (config.persist && persistedState[key] !== undefined) {

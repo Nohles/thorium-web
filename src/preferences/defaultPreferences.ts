@@ -353,12 +353,22 @@ export const defaultPreferences: ThPreferences<DefaultKeys> = createPreferences<
     ],
     comicOrder: [
       ThSettingsKeys.theme,
+      ThSettingsKeys.comicProgressBarType,
+      ThSettingsKeys.comicProgressBarSizePx,
+      ThSettingsKeys.comicProgressBarPosition,
       ThSettingsKeys.comicReadingMode,
+      ThSettingsKeys.comicReadingModePreview,
       ThSettingsKeys.comicPageGap,
       ThSettingsKeys.comicReadingDirection,
       ThSettingsKeys.comicTapZones,
+      ThSettingsKeys.comicTapZonePreview,
       ThSettingsKeys.comicInvertTapZones,
       ThSettingsKeys.comicScaleType,
+      ThSettingsKeys.comicStretchSmallPages,
+      ThSettingsKeys.comicWidthLimitEnabled,
+      ThSettingsKeys.comicWidthLimitPercent,
+      ThSettingsKeys.comicScrollAmountPercent,
+      ThSettingsKeys.comicImagePreloadAmount,
     ],
     keys: {
       [ThSettingsKeys.fontFamily]: {
