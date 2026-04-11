@@ -362,7 +362,6 @@ export const defaultPreferences: ThPreferences<DefaultKeys> = createPreferences<
       ThSettingsKeys.comicReadingDirection,
       ThSettingsKeys.comicTapZones,
       ThSettingsKeys.comicTapZonePreview,
-      ThSettingsKeys.comicInvertTapZones,
       ThSettingsKeys.comicScaleType,
       ThSettingsKeys.comicStretchSmallPages,
       ThSettingsKeys.comicWidthLimitEnabled,

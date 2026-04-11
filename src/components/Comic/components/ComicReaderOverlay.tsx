@@ -8,13 +8,16 @@ import { StatefulSettingsTrigger } from "@/components/Actions/Settings/StatefulS
 import {
   ComicProgressBarPosition,
   ComicProgressBarType,
+  ComicReadingDirection,
   defaultComicSettings,
 } from "@/lib/comicSettingsReducer";
+import { useI18n } from "@/i18n/useI18n";
 import { CSSProperties } from "react";
 
 export const ComicReaderOverlay = ({
   pageCount,
   cursorIndex,
+  direction,
   canGoPrev,
   canGoNext,
   onPrev,
@@ -26,6 +29,7 @@ export const ComicReaderOverlay = ({
 }: {
   pageCount: number;
   cursorIndex: number;
+  direction: ComicReadingDirection;
   canGoPrev: boolean;
   canGoNext: boolean;
   onPrev: () => void;
@@ -35,7 +39,16 @@ export const ComicReaderOverlay = ({
   isVisible: boolean;
   settingsTriggerRef: React.RefObject<HTMLElement | null>;
 }) => {
+  const { t } = useI18n();
   if (!isVisible) return null;
+
+  const isRtl = direction === ComicReadingDirection.rtl;
+  const leftAria = isRtl ? t("reader.actions.goToNextPage.descriptive") : t("reader.actions.goToPreviousPage.descriptive");
+  const rightAria = isRtl ? t("reader.actions.goToPreviousPage.descriptive") : t("reader.actions.goToNextPage.descriptive");
+  const leftOnPress = isRtl ? onNext : onPrev;
+  const rightOnPress = isRtl ? onPrev : onNext;
+  const leftDisabled = isRtl ? !canGoNext : !canGoPrev;
+  const rightDisabled = isRtl ? !canGoPrev : !canGoNext;
 
   const progressPosition: CSSProperties =
     settings.progressBarPosition === ComicProgressBarPosition.left
@@ -69,10 +82,10 @@ export const ComicReaderOverlay = ({
       </header>
 
       <div style={{ position: "absolute", top: "50%", left: 8, transform: "translateY(-50%)", zIndex: 12 }}>
-        <ThNavigationButton direction="left" aria-label="Previous page" isDisabled={!canGoPrev} onPress={onPrev} />
+        <ThNavigationButton direction="left" aria-label={leftAria} isDisabled={leftDisabled} onPress={leftOnPress} />
       </div>
       <div style={{ position: "absolute", top: "50%", right: 8, transform: "translateY(-50%)", zIndex: 12 }}>
-        <ThNavigationButton direction="right" aria-label="Next page" isDisabled={!canGoNext} onPress={onNext} />
+        <ThNavigationButton direction="right" aria-label={rightAria} isDisabled={rightDisabled} onPress={rightOnPress} />
       </div>
 
       {settings.showPageNumber && (

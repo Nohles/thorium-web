@@ -23,16 +23,7 @@ export enum ComicTapZones {
   disabled = "disabled",
 }
 
-export enum ComicInvertTapZones {
-  default = "default",
-  none = "none",
-  horizontal = "horizontal",
-  vertical = "vertical",
-  both = "both",
-}
-
 export enum ComicScaleType {
-  default = "default",
   fitWidth = "fitWidth",
   fitHeight = "fitHeight",
   fitScreen = "fitScreen",
@@ -61,7 +52,6 @@ export interface ComicSettings {
   pageGapPx: number;
   direction: ComicReadingDirection;
   tapZones: ComicTapZones;
-  invertTapZones: ComicInvertTapZones;
   scaleType: ComicScaleType;
   overlayMode: ComicOverlayMode;
   showPageNumber: boolean;
@@ -70,6 +60,7 @@ export interface ComicSettings {
   progressBarSizePx: number;
   progressBarPosition: ComicProgressBarPosition;
   stretchSmallPages: boolean;
+  /** When false, the page column uses full reader width (slider ignored). */
   widthLimitEnabled: boolean;
   widthLimitPercent: number;
   scrollAmountPercent: number;
@@ -86,8 +77,7 @@ export const defaultComicSettings: ComicSettings = {
   pageGapPx: 5,
   direction: ComicReadingDirection.ltr,
   tapZones: ComicTapZones.default,
-  invertTapZones: ComicInvertTapZones.default,
-  scaleType: ComicScaleType.default,
+  scaleType: ComicScaleType.originalSize,
   overlayMode: ComicOverlayMode.auto,
   showPageNumber: true,
   staticNavigation: false,
@@ -116,9 +106,47 @@ const initialState: ComicSettingsReducerState = {
   byKey: {},
 };
 
+type LegacyComicSettings = Partial<ComicSettings> & Record<string, unknown>;
+
+const LEGACY_DEFAULT_SCALE = "default" as const;
+
+const normalizeScaleType = (raw: unknown): ComicScaleType => {
+  if (raw === LEGACY_DEFAULT_SCALE) {
+    return ComicScaleType.originalSize;
+  }
+  if (
+    typeof raw === "string" &&
+    (Object.values(ComicScaleType) as string[]).includes(raw)
+  ) {
+    return raw as ComicScaleType;
+  }
+  return defaultComicSettings.scaleType;
+};
+
+const migrateLegacyComicSettings = (entry: LegacyComicSettings): ComicSettings => {
+  const widthLimitEnabled =
+    typeof entry.widthLimitEnabled === "boolean"
+      ? entry.widthLimitEnabled
+      : defaultComicSettings.widthLimitEnabled;
+  const widthLimitPercent =
+    typeof entry.widthLimitPercent === "number"
+      ? entry.widthLimitPercent
+      : defaultComicSettings.widthLimitPercent;
+  const scaleType = normalizeScaleType(entry.scaleType);
+  return {
+    ...defaultComicSettings,
+    ...(entry as ComicSettings),
+    scaleType,
+    widthLimitEnabled,
+    widthLimitPercent,
+  };
+};
+
 const ensureKey = (state: ComicSettingsReducerState, key: string): ComicSettings => {
   if (!state.byKey[key]) {
     state.byKey[key] = { ...defaultComicSettings };
+  } else {
+    state.byKey[key] = migrateLegacyComicSettings(state.byKey[key] as LegacyComicSettings);
   }
   return state.byKey[key];
 };

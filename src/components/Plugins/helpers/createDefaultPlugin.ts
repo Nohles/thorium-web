@@ -28,7 +28,6 @@ import { StatefulTheme } from "../../Epub/Settings/StatefulTheme";
 import { StatefulWordSpacing } from "../../Settings/Spacing/StatefulWordSpacing";
 import { StatefulZoom } from "../../Settings/StatefulZoom";
 import {
-  StatefulComicInvertTapZones,
   StatefulComicImagePreloadAmount,
   StatefulComicPageGap,
   StatefulComicProgressBarPosition,
@@ -42,8 +41,8 @@ import {
   StatefulComicStretchSmallPages,
   StatefulComicTapZones,
   StatefulComicTapZonePreview,
+  StatefulComicWidthLimit,
   StatefulComicWidthLimitEnabled,
-  StatefulComicWidthLimitPercent,
 } from "../../Settings/Comic";
 
 export const createDefaultPlugin = (): ThPlugin => {
@@ -159,9 +158,6 @@ export const createDefaultPlugin = (): ThPlugin => {
         [ThSettingsKeys.comicTapZones]: {
           Comp: StatefulComicTapZones
         },
-        [ThSettingsKeys.comicInvertTapZones]: {
-          Comp: StatefulComicInvertTapZones
-        },
         [ThSettingsKeys.comicScaleType]: {
           Comp: StatefulComicScaleType
         },
@@ -172,7 +168,7 @@ export const createDefaultPlugin = (): ThPlugin => {
           Comp: StatefulComicWidthLimitEnabled
         },
         [ThSettingsKeys.comicWidthLimitPercent]: {
-          Comp: StatefulComicWidthLimitPercent
+          Comp: StatefulComicWidthLimit
         },
         [ThSettingsKeys.comicScrollAmountPercent]: {
           Comp: StatefulComicScrollAmountPercent

@@ -1,8 +1,10 @@
 "use client";
 
+import { ComicReadingDirection } from "@/lib/comicSettingsReducer";
 import { useEffect } from "react";
 
 export type ComicKeyboardHandlers = {
+  direction: ComicReadingDirection;
   onPrev: () => void;
   onNext: () => void;
   onToggleMenu: () => void;
@@ -13,6 +15,7 @@ export type ComicKeyboardHandlers = {
 };
 
 export const useComicKeyboardShortcuts = ({
+  direction,
   onPrev,
   onNext,
   onToggleMenu,
@@ -22,6 +25,7 @@ export const useComicKeyboardShortcuts = ({
   onToggleAutoScroll,
 }: ComicKeyboardHandlers) => {
   useEffect(() => {
+    const isRtl = direction === ComicReadingDirection.rtl;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target as HTMLElement | null;
@@ -34,13 +38,15 @@ export const useComicKeyboardShortcuts = ({
         case "a":
         case "A":
           event.preventDefault();
-          onPrev();
+          if (isRtl) onNext();
+          else onPrev();
           break;
         case "ArrowRight":
         case "d":
         case "D":
           event.preventDefault();
-          onNext();
+          if (isRtl) onPrev();
+          else onNext();
           break;
         case "m":
         case "M":
@@ -73,6 +79,7 @@ export const useComicKeyboardShortcuts = ({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [
+    direction,
     onPrev,
     onNext,
     onToggleMenu,
