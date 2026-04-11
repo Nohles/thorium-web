@@ -131,17 +131,8 @@
         "rightAndLeft": "Right and left",
         "disabled": "Disabled"
       },
-      "invertTapZones": {
-        "label": "Invert tap zones",
-        "default": "Default",
-        "none": "None",
-        "horizontal": "Horizontal",
-        "vertical": "Vertical",
-        "both": "Both"
-      },
       "scaleType": {
         "label": "Scale type",
-        "default": "Default",
         "fitWidth": "Fit width",
         "fitHeight": "Fit height",
         "fitScreen": "Fit screen",
@@ -175,8 +166,8 @@
         "label": "Stretch small pages"
       },
       "widthLimit": {
-        "enabled": "Enable width limit",
-        "percent": "Width limit (%)"
+        "enabled": "Limit page width",
+        "label": "Width limit (%)"
       },
       "scrollAmount": {
         "label": "Scroll amount (%)"

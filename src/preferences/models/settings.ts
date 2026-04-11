@@ -24,7 +24,6 @@ export interface ThSettingsRadioPref<T extends string> {
 export enum ThSettingsKeys {
   comicImagePreloadAmount = "comicImagePreloadAmount",
   columns = "columns",
-  comicInvertTapZones = "comicInvertTapZones",
   comicOverlayMode = "comicOverlayMode",
   comicPageGap = "comicPageGap",
   comicProgressBarPosition = "comicProgressBarPosition",

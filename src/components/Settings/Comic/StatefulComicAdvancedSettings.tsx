@@ -7,10 +7,16 @@ import {
   ComicOverlayMode,
   ComicProgressBarPosition,
   ComicProgressBarType,
+  defaultComicSettings,
   updateComicSettings,
 } from "@/lib/comicSettingsReducer";
+import {
+  isReaderWidthEditable,
+  stretchAllowedForScale,
+} from "@/components/Comic/lib/comicReaderLayout";
 import { StatefulNumberField } from "../StatefulNumberField";
 import { StatefulRadioGroup } from "../StatefulRadioGroup";
+import { StatefulSlider } from "../StatefulSlider";
 import { StatefulSwitch } from "../StatefulSwitch";
 
 const useComicSetting = () => {
@@ -144,6 +150,10 @@ export const StatefulComicProgressBarPosition = () => {
 export const StatefulComicStretchSmallPages = () => {
   const { t } = useI18n();
   const { settings, patch } = useComicSetting();
+  const scaleType = settings?.scaleType ?? defaultComicSettings.scaleType;
+  if (!stretchAllowedForScale(scaleType)) {
+    return null;
+  }
   return (
     <StatefulSwitch
       standalone={true}
@@ -157,6 +167,10 @@ export const StatefulComicStretchSmallPages = () => {
 export const StatefulComicWidthLimitEnabled = () => {
   const { t } = useI18n();
   const { settings, patch } = useComicSetting();
+  const scaleType = settings?.scaleType ?? defaultComicSettings.scaleType;
+  if (!isReaderWidthEditable(scaleType)) {
+    return null;
+  }
   return (
     <StatefulSwitch
       standalone={true}
@@ -167,17 +181,26 @@ export const StatefulComicWidthLimitEnabled = () => {
   );
 };
 
-export const StatefulComicWidthLimitPercent = () => {
+const WIDTH_LIMIT_SLIDER_RANGE: [number, number] = [10, 100];
+
+export const StatefulComicWidthLimit = () => {
   const { t } = useI18n();
   const { settings, patch } = useComicSetting();
+  const scaleType = settings?.scaleType ?? defaultComicSettings.scaleType;
+  if (!isReaderWidthEditable(scaleType)) {
+    return null;
+  }
+  const enabled = settings?.widthLimitEnabled ?? false;
   return (
-    <StatefulNumberField
+    <StatefulSlider
       standalone={true}
-      label={t("reader.comic.widthLimit.percent")}
-      range={[20, 100]}
+      label={t("reader.comic.widthLimit.label")}
+      value={settings?.widthLimitPercent ?? defaultComicSettings.widthLimitPercent}
+      defaultValue={defaultComicSettings.widthLimitPercent}
+      range={WIDTH_LIMIT_SLIDER_RANGE}
       step={1}
-      value={settings?.widthLimitPercent ?? 50}
-      onChange={(value) => patch({ widthLimitPercent: value })}
+      isDisabled={!enabled}
+      onChange={(v) => patch({ widthLimitPercent: v as number })}
     />
   );
 };

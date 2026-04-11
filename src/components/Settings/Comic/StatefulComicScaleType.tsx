@@ -14,11 +14,10 @@ export const StatefulComicScaleType = () => {
     activeKey ? s.comicSettings.byKey[activeKey] : undefined
   );
 
-  const value = settings?.scaleType ?? ComicScaleType.default;
+  const value = settings?.scaleType ?? ComicScaleType.originalSize;
 
   const items = useMemo(
     () => [
-      { value: ComicScaleType.default, label: t("reader.comic.scaleType.default") },
       { value: ComicScaleType.fitWidth, label: t("reader.comic.scaleType.fitWidth") },
       { value: ComicScaleType.fitHeight, label: t("reader.comic.scaleType.fitHeight") },
       { value: ComicScaleType.fitScreen, label: t("reader.comic.scaleType.fitScreen") },

@@ -5,7 +5,6 @@ import { Publication } from "@readium/shared";
 import { StatefulReaderProps } from "../Reader/StatefulReaderWrapper";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import {
-  ComicInvertTapZones,
   ComicReadingDirection,
   ComicReadingMode,
   ComicScaleType,
@@ -23,7 +22,7 @@ import { StatefulSettingsContainer } from "../Actions/Settings/StatefulSettingsC
 import { ComicReaderOverlay } from "./components/ComicReaderOverlay";
 import { ComicReaderViewport } from "./components/ComicReaderViewport";
 import { useComicKeyboardShortcuts } from "./hooks/useComicKeyboardShortcuts";
-import { applyInvertTapZones, resolveTapAction } from "./hooks/useComicTapNavigation";
+import { resolveTapAction } from "./hooks/useComicTapNavigation";
 import { ComicPage, useComicReaderController } from "./hooks/useComicReaderController";
 
 const getReadingOrderImages = (publication: Publication): ComicPage[] => {
@@ -88,6 +87,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
     updateSettings({ readingMode: next });
   }, [cycleOption, mode, updateSettings]);
 
+  /** Order matches settings radio: fit width → fit height → fit screen → original size. */
   const cycleScaleType = useCallback(() => {
     const next = cycleOption(
       [ComicScaleType.fitWidth, ComicScaleType.fitHeight, ComicScaleType.fitScreen, ComicScaleType.originalSize] as const,
@@ -102,6 +102,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
   }, [cycleOption, direction, updateSettings]);
 
   useComicKeyboardShortcuts({
+    direction,
     onPrev: goPrev,
     onNext: goNext,
     onToggleMenu: toggleMenu,
@@ -123,18 +124,16 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
     (event: React.PointerEvent) => {
       const rect = containerRef.current?.getBoundingClientRect();
       if (!rect) return;
-      const rawX = (event.clientX - rect.left) / rect.width;
-      const rawY = (event.clientY - rect.top) / rect.height;
-      const invert = merged.invertTapZones === ComicInvertTapZones.default ? ComicInvertTapZones.none : merged.invertTapZones;
+      const x = (event.clientX - rect.left) / rect.width;
+      const y = (event.clientY - rect.top) / rect.height;
       const zones = merged.tapZones === ComicTapZones.default ? ComicTapZones.rightAndLeft : merged.tapZones;
-      const { x, y } = applyInvertTapZones(rawX, rawY, invert);
       const action = resolveTapAction({ x, y, zones, direction });
       if (action === "toggle") {
         if (merged.overlayMode === "auto") toggleMenu();
       } else if (action === "next") goNext();
       else goPrev();
     },
-    [direction, goNext, goPrev, merged.invertTapZones, merged.overlayMode, merged.tapZones, toggleMenu]
+    [direction, goNext, goPrev, merged.overlayMode, merged.tapZones, toggleMenu]
   );
 
   const onWheel = useCallback(
@@ -149,28 +148,44 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
   );
 
   const showOverlay = merged.overlayMode === "pinned" || !isImmersive;
-  const showTapZoneDebugOverlay = import.meta.env.DEV;
-  const tapZoneDebugCells = useMemo(() => {
-    if (!showTapZoneDebugOverlay) return [];
-    const invert = merged.invertTapZones === ComicInvertTapZones.default ? ComicInvertTapZones.none : merged.invertTapZones;
+  const tapZonePreviewCells = useMemo(() => {
+    if (!merged.tapZonePreview) return [];
     const zones = merged.tapZones === ComicTapZones.default ? ComicTapZones.rightAndLeft : merged.tapZones;
     const steps = 12;
     const cells: Array<{ row: number; col: number; action: "prev" | "next" | "toggle" }> = [];
     for (let row = 0; row < steps; row += 1) {
       for (let col = 0; col < steps; col += 1) {
-        const rawX = (col + 0.5) / steps;
-        const rawY = (row + 0.5) / steps;
-        const { x, y } = applyInvertTapZones(rawX, rawY, invert);
+        const x = (col + 0.5) / steps;
+        const y = (row + 0.5) / steps;
         const action = resolveTapAction({ x, y, zones, direction });
         cells.push({ row, col, action });
       }
     }
     return cells;
-  }, [direction, merged.invertTapZones, merged.tapZones, showTapZoneDebugOverlay]);
+  }, [direction, merged.tapZones, merged.tapZonePreview]);
 
   return (
-    <div style={{ height: "100vh", width: "100vw", background: "var(--th-theme-background, #111)", color: "var(--th-theme-text, #fff)" }}>
-      <div style={{ height: "100%", width: "100%", position: "relative" }} onWheel={onWheel}>
+    <div
+      style={{
+        height: "100vh",
+        width: "100vw",
+        display: "flex",
+        flexDirection: "column",
+        background: "var(--th-theme-background, #111)",
+        color: "var(--th-theme-text, #fff)",
+      }}
+    >
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          width: "100%",
+          position: "relative",
+          display: "flex",
+          flexDirection: "column",
+        }}
+        onWheel={onWheel}
+      >
         <ComicReaderViewport
           publication={publication}
           pages={pages}
@@ -190,6 +205,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
         <ComicReaderOverlay
           pageCount={pages.length}
           cursorIndex={cursorIndex}
+          direction={direction}
           canGoPrev={canGoPrev}
           canGoNext={canGoNext}
           onPrev={goPrev}
@@ -199,7 +215,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
           isVisible={showOverlay}
           settingsTriggerRef={settingsTriggerRef}
         />
-        {showTapZoneDebugOverlay ? (
+        {merged.tapZonePreview ? (
           <div
             aria-hidden
             style={{
@@ -212,7 +228,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
               zIndex: 25,
             }}
           >
-            {tapZoneDebugCells.map((cell) => (
+            {tapZonePreviewCells.map((cell) => (
               <div
                 key={`${cell.row}-${cell.col}`}
                 style={{
