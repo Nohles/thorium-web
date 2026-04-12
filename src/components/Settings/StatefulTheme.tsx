@@ -40,12 +40,18 @@ export const StatefulTheme = () => {
 
   const themeArray: (ThemeKeyType | "auto")[] = profile === "audio"
     ? ((audioThemeOrder ?? []) as (ThemeKeyType | "auto")[])
-    : (isFXL
-        ? ((fxlThemeOrder ?? []) as (ThemeKeyType | "auto")[])
-        : ((reflowThemeOrder ?? []) as (ThemeKeyType | "auto")[]));
+    : profile === "comic"
+      ? ((fxlThemeOrder ?? []) as (ThemeKeyType | "auto")[])
+      : (isFXL
+          ? ((fxlThemeOrder ?? []) as (ThemeKeyType | "auto")[])
+          : ((reflowThemeOrder ?? []) as (ThemeKeyType | "auto")[]));
 
   const themeObject = useAppSelector(state => state.theming.theme);
-  const theme = profile === "audio" ? themeObject.audio : (isFXL ? themeObject.fxl : themeObject.reflow);
+  const theme = profile === "audio"
+    ? themeObject.audio
+    : (isFXL || profile === "comic")
+      ? themeObject.fxl
+      : themeObject.reflow;
   const colorScheme = useAppSelector(state => state.theming.colorScheme);
   const coverTheme = useAppSelector(state => state.theming.coverTheme);
 
@@ -93,7 +99,7 @@ export const StatefulTheme = () => {
     await submitPreferences(themeProps);
 
     dispatch(setTheme({
-      key: profile === "audio" ? "audio" : (isFXL ? "fxl" : "reflow"),
+      key: profile === "audio" ? "audio" : ((isFXL || profile === "comic") ? "fxl" : "reflow"),
       value: value
     }));
   }, [isFXL, themeKeys, systemThemes, submitPreferences, dispatch, colorScheme, profile]);

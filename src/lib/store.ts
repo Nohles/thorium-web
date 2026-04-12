@@ -11,8 +11,11 @@ import preferencesReducer, { PreferencesReducerState } from "./preferencesReduce
 import webPubSettingsReducer, { WebPubSettingsReducerState } from "./webPubSettingsReducer";
 import audioSettingsReducer, { AudioSettingsState } from "./audioSettingsReducer";
 import playerReducer, { PlayerReducerState } from "./playerReducer";
+import comicSettingsReducer, { ComicSettingsReducerState } from "./comicSettingsReducer";
+import comicPositionReducer, { ComicPositionReducerState } from "./comicPositionReducer";
 
 import debounce from "debounce";
+import { ThSettingsKeys } from "@/preferences/models";
 
 interface ExternalReducerConfig {
   reducer: any;
@@ -30,6 +33,8 @@ export type RootState = {
   webPubSettings: WebPubSettingsReducerState;
   audioSettings: AudioSettingsState;
   player: PlayerReducerState;
+  comicSettings: ComicSettingsReducerState;
+  comicPosition: ComicPositionReducerState;
   [key: string]: any; // For external reducers
 };
 
@@ -78,7 +83,9 @@ const loadState = (storageKey: string = DEFAULT_STORAGE_KEY) => {
         theming: undefined,
         preferences: undefined,
         webPubSettings: undefined,
-        audioSettings: undefined
+        audioSettings: undefined,
+        comicSettings: undefined,
+        comicPosition: undefined
       };
     }
     
@@ -98,6 +105,19 @@ const loadState = (storageKey: string = DEFAULT_STORAGE_KEY) => {
       if (state.actions) {
         state.actions = updateActionsState(state.actions);
       }
+
+      // Ensure comic settings order includes theme for existing users
+      if (state.preferences?.settings) {
+        const comicOrder: string[] =
+          state.preferences.settings.comicOrder ||
+          [];
+        if (!comicOrder.includes(ThSettingsKeys.theme)) {
+          state.preferences.settings.comicOrder = [
+            ThSettingsKeys.theme,
+            ...comicOrder,
+          ];
+        }
+      }
     }
     
     return state;
@@ -107,7 +127,10 @@ const loadState = (storageKey: string = DEFAULT_STORAGE_KEY) => {
       settings: undefined, 
       theming: undefined,
       preferences: undefined,
-      webPubSettings: undefined
+      webPubSettings: undefined,
+      audioSettings: undefined,
+      comicSettings: undefined,
+      comicPosition: undefined
     };
   }
 };
@@ -126,6 +149,8 @@ const saveState = (state: any, storageKey?: string, externalReducers: Record<str
     if (state.preferences) stateToPersist.preferences = state.preferences;
     if (state.webPubSettings) stateToPersist.webPubSettings = state.webPubSettings;
     if (state.audioSettings) stateToPersist.audioSettings = state.audioSettings;
+    if (state.comicSettings) stateToPersist.comicSettings = state.comicSettings;
+    if (state.comicPosition) stateToPersist.comicPosition = state.comicPosition;
     
     // External reducers to persist
     Object.entries(externalReducers).forEach(([key, config]) => {
@@ -153,6 +178,8 @@ export const makeStore = (storageKey?: string, externalReducers: Record<string, 
     webPubSettings: webPubSettingsReducer,
     audioSettings: audioSettingsReducer,
     player: playerReducer,
+    comicSettings: comicSettingsReducer,
+    comicPosition: comicPositionReducer,
     ...Object.entries(externalReducers).reduce((acc, [key, config]) => ({
       ...acc,
       [key]: config.reducer
@@ -170,6 +197,8 @@ export const makeStore = (storageKey?: string, externalReducers: Record<string, 
     preferences: persistedState.preferences,
     webPubSettings: persistedState.webPubSettings,
     audioSettings: persistedState.audioSettings,
+    comicSettings: persistedState.comicSettings,
+    comicPosition: persistedState.comicPosition,
     // Include persisted state for external reducers that have it
     ...Object.entries(externalReducers).reduce((acc, [key, config]) => {
       if (config.persist && persistedState[key] !== undefined) {

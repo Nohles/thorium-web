@@ -43,6 +43,7 @@ export const StatefulVisualSettingsContainer = ({
     subPanelSpacingSettingsKeys,
     subPanelTextSettingsKeys,
     webPubSettingsKeys,
+    comicSettingsKeys
   } = usePreferenceKeys();
   const { preferences } = usePreferences();
   const { t } = useI18n();
@@ -56,10 +57,12 @@ export const StatefulVisualSettingsContainer = ({
   const settingItems = useMemo(() => {
     return profile === "webPub"
       ? webPubSettingsKeys
-      : isFXL
-        ? fxlSettingsKeys
-        : reflowSettingsKeys
-  }, [profile, isFXL, fxlSettingsKeys, reflowSettingsKeys, webPubSettingsKeys]);
+      : profile === "comic"
+        ? comicSettingsKeys
+        : isFXL
+          ? fxlSettingsKeys
+          : reflowSettingsKeys;
+  }, [profile, isFXL, fxlSettingsKeys, reflowSettingsKeys, webPubSettingsKeys, comicSettingsKeys]);
 
   const setInitial = useCallback(() => {
     dispatch(setSettingsContainer(ThSettingsContainerKeys.initial));

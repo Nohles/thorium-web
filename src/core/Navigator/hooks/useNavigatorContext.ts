@@ -24,21 +24,21 @@ interface UnifiedNavigator {
   go(locator: Locator, animated: boolean, callback: NavigationCallback): void;
   goLink(link: Link, animated: boolean, callback: NavigationCallback): void;
   currentLocator(): Locator | undefined;
-  
+
   // Unified previous/next navigation
   previousLocator(): Locator | null;
   nextLocator(): Locator | null;
-  
+
   // Unified forward/backward navigation
   goForward(animated: boolean, callback: NavigationCallback): void;
   goBackward(animated: boolean, callback: NavigationCallback): void;
-  
+
   // Check if navigator is visual
   isVisual(): boolean;
-  
+
   // Visual-specific methods (only available when isVisual() is true)
   getCframes?(): (FXLFrameManager | FrameManager | WebPubFrameManager | undefined)[] | undefined;
-  
+
   // Access to underlying navigator for advanced use cases
   underlying: VisualNavigator | MediaNavigator;
 }
@@ -52,7 +52,7 @@ const createUnifiedGetSetting = (navigator: VisualNavigator) => {
 
 // Type guards to check navigator type - using context reference instead of fragile method detection
 const isVisualNavigator = (
-  navigator: VisualNavigator | MediaNavigator, 
+  navigator: VisualNavigator | MediaNavigator,
   contextVisual: VisualNavigator | undefined
 ): navigator is VisualNavigator => {
   return navigator === contextVisual;
@@ -67,7 +67,7 @@ export const useNavigator = () => {
   return {
     get visual() {
       if (!context.visual) throw new Error("Visual navigator not available");
-      
+
       // Create a wrapper that provides a unified getSetting interface
       const visualNavigator = context.visual;
       return {
@@ -84,9 +84,9 @@ export const useNavigator = () => {
       // Prefer visual navigator when available, fallback to media
       const navigator = context.visual || context.media;
       if (!navigator) throw new Error("No navigator available");
-      
+
       const isVisual = isVisualNavigator(navigator, context.visual);
-      
+
       return {
         // Navigation methods available in both
         go: (locator: Locator, animated: boolean, callback: NavigationCallback) => {
@@ -96,7 +96,7 @@ export const useNavigator = () => {
           return navigator.goLink(link, animated, callback);
         },
         currentLocator: (): Locator | undefined => navigator.currentLocator(),
-        
+
         // Unified previous/next navigation
         previousLocator: (): Locator | null => {
           if (isVisual && navigator.previousLocator) {
@@ -114,7 +114,7 @@ export const useNavigator = () => {
           // For now, return null as media doesn't have this concept
           return null;
         },
-        
+
         // Unified forward/backward navigation
         goForward: (animated: boolean, callback: NavigationCallback) => {
           if (navigator.goForward) {
@@ -128,13 +128,13 @@ export const useNavigator = () => {
           }
           return callback?.(false);
         },
-        
+
         // Check if navigator is visual
         isVisual: () => isVisual,
-        
+
         // Visual-specific methods (only available when isVisual() is true)
         getCframes: isVisual ? navigator.getCframes?.bind(navigator) : undefined,
-        
+
         // Access to underlying navigator for advanced use cases
         underlying: navigator
       };

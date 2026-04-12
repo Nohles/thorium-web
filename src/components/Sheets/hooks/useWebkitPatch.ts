@@ -27,7 +27,7 @@ export const useWebkitPatch = (isOpen: boolean) => {
   } = useNavigator().unified;
 
   useEffect(() => {
-    if (isScroll && !isOpen) {
+    if (isScroll && !isOpen && getCframes) {
       // We have to force a reflow on the iframe container to fix the issue.
       // Using the infamous Recalc technique (adding a style element with *{}) 
       // in the iframe contentDocument does not work.

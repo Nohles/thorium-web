@@ -27,6 +27,23 @@ import { StatefulTextNormalize } from "../../Settings/Text/StatefulTextNormalize
 import { StatefulTheme } from "../../Settings/StatefulTheme";
 import { StatefulWordSpacing } from "../../Settings/Spacing/StatefulWordSpacing";
 import { StatefulZoom } from "../../Settings/StatefulZoom";
+import {
+  StatefulComicImagePreloadAmount,
+  StatefulComicPageGap,
+  StatefulComicProgressBarPosition,
+  StatefulComicProgressBarSize,
+  StatefulComicProgressBarType,
+  StatefulComicReadingDirection,
+  StatefulComicReadingMode,
+  StatefulComicReadingModePreview,
+  StatefulComicScaleType,
+  StatefulComicScrollAmountPercent,
+  StatefulComicStretchSmallPages,
+  StatefulComicTapZones,
+  StatefulComicTapZonePreview,
+  StatefulComicWidthLimit,
+  StatefulComicWidthLimitEnabled,
+} from "../../Settings/Comic";
 
 export const createDefaultPlugin = (): ThPlugin => {
   return {
@@ -118,6 +135,52 @@ export const createDefaultPlugin = (): ThPlugin => {
         },
         [ThSettingsKeys.zoom]: {
           Comp: StatefulZoom
+        }
+        ,
+        [ThSettingsKeys.comicReadingMode]: {
+          Comp: StatefulComicReadingMode
+        },
+        [ThSettingsKeys.comicProgressBarType]: {
+          Comp: StatefulComicProgressBarType
+        },
+        [ThSettingsKeys.comicProgressBarSizePx]: {
+          Comp: StatefulComicProgressBarSize
+        },
+        [ThSettingsKeys.comicProgressBarPosition]: {
+          Comp: StatefulComicProgressBarPosition
+        },
+        [ThSettingsKeys.comicPageGap]: {
+          Comp: StatefulComicPageGap
+        },
+        [ThSettingsKeys.comicReadingDirection]: {
+          Comp: StatefulComicReadingDirection
+        },
+        [ThSettingsKeys.comicTapZones]: {
+          Comp: StatefulComicTapZones
+        },
+        [ThSettingsKeys.comicScaleType]: {
+          Comp: StatefulComicScaleType
+        },
+        [ThSettingsKeys.comicStretchSmallPages]: {
+          Comp: StatefulComicStretchSmallPages
+        },
+        [ThSettingsKeys.comicWidthLimitEnabled]: {
+          Comp: StatefulComicWidthLimitEnabled
+        },
+        [ThSettingsKeys.comicWidthLimitPercent]: {
+          Comp: StatefulComicWidthLimit
+        },
+        [ThSettingsKeys.comicScrollAmountPercent]: {
+          Comp: StatefulComicScrollAmountPercent
+        },
+        [ThSettingsKeys.comicReadingModePreview]: {
+          Comp: StatefulComicReadingModePreview
+        },
+        [ThSettingsKeys.comicTapZonePreview]: {
+          Comp: StatefulComicTapZonePreview
+        },
+        [ThSettingsKeys.comicImagePreloadAmount]: {
+          Comp: StatefulComicImagePreloadAmount
         }
       }
     }

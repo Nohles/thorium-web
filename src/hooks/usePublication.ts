@@ -57,7 +57,17 @@ const detectProfile = (manifest: Manifest): ReaderProfile => {
   if (!metadata) return "webPub"; // Default to webPub when no metadata
   
   const conformsTo = metadata.conformsTo;
-  if (!conformsTo) return "webPub"; // Default to webPub when no conformsTo
+  if (!conformsTo) {
+    // Robust fallback for mis-labeled manifests: treat image-only readingOrder as comics.
+    const items = manifest.readingOrder?.items ?? [];
+    if (
+      items.length > 0 &&
+      items.every((item) => typeof item.type === "string" && item.type.startsWith("image/"))
+    ) {
+      return "comic";
+    }
+    return "webPub"; // Default to webPub when no conformsTo
+  }
   
   // Handle both string and array formats
   const profiles = Array.isArray(conformsTo) ? conformsTo : [conformsTo];
@@ -67,6 +77,13 @@ const detectProfile = (manifest: Manifest): ReaderProfile => {
     profile === Profile.AUDIOBOOK
   )) {
     return "audio";
+  }
+  
+  // Check for comics profile (DIVINA)
+  if (profiles.some((profile: Profile) =>
+    profile === Profile.DIVINA
+  )) {
+    return "comic";
   }
   
   // Check for epub profile
@@ -206,11 +223,16 @@ export const usePublication = ({
     setIsRTL(rtl);
     dispatch(setRTL(rtl));
 
-    // FXL detection (only relevant for epub)
+    // FXL detection
+    // - epub: detect from metadata
+    // - comic (DIVINA): treat as fixed layout for theming + UI behavior parity
     if (profile === "epub") {
       const fxl = publication.metadata.effectiveLayout === Layout.fixed;
       setIsFXL(fxl);
       dispatch(setFXL(fxl));
+    } else if (profile === "comic") {
+      setIsFXL(true);
+      dispatch(setFXL(true));
     }
 
     // Display transformability

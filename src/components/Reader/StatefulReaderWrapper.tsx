@@ -35,6 +35,8 @@ const StatefulEpubReader = lazy(() => import("@/components/Epub").then(mod => ({
 const StatefulWebPubReader = lazy(() => import("@/components/WebPub").then(mod => ({ default: mod.ExperimentalWebPubStatefulReader })));
 const StatefulPlayer = lazy(() => import("@/components/Audio").then(mod => ({ default: mod.StatefulPlayer })));
 
+const StatefulComicReader = lazy(() => import("@/components/Comic/StatefulComicReader").then(mod => ({ default: mod.StatefulComicReader })));
+
 export interface PositionStorage {
   get: () => Locator | undefined;
   set: (locator: Locator) => void | Promise<void>;
@@ -53,10 +55,11 @@ export interface ReaderPlugins {
   epub?: ThPluginFactory;
   webPub?: ThPluginFactory;
   audio?: ThPluginFactory;
+  comic?: ThPluginFactory;
 }
 
 export interface ReaderComponentProps<
-  P extends "epub" | "webPub" | "audio" | undefined | null = undefined,
+  P extends "epub" | "webPub" | "audio" | "comic" | undefined | null = undefined,
   K extends CustomizableKeys = {}
 > {
   profile: P;
@@ -67,7 +70,7 @@ export interface ReaderComponentProps<
   plugins?: ReaderPlugins;
   preferences?: P extends "audio"
     ? { initialPreferences?: ThAudioPreferences<K>; adapter?: ThAudioPreferencesAdapter<K> }
-    : P extends "epub" | "webPub"
+    : P extends "epub" | "webPub" | "comic"
     ? { initialPreferences?: ThPreferences<K>; adapter?: ThPreferencesAdapter<K> }
     : never;
 }
@@ -80,6 +83,7 @@ export const StatefulReaderWrapper = ({ profile, plugins, isLoading, preferences
   const pendingFactory = profile === "epub" ? plugins?.epub
     : profile === "webPub" ? plugins?.webPub
     : profile === "audio" ? plugins?.audio
+    : profile === "comic" ? plugins?.comic
     : undefined;
 
   useEffect(() => {
@@ -178,7 +182,7 @@ const StatefulAudioContent = ({ publication, localDataKey, positionStorage, cove
 // ─── Reader inner content ─────────────────────────────────────────────────────
 
 interface ReaderContentProps {
-  profile: "epub" | "webPub" | undefined | null;
+  profile: "epub" | "webPub" | "comic" | undefined | null;
   publication: Publication;
   localDataKey: string | null;
   positionStorage?: PositionStorage;
@@ -190,7 +194,11 @@ const StatefulReaderContent = ({ profile, publication, plugins, coverUrl, ...pro
   const { preferences, resolveFontLanguage } = usePreferences();
   const themeObject = useAppSelector(state => state.theming.theme);
   const isFXL = useAppSelector(state => state.publication.isFXL);
-  const theme = profile === "epub" ? (isFXL ? themeObject.fxl : themeObject.reflow) : ThThemeKeys.light;
+  const theme = profile === "epub"
+    ? (isFXL ? themeObject.fxl : themeObject.reflow)
+    : profile === "comic"
+      ? themeObject.fxl
+      : ThThemeKeys.light;
   const dispatch = useAppDispatch();
 
   useEffect(() => {
@@ -230,6 +238,8 @@ const StatefulReaderContent = ({ profile, publication, plugins, coverUrl, ...pro
   switch (profile) {
     case "epub":
       return <Suspense><StatefulEpubReader publication={ publication } { ...props } plugins={ plugins } /></Suspense>;
+    case "comic":
+      return <Suspense><StatefulComicReader publication={ publication } { ...props } plugins={ plugins } /></Suspense>;
     case "webPub":
     default:
       return <Suspense><StatefulWebPubReader publication={ publication } { ...props } plugins={ plugins } /></Suspense>;
