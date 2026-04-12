@@ -73,6 +73,7 @@ export const useComicReaderController = ({
     mode,
     direction,
     scaleType,
+    step,
     cursorIndex,
     setCursorIndex,
     canGoPrev,

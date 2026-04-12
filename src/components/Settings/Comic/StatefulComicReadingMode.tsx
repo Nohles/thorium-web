@@ -47,7 +47,6 @@ export const StatefulComicReadingMode = () => {
         );
       }}
       items={options}
-      allowUnset={false}
     />
   );
 };

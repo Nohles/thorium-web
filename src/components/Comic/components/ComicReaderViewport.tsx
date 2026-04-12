@@ -1,7 +1,17 @@
 "use client";
 
 import { Link, Publication } from "@readium/shared";
-import { CSSProperties, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  CSSProperties,
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ComicReadingDirection,
   ComicReadingMode,
@@ -41,7 +51,7 @@ const useObjectUrl = (publication: Publication, link: Link | undefined, preload 
           return;
         }
         const byteArray = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-        const blob = new Blob([byteArray], { type: link.type || "image/jpeg" });
+        const blob = new Blob([new Uint8Array(byteArray)], { type: link.type || "image/jpeg" });
         created = URL.createObjectURL(blob);
         setObjectUrl((prev) => {
           if (prev) URL.revokeObjectURL(prev);
@@ -233,22 +243,20 @@ const pageCellStyleHorizontal: CSSProperties = {
   flexDirection: "column",
 };
 
-export const ComicReaderViewport = ({
-  publication,
-  pages,
-  mode,
-  direction,
-  scaleType,
-  cursorIndex,
-  setCursorIndex,
-  pageGapPx,
-  stretchSmallPages,
-  widthLimitEnabled,
-  widthLimitPercent,
-  imagePreloadAmount,
-  onTap,
-  containerRef,
-}: {
+const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
+
+const verticalScrollProgress = (el: HTMLDivElement): number => {
+  const max = el.scrollHeight - el.clientHeight;
+  if (max <= 0) return 0;
+  return clamp01(el.scrollTop / max);
+};
+
+export type ComicReaderViewportHandle = {
+  getScrollProgress: () => number;
+  setScrollProgress: (fraction: number) => void;
+};
+
+export type ComicReaderViewportProps = {
   publication: Publication;
   pages: ComicPage[];
   mode: ComicReadingMode;
@@ -263,9 +271,75 @@ export const ComicReaderViewport = ({
   imagePreloadAmount: number;
   onTap: (event: React.PointerEvent) => void;
   containerRef: React.RefObject<HTMLDivElement | null>;
-}) => {
+  /** Fired while vertically scrolling (continuous vertical / webtoon). */
+  onScrollProgress?: (progress: number) => void;
+};
+
+export const ComicReaderViewport = forwardRef<ComicReaderViewportHandle, ComicReaderViewportProps>(
+  function ComicReaderViewport(
+    {
+      publication,
+      pages,
+      mode,
+      direction,
+      scaleType,
+      cursorIndex,
+      setCursorIndex,
+      pageGapPx,
+      stretchSmallPages,
+      widthLimitEnabled,
+      widthLimitPercent,
+      imagePreloadAmount,
+      onTap,
+      containerRef,
+      onScrollProgress,
+    },
+    ref
+  ) {
   const itemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  const isVerticalScrollMode =
+    mode === ComicReadingMode.continuousVertical || mode === ComicReadingMode.webtoon;
+
+  const reportScrollProgress = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el || !isVerticalScrollMode) return;
+    onScrollProgress?.(verticalScrollProgress(el));
+  }, [isVerticalScrollMode, onScrollProgress]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      getScrollProgress: () => {
+        const el = scrollRef.current;
+        if (!el || !isVerticalScrollMode) return 0;
+        return verticalScrollProgress(el);
+      },
+      setScrollProgress: (fraction: number) => {
+        const el = scrollRef.current;
+        if (!el || !isVerticalScrollMode) return;
+        const max = el.scrollHeight - el.clientHeight;
+        el.scrollTop = max <= 0 ? 0 : clamp01(fraction) * max;
+      },
+    }),
+    [isVerticalScrollMode]
+  );
+
+  useEffect(() => {
+    if (!isVerticalScrollMode) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => reportScrollProgress();
+    el.addEventListener("scroll", onScroll, { passive: true });
+    const ro = new ResizeObserver(() => reportScrollProgress());
+    ro.observe(el);
+    reportScrollProgress();
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      ro.disconnect();
+    };
+  }, [isVerticalScrollMode, reportScrollProgress, pages.length]);
 
   useEffect(() => {
     if (mode !== ComicReadingMode.continuousVertical && mode !== ComicReadingMode.continuousHorizontal && mode !== ComicReadingMode.webtoon) {
@@ -293,7 +367,7 @@ export const ComicReaderViewport = ({
     );
     itemRefs.current.forEach((node) => observer.observe(node));
     return () => observer.disconnect();
-  }, [mode, setCursorIndex]);
+  }, [mode, pages, setCursorIndex]);
 
   const current = pages[cursorIndex];
   const nextPage = pages[cursorIndex + 1];
@@ -332,6 +406,8 @@ export const ComicReaderViewport = ({
           style={{
             height: "100%",
             overflowY: "auto",
+            overscrollBehavior: "contain",
+            touchAction: "pan-y",
             padding: 8,
             display: "flex",
             flexDirection: "column",
@@ -368,6 +444,8 @@ export const ComicReaderViewport = ({
             height: "100%",
             overflowX: "auto",
             overflowY: "hidden",
+            overscrollBehavior: "contain",
+            touchAction: "pan-x",
             padding: 8,
             display: "flex",
             gap: pageGapPx,
@@ -503,4 +581,5 @@ export const ComicReaderViewport = ({
       )}
     </div>
   );
-};
+  }
+);

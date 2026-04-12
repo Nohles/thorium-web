@@ -92,7 +92,7 @@ export const defaultComicSettings: ComicSettings = {
   autoScrollSpeedSeconds: 5,
   autoScrollSmooth: true,
   readingModePreview: true,
-  tapZonePreview: true,
+  tapZonePreview: false,
   imagePreloadAmount: 5,
 };
 

@@ -53,7 +53,6 @@ export const StatefulComicOverlayMode = () => {
       value={settings?.overlayMode ?? ComicOverlayMode.auto}
       onChange={(value) => patch({ overlayMode: value })}
       items={options}
-      allowUnset={false}
     />
   );
 };
@@ -65,7 +64,7 @@ export const StatefulComicShowPageNumber = () => {
     <StatefulSwitch
       standalone={true}
       label={t("reader.comic.showPageNumber.label")}
-      value={settings?.showPageNumber ?? true}
+      isSelected={settings?.showPageNumber ?? true}
       onChange={(value) => patch({ showPageNumber: value })}
     />
   );
@@ -78,7 +77,7 @@ export const StatefulComicStaticNavigation = () => {
     <StatefulSwitch
       standalone={true}
       label={t("reader.comic.staticNavigation.label")}
-      value={settings?.staticNavigation ?? false}
+      isSelected={settings?.staticNavigation ?? false}
       onChange={(value) => patch({ staticNavigation: value })}
     />
   );
@@ -103,7 +102,6 @@ export const StatefulComicProgressBarType = () => {
       value={settings?.progressBarType ?? ComicProgressBarType.standard}
       onChange={(value) => patch({ progressBarType: value })}
       items={options}
-      allowUnset={false}
     />
   );
 };
@@ -142,7 +140,6 @@ export const StatefulComicProgressBarPosition = () => {
       value={settings?.progressBarPosition ?? ComicProgressBarPosition.auto}
       onChange={(value) => patch({ progressBarPosition: value })}
       items={options}
-      allowUnset={false}
     />
   );
 };
@@ -158,7 +155,7 @@ export const StatefulComicStretchSmallPages = () => {
     <StatefulSwitch
       standalone={true}
       label={t("reader.comic.stretchSmallPages.label")}
-      value={settings?.stretchSmallPages ?? false}
+      isSelected={settings?.stretchSmallPages ?? false}
       onChange={(value) => patch({ stretchSmallPages: value })}
     />
   );
@@ -175,7 +172,7 @@ export const StatefulComicWidthLimitEnabled = () => {
     <StatefulSwitch
       standalone={true}
       label={t("reader.comic.widthLimit.enabled")}
-      value={settings?.widthLimitEnabled ?? false}
+      isSelected={settings?.widthLimitEnabled ?? false}
       onChange={(value) => patch({ widthLimitEnabled: value })}
     />
   );
@@ -227,7 +224,7 @@ export const StatefulComicAutoScrollEnabled = () => {
     <StatefulSwitch
       standalone={true}
       label={t("reader.comic.autoScroll.enabled")}
-      value={settings?.autoScrollEnabled ?? false}
+      isSelected={settings?.autoScrollEnabled ?? false}
       onChange={(value) => patch({ autoScrollEnabled: value })}
     />
   );
@@ -255,7 +252,7 @@ export const StatefulComicAutoScrollSmooth = () => {
     <StatefulSwitch
       standalone={true}
       label={t("reader.comic.autoScroll.smooth")}
-      value={settings?.autoScrollSmooth ?? true}
+      isSelected={settings?.autoScrollSmooth ?? true}
       onChange={(value) => patch({ autoScrollSmooth: value })}
     />
   );
@@ -268,7 +265,7 @@ export const StatefulComicReadingModePreview = () => {
     <StatefulSwitch
       standalone={true}
       label={t("reader.comic.readingModePreview.label")}
-      value={settings?.readingModePreview ?? true}
+      isSelected={settings?.readingModePreview ?? true}
       onChange={(value) => patch({ readingModePreview: value })}
     />
   );
@@ -281,7 +278,7 @@ export const StatefulComicTapZonePreview = () => {
     <StatefulSwitch
       standalone={true}
       label={t("reader.comic.tapZonePreview.label")}
-      value={settings?.tapZonePreview ?? true}
+      isSelected={settings?.tapZonePreview ?? false}
       onChange={(value) => patch({ tapZonePreview: value })}
     />
   );

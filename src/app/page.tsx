@@ -76,6 +76,7 @@ const audiobooks = [
     rendition: "Audiobook"
   }
 ]
+const comics = [ { title: "cbz", author: "John Doe", cover: "/images/cbz.jpg", url: "/read/manifest/http%3A%2F%2Flocalhost%3A8006%2Fwebpub%2FZmlsZTovLy9DaGFwdGVyIDEuY2J6%2Fmanifest.json", rendition: "Fixed-Layout CBZ" } ]
 
 export default function Home() {
   const [isManifestEnabled, setIsManifestEnabled] = useState<boolean>(true);
@@ -103,7 +104,7 @@ export default function Home() {
       </header>
 
       <PublicationGrid
-        publications={ [...books, ...webPublications, ...audiobooks] }
+        publications={ [...books, ...webPublications, ...audiobooks, ...comics] }
         renderCover={ (publication) => (
           <Image
             src={ publication.cover }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { ComponentType, SVGProps, useEffect, useRef } from "react";
+import React, { ComponentType, SVGProps, useEffect, useId, useRef } from "react";
 
 import { HTMLAttributesWithRef, WithRef } from "../customTypes";
 
@@ -14,7 +14,8 @@ import {
 } from "react-aria-components"
 
 export interface ThRadioGroupItems {
-  id: string;
+  /** When omitted, a stable id is derived from the radio group instance and `value`. */
+  id?: string;
   value: string;
   icon?: ComponentType<SVGProps<SVGElement>>;
   label: string;
@@ -55,6 +56,7 @@ export const ThRadioGroup = ({
   ...props
 }: ThRadioGroupProps) => {
   const radioGroupRef = useRef<HTMLDivElement>(null);
+  const groupInstanceId = useId();
 
   // Auto-detect when value doesn't match items and ensure first radio is focusable
   // Otherwise all inputs will have tabindex -1 and the entire group will be skipped
@@ -100,11 +102,13 @@ export const ThRadioGroup = ({
           </Label>
         }
         <div { ...compounds?.wrapper }>
-          { items.map((item) => (
+          { items.map((item) => {
+            const radioId = item.id ?? `${groupInstanceId}-${item.value}`;
+            return (
             <Radio
               { ...compounds?.radio }
-              id={ item.id }
-              key={ item.id }
+              id={ radioId }
+              key={ radioId }
               value={ item.value }
               isDisabled={ item.isDisabled }
             >
@@ -115,7 +119,8 @@ export const ThRadioGroup = ({
                 </span>
               </React.Fragment>
             </Radio>
-          )) }
+            );
+          }) }
         </div>
       </RadioGroup>
     )

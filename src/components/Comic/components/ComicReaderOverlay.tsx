@@ -1,43 +1,63 @@
 "use client";
 
 import { ThNavigationButton } from "@/core/Components/Buttons/ThNavigationButton";
-import { ThActionsTriggerVariant } from "@/core/Components/Actions/ThActionsBar";
-import { StatefulBackLink } from "@/components/StatefulBackLink";
-import { StatefulFullscreenTrigger } from "@/components/Actions/Fullscreen/StatefulFullscreenTrigger";
-import { StatefulSettingsTrigger } from "@/components/Actions/Settings/StatefulSettingsTrigger";
 import {
   ComicProgressBarPosition,
   ComicProgressBarType,
   ComicReadingDirection,
+  ComicReadingMode,
   defaultComicSettings,
 } from "@/lib/comicSettingsReducer";
 import { useI18n } from "@/i18n/useI18n";
 import { CSSProperties } from "react";
 
+const isVerticalScrollMode = (mode: ComicReadingMode) =>
+  mode === ComicReadingMode.continuousVertical || mode === ComicReadingMode.webtoon;
+
+const resolveEffectiveProgressPosition = (
+  settings: typeof defaultComicSettings,
+  mode: ComicReadingMode
+): ComicProgressBarPosition => {
+  if (settings.progressBarPosition !== ComicProgressBarPosition.auto) {
+    return settings.progressBarPosition;
+  }
+  if (isVerticalScrollMode(mode)) {
+    return ComicProgressBarPosition.right;
+  }
+  return ComicProgressBarPosition.bottom;
+};
+
 export const ComicReaderOverlay = ({
+  mode,
   pageCount,
   cursorIndex,
+  scrollProgress,
   direction,
   canGoPrev,
   canGoNext,
   onPrev,
   onNext,
   onJumpTo,
+  onSeekScroll,
   settings,
   isVisible,
-  settingsTriggerRef,
+  integrateProgressInFooter,
 }: {
+  mode: ComicReadingMode;
   pageCount: number;
   cursorIndex: number;
+  scrollProgress: number;
   direction: ComicReadingDirection;
   canGoPrev: boolean;
   canGoNext: boolean;
   onPrev: () => void;
   onNext: () => void;
   onJumpTo: (index: number) => void;
+  onSeekScroll: (fraction: number) => void;
   settings: typeof defaultComicSettings;
   isVisible: boolean;
-  settingsTriggerRef: React.RefObject<HTMLElement | null>;
+  /** When true, bottom standard progress is shown in {@link StatefulReaderFooter} instead. */
+  integrateProgressInFooter?: boolean;
 }) => {
   const { t } = useI18n();
   if (!isVisible) return null;
@@ -50,37 +70,24 @@ export const ComicReaderOverlay = ({
   const leftDisabled = isRtl ? !canGoNext : !canGoPrev;
   const rightDisabled = isRtl ? !canGoPrev : !canGoNext;
 
+  const effectivePosition = resolveEffectiveProgressPosition(settings, mode);
+
   const progressPosition: CSSProperties =
-    settings.progressBarPosition === ComicProgressBarPosition.left
+    effectivePosition === ComicProgressBarPosition.left
       ? { insetInlineStart: 0, top: 0, bottom: 0, width: settings.progressBarSizePx }
-      : settings.progressBarPosition === ComicProgressBarPosition.right
-      ? { insetInlineEnd: 0, top: 0, bottom: 0, width: settings.progressBarSizePx }
-      : { left: 0, right: 0, bottom: 0, height: settings.progressBarSizePx };
+      : effectivePosition === ComicProgressBarPosition.right
+        ? { insetInlineEnd: 0, top: 0, bottom: 0, width: settings.progressBarSizePx }
+        : { left: 0, right: 0, bottom: 0, height: settings.progressBarSizePx };
+
+  const showStandardProgressBar =
+    settings.progressBarType === ComicProgressBarType.standard &&
+    !(integrateProgressInFooter && settings.progressBarPosition === ComicProgressBarPosition.bottom);
+
+  const verticalStrip = !!(progressPosition.width && !progressPosition.height);
+  const useScrollProgress = isVerticalScrollMode(mode);
 
   return (
     <>
-      <header
-        style={{
-          position: "absolute",
-          top: 10,
-          left: 10,
-          right: 10,
-          zIndex: 12,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 8,
-        }}
-      >
-        <StatefulBackLink />
-        <div style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-          <StatefulFullscreenTrigger variant={ThActionsTriggerVariant.button} />
-          <span ref={settingsTriggerRef as never}>
-            <StatefulSettingsTrigger variant={ThActionsTriggerVariant.button} />
-          </span>
-        </div>
-      </header>
-
       <div style={{ position: "absolute", top: "50%", left: 8, transform: "translateY(-50%)", zIndex: 12 }}>
         <ThNavigationButton direction="left" aria-label={leftAria} isDisabled={leftDisabled} onPress={leftOnPress} />
       </div>
@@ -106,7 +113,7 @@ export const ComicReaderOverlay = ({
         </div>
       )}
 
-      {settings.progressBarType === ComicProgressBarType.standard && (
+      {showStandardProgressBar && (
         <div
           style={{
             position: "absolute",
@@ -115,21 +122,40 @@ export const ComicReaderOverlay = ({
             background: "color-mix(in srgb, var(--th-theme-text, #fff) 28%, transparent)",
           }}
         >
-          <input
-            aria-label="Reader progress"
-            type="range"
-            min={0}
-            max={Math.max(0, pageCount - 1)}
-            value={cursorIndex}
-            onChange={(event) => onJumpTo(Number(event.target.value))}
-            style={{
-              width: progressPosition.height ? "100%" : "100vh",
-              height: progressPosition.width ? "100%" : "100%",
-              transform: progressPosition.width ? "rotate(-90deg) translateX(-100%)" : undefined,
-              transformOrigin: progressPosition.width ? "top left" : undefined,
-              background: "transparent",
-            }}
-          />
+          {useScrollProgress ? (
+            <input
+              aria-label="Reader progress"
+              type="range"
+              min={0}
+              max={1}
+              step="any"
+              value={scrollProgress}
+              onChange={(event) => onSeekScroll(Number(event.target.value))}
+              style={{
+                width: verticalStrip ? "100%" : progressPosition.height ? "100%" : "100vw",
+                height: verticalStrip ? "100%" : progressPosition.width ? "100%" : "100%",
+                transform: verticalStrip ? "rotate(-90deg) translateX(-100%)" : undefined,
+                transformOrigin: verticalStrip ? "top left" : undefined,
+                background: "transparent",
+              }}
+            />
+          ) : (
+            <input
+              aria-label="Reader progress"
+              type="range"
+              min={0}
+              max={Math.max(0, pageCount - 1)}
+              value={cursorIndex}
+              onChange={(event) => onJumpTo(Number(event.target.value))}
+              style={{
+                width: verticalStrip ? "100%" : progressPosition.height ? "100%" : "100vh",
+                height: verticalStrip ? "100%" : progressPosition.width ? "100%" : "100%",
+                transform: verticalStrip ? "rotate(-90deg) translateX(-100%)" : undefined,
+                transformOrigin: verticalStrip ? "top left" : undefined,
+                background: "transparent",
+              }}
+            />
+          )}
         </div>
       )}
     </>

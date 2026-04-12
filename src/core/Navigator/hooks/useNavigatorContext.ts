@@ -6,10 +6,20 @@ import { Link, Locator } from "@readium/shared";
 // Import the navigator hook types
 import type { useEpubNavigator } from "../../Hooks/Epub/useEpubNavigator";
 import type { useWebPubNavigator } from "../../Hooks/WebPub/useWebPubNavigator";
+import type { useComicNavigator } from "../../Hooks/Comic/useComicNavigator";
 import type { useAudioNavigator } from "../../Hooks/Audio/useAudioNavigator";
 
+function isComicNavigator(
+  v: ReturnType<typeof useEpubNavigator> | ReturnType<typeof useWebPubNavigator> | ReturnType<typeof useComicNavigator>
+): v is ReturnType<typeof useComicNavigator> {
+  return "isComicNavigator" in v && v.isComicNavigator === true;
+}
+
 // Define proper types for navigator interfaces
-type VisualNavigator = ReturnType<typeof useEpubNavigator> | ReturnType<typeof useWebPubNavigator>;
+type VisualNavigator =
+  | ReturnType<typeof useEpubNavigator>
+  | ReturnType<typeof useWebPubNavigator>
+  | ReturnType<typeof useComicNavigator>;
 type MediaNavigator = ReturnType<typeof useAudioNavigator>;
 
 // Union of all settings keys across both navigator types
@@ -68,8 +78,16 @@ export const useNavigator = () => {
     get visual() {
       if (!context.visual) throw new Error("Visual navigator not available");
 
-      // Create a wrapper that provides a unified getSetting interface
       const visualNavigator = context.visual;
+      if (isComicNavigator(visualNavigator)) {
+        return {
+          ...visualNavigator,
+          getSetting: <K extends keyof AllVisualSettings>(_settingKey: K): AllVisualSettings[K] => {
+            return undefined as unknown as AllVisualSettings[K];
+          }
+        };
+      }
+
       return {
         ...visualNavigator,
         getSetting: createUnifiedGetSetting(visualNavigator)

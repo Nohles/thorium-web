@@ -36,7 +36,6 @@ export const StatefulComicScaleType = () => {
         dispatch(updateComicSettings({ key: activeKey, patch: { scaleType: v as ComicScaleType } }));
       }}
       items={items}
-      allowUnset={false}
     />
   );
 };

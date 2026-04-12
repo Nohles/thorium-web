@@ -43,7 +43,6 @@ export const StatefulComicReadingDirection = () => {
         );
       }}
       items={items}
-      allowUnset={false}
     />
   );
 };

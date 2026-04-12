@@ -38,7 +38,6 @@ export const StatefulComicTapZones = () => {
         dispatch(updateComicSettings({ key: activeKey, patch: { tapZones: v as ComicTapZones } }));
       }}
       items={items}
-      allowUnset={false}
     />
   );
 };
