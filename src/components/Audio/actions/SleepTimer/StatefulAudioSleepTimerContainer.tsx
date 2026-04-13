@@ -10,7 +10,6 @@ import { ThNumberField } from "@/core/Components/Settings/ThNumberField";
 import { ThRadioGroup } from "@/core/Components/Settings/ThRadioGroup";
 import { StatefulActionContainerProps } from "../../../Actions/models/actions";
 
-import audioStyles from "../assets/styles/thorium-web.audioActions.module.css";
 import timerStyles from "./assets/styles/thorium-web.sleepTimer.module.css";
 
 import { useNavigator } from "@/core/Navigator";
@@ -234,7 +233,7 @@ export const StatefulAudioSleepTimerContainer = ({ triggerRef, placement = "top"
         id: ThAudioActionKeys.sleepTimer,
         triggerRef,
         heading: t("reader.playback.preferences.sleepTimer.descriptive"),
-        className: audioStyles.popover,
+        className: timerStyles.wrapper,
         placement,
         isOpen,
         onOpenChange: setOpen,
