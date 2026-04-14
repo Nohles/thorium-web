@@ -29,7 +29,6 @@ import { StatefulAudioProgressBar } from "./controls/StatefulAudioProgressBar";
 import { useAudioPreferences } from "@/preferences/hooks/useAudioPreferences";
 import { useAudioNavigator } from "@/core/Hooks/Audio/useAudioNavigator";
 import { useAudioStatelessCache } from "./Hooks/useAudioStatelessCache";
-import { useNavigator } from "@/core/Navigator";
 import { useI18n } from "@/i18n/useI18n";
 import { resolveAudioContentProtectionConfig } from "@/preferences/models/protection";
 import { usePositionStorage } from "@/hooks/usePositionStorage";
@@ -106,6 +105,7 @@ const StatefulPlayerInner = ({ publication, localDataKey, positionStorage, cover
   const { t } = useI18n();
 
   const wrapperRef = useRef<HTMLElement>(null);
+  const coverSectionRef = useRef<HTMLElement>(null);
   const compactMinHeight = useRef<number>(0);
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -140,7 +140,7 @@ const StatefulPlayerInner = ({ publication, localDataKey, positionStorage, cover
   const dispatch = useAppDispatch();
 
   const audioNavigator = useAudioNavigator();
-  const { canGoBackward, canGoForward, submitPreferences, pause } = audioNavigator;
+  const { canGoBackward, canGoForward, submitPreferences, pause, isPlaying } = audioNavigator;
 
   const { setLocalData, getLocalData } = usePositionStorage(localDataKey, positionStorage);
 
@@ -234,7 +234,7 @@ const StatefulPlayerInner = ({ publication, localDataKey, positionStorage, cover
     trackLoaded: () => {
       dispatch(setTrackReady(true));
       dispatch(setStalled(false));
-      dispatch(setStatus("paused"));
+      dispatch(setStatus(isPlaying() ? "playing" : "paused"));
     },
     trackEnded: () => {
       if (cache.current.sleepTimerOnTrackEnd) {
@@ -280,7 +280,7 @@ const StatefulPlayerInner = ({ publication, localDataKey, positionStorage, cover
     contentProtection: (_type: string, _detail: SuspiciousActivityEvent) => {},
     peripheral: (_data: KeyboardEventData) => {},
     contextMenu: (_data: ContextMenuEvent) => {}
-  }), [setLocalData, canGoBackward, canGoForward, dispatch, cache, submitPreferences, publication, handleTimelineNavigation, handleSleepTimerEndOfFragment, handleContinuousPlay]);
+  }), [setLocalData, canGoBackward, canGoForward, isPlaying, dispatch, cache, submitPreferences, publication, handleTimelineNavigation, handleSleepTimerEndOfFragment, handleContinuousPlay]);
 
   const initialPosition = useMemo(() => getLocalData(), [getLocalData]);
 
@@ -299,7 +299,7 @@ const StatefulPlayerInner = ({ publication, localDataKey, positionStorage, cover
   const renderPlayerComponent = useCallback((component: ThAudioPlayerComponent) => {
     switch (component) {
       case ThAudioPlayerComponent.cover:
-        return <StatefulAudioCover key={ component } coverUrl={ coverUrl } title={ publication?.metadata?.title?.getTranslation("en") } />;
+        return <StatefulAudioCover key={ component } ref={ coverSectionRef } coverUrl={ coverUrl } title={ publication?.metadata?.title?.getTranslation("en") } />;
       case ThAudioPlayerComponent.metadata:
         return publication ? <StatefulAudioMetadata key={ component } publication={ publication } /> : null;
       case ThAudioPlayerComponent.playbackControls:
@@ -344,9 +344,22 @@ const StatefulPlayerInner = ({ publication, localDataKey, positionStorage, cover
 
     const check = debounce(() => {
       if (!isExpanded) {
-        if (el.scrollHeight > el.clientHeight) {
+        const overflow = el.scrollHeight - el.clientHeight;
+        if (overflow > 0) {
+          const coverEl = coverSectionRef.current;
+          if (coverEl) {
+            const minHeight = parseFloat(getComputedStyle(coverEl).minHeight) || 0;
+            const newMaxHeight = coverEl.clientHeight - overflow;
+            if (newMaxHeight >= minHeight) {
+              el.style.setProperty("--th-layout-constraints-cover", `${ newMaxHeight }px`);
+              return;
+            }
+          }
+          el.style.removeProperty("--th-layout-constraints-cover");
           compactMinHeight.current = el.scrollHeight;
           setIsExpanded(true);
+        } else {
+          el.style.removeProperty("--th-layout-constraints-cover");
         }
       } else {
         if (el.clientHeight > compactMinHeight.current) {

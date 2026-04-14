@@ -251,13 +251,15 @@ This document outlines the available styling classes and custom properties for t
 
 #### Volume
 
-- `.thorium_web_volume.button` - Volume button
-- `.thorium_web_volume.slider` - Volume slider
-- `.thorium_web_volume.sliderTrack` - Volume slider track
-- `.thorium_web_volume.sliderThumb` - Volume slider thumb
+- `.thorium_web_volume_wrapper` - Volume wrapper
+- `.thorium_web_volume_button` - Volume button
+- `.thorium_web_volume_slider` - Volume slider
+- `.thorium_web_volume_sliderTrack` - Volume slider track
+- `.thorium_web_volume_sliderThumb` - Volume slider thumb
 
 #### Playback Rate
 
+- `.thorium_web_playbackRate_wrapper` - Playback Rate wrapper
 - `.thorium_web_playbackRate_button` - Playback rate button
 - `.thorium_web_playbackRate_label` - Playback rate label (e.g. `1×`)
 - `.thorium_web_playbackRate_slider` - Playback rate slider popover content
@@ -265,10 +267,11 @@ This document outlines the available styling classes and custom properties for t
 
 #### TOC
 
-- `.thorium_web_audioToc.button` - Table of contents button
+- `.thorium_web_audioToc_button` - Table of contents button
 
 #### Sleep Timer
 
+- `.thorium_web_sleepTimer_wrapper` - Sleep timer wrapper
 - `.thorium_web_sleepTimer_button` - Sleep timer button
 - `.thorium_web_sleepTimer_label` - Sleep timer label
 - `.thorium_web_sleepTimer_listbox` - Sleep timer preset listbox
@@ -285,14 +288,14 @@ This document outlines the available styling classes and custom properties for t
 
 ### Progress Bar
 
-- `.thorium_web_audioProgressBar_audioProgressControl` - Progress bar container
-- `.thorium_web_audioProgressBar_audioProgressChapter` - Current chapter label
-- `.thorium_web_audioProgressBar_audioProgressSlider` - Progress slider
-- `.thorium_web_audioProgressBar_audioProgressTrack` - Progress slider track
-- `.thorium_web_audioProgressBar_audioProgressThumb` - Progress slider thumb
-- `.thorium_web_audioProgressBar_audioProgressSeekableRange` - Seekable range overlay
-- `.thorium_web_audioProgressBar_audioProgressElapsedTime` - Elapsed time display
-- `.thorium_web_audioProgressBar_audioProgressRemainingTime` - Remaining time display
+- `.thorium_web_audioProgressBar_wrapper` - Progress bar container
+- `.thorium_web_audioProgressBar_current` - Current chapter label
+- `.thorium_web_audioProgressBar_slider` - Progress slider
+- `.thorium_web_audioProgressBar_track` - Progress slider track
+- `.thorium_web_audioProgressBar_thumb` - Progress slider thumb
+- `.thorium_web_audioProgressBar_seekableRange` - Seekable range overlay
+- `.thorium_web_audioProgressBar_elapsed` - Elapsed time display
+- `.thorium_web_audioProgressBar_remaining` - Remaining time display
 
 ## Misc Components
 

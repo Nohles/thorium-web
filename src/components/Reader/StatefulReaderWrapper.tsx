@@ -30,6 +30,7 @@ import { ThPreferences, CustomizableKeys } from "@/preferences/preferences";
 import { ThAudioPreferences } from "@/preferences/audioPreferences";
 import { ThPreferencesAdapter } from "@/preferences/adapters/ThPreferencesAdapter";
 import { ThAudioPreferencesAdapter } from "@/preferences/adapters/ThAudioPreferencesAdapter";
+import { InitOptions } from "i18next";
 
 const StatefulEpubReader = lazy(() => import("@/components/Epub").then(mod => ({ default: mod.StatefulReader })));
 const StatefulWebPubReader = lazy(() => import("@/components/WebPub").then(mod => ({ default: mod.ExperimentalWebPubStatefulReader })));
@@ -68,6 +69,7 @@ export interface ReaderComponentProps<
   isLoading?: boolean;
   positionStorage?: PositionStorage;
   plugins?: ReaderPlugins;
+  i18n?: Partial<InitOptions>;
   preferences?: P extends "audio"
     ? { initialPreferences?: ThAudioPreferences<K>; adapter?: ThAudioPreferencesAdapter<K> }
     : P extends "epub" | "webPub" | "comic"
@@ -77,7 +79,7 @@ export interface ReaderComponentProps<
 
 // ─── Outer wrapper — selects provider based on profile ────────────────────────
 
-export const StatefulReaderWrapper = ({ profile, plugins, isLoading, preferences, ...props }: ReaderComponentProps<any, any>) => {
+export const StatefulReaderWrapper = ({ profile, plugins, isLoading, preferences, i18n: i18nOptions, ...props }: ReaderComponentProps<any, any>) => {
   const [resolvedPlugins, setResolvedPlugins] = useState<ThPlugin[] | undefined>(undefined);
 
   const pendingFactory = profile === "epub" ? plugins?.epub
@@ -107,7 +109,7 @@ export const StatefulReaderWrapper = ({ profile, plugins, isLoading, preferences
         initialPreferences={ preferences?.initialPreferences as ThAudioPreferences<any> | undefined }
         adapter={ preferences?.adapter as ThAudioPreferencesAdapter<any> | undefined }
       >
-        <ThI18nProvider>
+        <ThI18nProvider { ...i18nOptions }>
           <StatefulAudioContent { ...props } coverUrl={ coverUrl } externalLoading={ isLoading ?? false } />
         </ThI18nProvider>
       </ThAudioPreferencesProvider>
@@ -120,7 +122,7 @@ export const StatefulReaderWrapper = ({ profile, plugins, isLoading, preferences
       initialPreferences={ preferences?.initialPreferences as ThPreferences<any> | undefined }
       adapter={ preferences?.adapter as ThPreferencesAdapter<any> | undefined }
     >
-      <ThI18nProvider>
+      <ThI18nProvider { ...i18nOptions }>
         <StatefulLoader isLoading={ isLoading ?? false }>
           <StatefulReaderContent profile={ profile } { ...props } coverUrl={ coverUrl } plugins={ resolvedPlugins } />
         </StatefulLoader>

@@ -17,12 +17,12 @@ export interface ThModalProps extends Omit<ModalOverlayProps, "children">, ThCon
   }
 }
 
-export const ThModal = ({ 
+export const ThModal = ({
   ref,
   focusOptions,
   compounds,
-  children, 
-  ...props 
+  children,
+  ...props
 }: ThModalProps) => {
   const resolvedRef = useObjectRef(ref as React.RefObject<HTMLDivElement | null>);
 
@@ -34,7 +34,7 @@ export const ThModal = ({
   useFirstFocusable(updatedFocusOptions);
 
   return (
-    <Modal 
+    <Modal
       ref={ resolvedRef }
       { ...props }
     >

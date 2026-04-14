@@ -1,3 +1,7 @@
+.wrapper {
+  width: auto;
+}
+
 .button {
   --th-icon-size: calc(var(--audio-icon-base) * (5/4));
   padding: calc(var(--th-icon-size) * (1/4));
