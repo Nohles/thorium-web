@@ -107,10 +107,11 @@
   background-color: var(--th-theme-text);
   color: var(--th-theme-background);
   border-radius: var(--th-layout-radius);
-  padding: 5px;
+  padding: calc(var(--th-layout-spacing) / 2);
   font-size: 0.75rem;
   pointer-events: none;
-  max-width: 400px;
+  max-width: 320px;
+  text-wrap: pretty;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;

@@ -29,7 +29,6 @@ import { StatefulAudioProgressBar } from "./controls/StatefulAudioProgressBar";
 import { useAudioPreferences } from "@/preferences/hooks/useAudioPreferences";
 import { useAudioNavigator } from "@/core/Hooks/Audio/useAudioNavigator";
 import { useAudioStatelessCache } from "./Hooks/useAudioStatelessCache";
-import { useNavigator } from "@/core/Navigator";
 import { useI18n } from "@/i18n/useI18n";
 import { resolveAudioContentProtectionConfig } from "@/preferences/models/protection";
 import { usePositionStorage } from "@/hooks/usePositionStorage";
@@ -141,7 +140,7 @@ const StatefulPlayerInner = ({ publication, localDataKey, positionStorage, cover
   const dispatch = useAppDispatch();
 
   const audioNavigator = useAudioNavigator();
-  const { canGoBackward, canGoForward, submitPreferences, pause } = audioNavigator;
+  const { canGoBackward, canGoForward, submitPreferences, pause, isPlaying } = audioNavigator;
 
   const { setLocalData, getLocalData } = usePositionStorage(localDataKey, positionStorage);
 
@@ -235,7 +234,7 @@ const StatefulPlayerInner = ({ publication, localDataKey, positionStorage, cover
     trackLoaded: () => {
       dispatch(setTrackReady(true));
       dispatch(setStalled(false));
-      dispatch(setStatus("paused"));
+      dispatch(setStatus(isPlaying() ? "playing" : "paused"));
     },
     trackEnded: () => {
       if (cache.current.sleepTimerOnTrackEnd) {
@@ -281,7 +280,7 @@ const StatefulPlayerInner = ({ publication, localDataKey, positionStorage, cover
     contentProtection: (_type: string, _detail: SuspiciousActivityEvent) => {},
     peripheral: (_data: KeyboardEventData) => {},
     contextMenu: (_data: ContextMenuEvent) => {}
-  }), [setLocalData, canGoBackward, canGoForward, dispatch, cache, submitPreferences, publication, handleTimelineNavigation, handleSleepTimerEndOfFragment, handleContinuousPlay]);
+  }), [setLocalData, canGoBackward, canGoForward, isPlaying, dispatch, cache, submitPreferences, publication, handleTimelineNavigation, handleSleepTimerEndOfFragment, handleContinuousPlay]);
 
   const initialPosition = useMemo(() => getLocalData(), [getLocalData]);
 
