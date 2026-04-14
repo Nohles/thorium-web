@@ -45,7 +45,9 @@
     "./reader": "./dist/components/Reader/index.mjs",
     "./reader/styles": "./dist/components/Reader/index.css",
     "./webpub": "./dist/components/WebPub/index.mjs",
-    "./webpub/styles": "./dist/components/WebPub/index.css"
+    "./webpub/styles": "./dist/components/WebPub/index.css",
+    "./comic": "./dist/components/Comic/index.mjs",
+    "./comic/styles": "./dist/components/Comic/index.css"
   },
   "scripts": {
     "dev": "next dev",
