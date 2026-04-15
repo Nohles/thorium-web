@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 
 import {
   Slider,
@@ -68,6 +68,18 @@ export const ThAudioProgress = ({
   const anchorRef = useRef<HTMLSpanElement>(null);
   const overlayRef = useObjectRef(compounds?.tooltip?.ref);
   const [isOpen, setIsOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragValue, setDragValue] = useState(0);
+  const seekTargetRef = useRef<number | null>(null);
+
+  // Clear drag state once the navigator's currentTime has caught up to the seek target
+  useEffect(() => {
+    if (seekTargetRef.current === null) return;
+    if (Math.abs(currentTime - seekTargetRef.current) < 1) {
+      seekTargetRef.current = null;
+      setIsDragging(false);
+    }
+  }, [currentTime]);
 
   const overlayConfig = compounds?.tooltip || {};
   const placement = overlayConfig.placement || "top";
@@ -81,8 +93,9 @@ export const ThAudioProgress = ({
     isOpen
   });
 
-  const defaultElapsedTime = formatTime(currentTime / playbackRate);
-  const defaultRemainingTime = formatTime(Math.max(0, (duration - currentTime) / playbackRate));
+  const displayTime = isDragging ? dragValue : currentTime;
+  const defaultElapsedTime = formatTime(displayTime / playbackRate);
+  const defaultRemainingTime = formatTime(Math.max(0, (duration - displayTime) / playbackRate));
 
   function formatTime(seconds: number) {
     if (isNaN(seconds) || !isFinite(seconds)) return "0:00";
@@ -128,10 +141,19 @@ export const ThAudioProgress = ({
         </div>
       ) }
       <Slider
-        value={ currentTime }
+        value={ isDragging ? dragValue : currentTime }
         minValue={ 0 }
         maxValue={ duration || 0 }
-        onChange={ (value) => onSeek(Array.isArray(value) ? value[0] : value) }
+        onChange={ (value) => {
+          const v = Array.isArray(value) ? value[0] : value;
+          setIsDragging(true);
+          setDragValue(v);
+        } }
+        onChangeEnd={ (value) => {
+          const v = Array.isArray(value) ? value[0] : value;
+          seekTargetRef.current = v;
+          onSeek(v);
+        } }
         isDisabled={ !!isDisabled }
         { ...compounds?.slider }
       >
