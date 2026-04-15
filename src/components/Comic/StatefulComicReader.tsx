@@ -17,8 +17,6 @@ import { getReaderClassNames } from "../Helpers/getReaderClassNames";
 
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import {
-  ComicProgressBarPosition,
-  ComicProgressBarType,
   ComicReadingDirection,
   ComicReadingMode,
   ComicScaleType,
@@ -34,11 +32,12 @@ import { ThPluginRegistry } from "../Plugins/PluginRegistry";
 import { ThPluginProvider } from "../Plugins/PluginProvider";
 import { createDefaultPlugin } from "../Plugins/helpers/createDefaultPlugin";
 import { ComicReaderOverlay } from "./components/ComicReaderOverlay";
-import { ComicReaderViewport, ComicReaderViewportHandle } from "./components/ComicReaderViewport";
+import { ComicReaderViewport } from "./components/ComicReaderViewport";
 import { useComicKeyboardShortcuts } from "./hooks/useComicKeyboardShortcuts";
 import { resolveTapAction } from "./hooks/useComicTapNavigation";
 import { ComicPage, useComicReaderController } from "./hooks/useComicReaderController";
 import { buildComicTimeline, buildComicTocTree } from "./buildComicTimeline";
+import { buildComicProgressItems, ComicPageLoadState } from "./lib/comicProgress";
 
 import { usePreferences } from "@/preferences/hooks/usePreferences";
 import { ThLayoutUI, ThProgressionFormat } from "@/preferences/models";
@@ -58,8 +57,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
   const pages = useMemo(() => getReadingOrderImages(publication), [publication]);
   const dispatch = useAppDispatch();
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const comicViewportRef = useRef<ComicReaderViewportHandle>(null);
-  const [scrollProgress, setScrollProgress] = useState(0);
+  const [pageLoadStates, setPageLoadStates] = useState<Record<number, ComicPageLoadState>>({});
 
   const comicNavigator = useComicNavigator();
 
@@ -167,13 +165,14 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
   }, [dispatch]);
 
   useEffect(() => {
-    if (mode !== ComicReadingMode.continuousVertical && mode !== ComicReadingMode.webtoon) {
-      setScrollProgress(0);
-    }
-  }, [mode]);
+    setPageLoadStates({});
+  }, [pages]);
 
-  const onSeekScroll = useCallback((fraction: number) => {
-    comicViewportRef.current?.setScrollProgress(fraction);
+  const onPageLoadStateChange = useCallback((pageIndex: number, state: ComicPageLoadState) => {
+    setPageLoadStates((prev) => {
+      if (prev[pageIndex] === state) return prev;
+      return { ...prev, [pageIndex]: state };
+    });
   }, []);
 
   const onTap = useCallback(
@@ -193,9 +192,17 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
   );
 
   const showOverlay = merged.overlayMode === "pinned" || !isImmersive;
-  const integrateFooterProgress =
-    merged.progressBarType === ComicProgressBarType.standard &&
-    merged.progressBarPosition === ComicProgressBarPosition.bottom;
+  const progressItems = useMemo(
+    () =>
+      buildComicProgressItems({
+        pages,
+        mode,
+        direction,
+        cursorIndex,
+        pageLoadStates,
+      }),
+    [cursorIndex, direction, mode, pageLoadStates, pages]
+  );
 
   const tapZonePreviewCells = useMemo(() => {
     if (!merged.tapZonePreview) return [];
@@ -249,7 +256,6 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
                 style={{ position: "relative", display: "flex", flexDirection: "column", minHeight: 0 }}
               >
                 <ComicReaderViewport
-                  ref={comicViewportRef}
                   publication={publication}
                   pages={pages}
                   mode={mode}
@@ -264,23 +270,22 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
                   imagePreloadAmount={merged.imagePreloadAmount}
                   onTap={onTap}
                   containerRef={containerRef}
-                  onScrollProgress={setScrollProgress}
+                  onPageLoadStateChange={onPageLoadStateChange}
                 />
                 <ComicReaderOverlay
                   mode={mode}
                   pageCount={pages.length}
                   cursorIndex={cursorIndex}
-                  scrollProgress={scrollProgress}
+                  progressItems={progressItems}
                   direction={direction}
                   canGoPrev={canGoPrev}
                   canGoNext={canGoNext}
                   onPrev={goPrev}
                   onNext={goNext}
                   onJumpTo={setCursorIndex}
-                  onSeekScroll={onSeekScroll}
                   settings={merged}
                   isVisible={showOverlay}
-                  integrateProgressInFooter={integrateFooterProgress}
+                  layoutUI={layoutUI}
                 />
                 {merged.tapZonePreview ? (
                   <div

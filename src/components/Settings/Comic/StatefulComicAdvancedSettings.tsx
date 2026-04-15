@@ -106,21 +106,6 @@ export const StatefulComicProgressBarType = () => {
   );
 };
 
-export const StatefulComicProgressBarSize = () => {
-  const { t } = useI18n();
-  const { settings, patch } = useComicSetting();
-  return (
-    <StatefulNumberField
-      standalone={true}
-      label={t("reader.comic.progressBar.size")}
-      range={[2, 16]}
-      step={1}
-      value={settings?.progressBarSizePx ?? 4}
-      onChange={(value) => patch({ progressBarSizePx: value })}
-    />
-  );
-};
-
 export const StatefulComicProgressBarPosition = () => {
   const { t } = useI18n();
   const { settings, patch } = useComicSetting();

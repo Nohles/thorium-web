@@ -3,10 +3,10 @@
 import { Link, Publication } from "@readium/shared";
 import {
   CSSProperties,
-  forwardRef,
+  Dispatch,
+  SetStateAction,
   useCallback,
   useEffect,
-  useImperativeHandle,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -26,8 +26,9 @@ import {
   stretchAllowedForScale,
 } from "@/components/Comic/lib/comicReaderLayout";
 import { ComicPage } from "../hooks/useComicReaderController";
+import { ComicPageLoadState } from "../lib/comicProgress";
 
-const useObjectUrl = (publication: Publication, link: Link | undefined, preload = false) => {
+const useObjectUrl = (publication: Publication, link: Link | undefined, shouldLoad = true) => {
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -38,8 +39,12 @@ const useObjectUrl = (publication: Publication, link: Link | undefined, preload 
 
     const run = async () => {
       setError(null);
-      if (!link) {
-        setObjectUrl(null);
+      if (!link || !shouldLoad) {
+        setIsLoading(false);
+        setObjectUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return null;
+        });
         return;
       }
       setIsLoading(true);
@@ -73,9 +78,8 @@ const useObjectUrl = (publication: Publication, link: Link | undefined, preload 
       cancelled = true;
       if (created) URL.revokeObjectURL(created);
     };
-  }, [publication, link]);
+  }, [publication, link, shouldLoad]);
 
-  void preload;
   return { objectUrl, error, isLoading };
 };
 
@@ -138,6 +142,7 @@ const getImageAreaStyle = (layoutMode: ComicPageLayoutMode): CSSProperties =>
       };
 
 const ComicImage = ({
+  pageIndex,
   publication,
   link,
   scaleType,
@@ -146,8 +151,10 @@ const ComicImage = ({
   widthLimitPercent,
   layoutMode,
   isDoublePageCell,
-  preload,
+  shouldLoad,
+  onPageLoadStateChange,
 }: {
+  pageIndex: number;
   publication: Publication;
   link: Link;
   scaleType: ComicScaleType;
@@ -156,15 +163,18 @@ const ComicImage = ({
   widthLimitPercent: number;
   layoutMode: ComicPageLayoutMode;
   isDoublePageCell: boolean;
-  preload: boolean;
+  shouldLoad: boolean;
+  onPageLoadStateChange?: (pageIndex: number, state: ComicPageLoadState) => void;
 }) => {
-  const { objectUrl, error, isLoading } = useObjectUrl(publication, link, preload);
+  const { objectUrl, error, isLoading } = useObjectUrl(publication, link, shouldLoad);
   const frameRef = useRef<HTMLDivElement | null>(null);
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
   const [frameWidth, setFrameWidth] = useState(0);
+  const [isImageReady, setIsImageReady] = useState(false);
 
   useEffect(() => {
     setNaturalSize({ w: 0, h: 0 });
+    setIsImageReady(false);
   }, [objectUrl]);
 
   useLayoutEffect(() => {
@@ -181,6 +191,7 @@ const ComicImage = ({
   const onImgLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
     setNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
+    setIsImageReady(true);
   }, []);
 
   const stretchOk = stretchSmallPages && stretchAllowedForScale(scaleType);
@@ -200,16 +211,31 @@ const ComicImage = ({
     [scaleType, shouldStretch, layoutMode]
   );
 
+  const loadState = useMemo<ComicPageLoadState>(() => {
+    if (error) return "error";
+    if (!shouldLoad) return "idle";
+    if (isLoading || (objectUrl && !isImageReady)) return "loading";
+    if (objectUrl && isImageReady) return "loaded";
+    return "idle";
+  }, [error, isImageReady, isLoading, objectUrl, shouldLoad]);
+
+  useEffect(() => {
+    onPageLoadStateChange?.(pageIndex, loadState);
+  }, [loadState, onPageLoadStateChange, pageIndex]);
+
+  useEffect(
+    () => () => {
+      onPageLoadStateChange?.(pageIndex, "idle");
+    },
+    [onPageLoadStateChange, pageIndex]
+  );
+
   if (error) return <div style={{ opacity: 0.7, fontSize: 12 }}>{error}</div>;
   if (!objectUrl) {
     return (
       <div style={getPageFrameStyle(widthLimitEnabled, widthLimitPercent, scaleType, layoutMode, isDoublePageCell)}>
         <div ref={frameRef} style={getImageAreaStyle(layoutMode)}>
-          {isLoading ? (
-            <div style={placeholderStyle} aria-busy="true" />
-          ) : (
-            <div style={{ opacity: 0.65, fontSize: 12 }}>No image to display.</div>
-          )}
+          <div style={placeholderStyle} aria-busy={loadState === "loading"} />
         </div>
       </div>
     );
@@ -243,8 +269,6 @@ const pageCellStyleHorizontal: CSSProperties = {
   display: "flex",
   flexDirection: "column",
 };
-
-const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
 
 /** Page that contains the viewport center line; if none (gap), closest by page-mid distance. */
 const getActivePageIndexVertical = (root: HTMLDivElement, itemRefs: Map<number, HTMLDivElement>): number => {
@@ -292,17 +316,6 @@ const getActivePageIndexHorizontal = (root: HTMLDivElement, itemRefs: Map<number
   return bestIdx;
 };
 
-const verticalScrollProgress = (el: HTMLDivElement): number => {
-  const max = el.scrollHeight - el.clientHeight;
-  if (max <= 0) return 0;
-  return clamp01(el.scrollTop / max);
-};
-
-export type ComicReaderViewportHandle = {
-  getScrollProgress: () => number;
-  setScrollProgress: (fraction: number) => void;
-};
-
 export type ComicReaderViewportProps = {
   publication: Publication;
   pages: ComicPage[];
@@ -310,7 +323,7 @@ export type ComicReaderViewportProps = {
   direction: ComicReadingDirection;
   scaleType: ComicScaleType;
   cursorIndex: number;
-  setCursorIndex: (index: number) => void;
+  setCursorIndex: Dispatch<SetStateAction<number>>;
   pageGapPx: number;
   stretchSmallPages: boolean;
   widthLimitEnabled: boolean;
@@ -318,31 +331,26 @@ export type ComicReaderViewportProps = {
   imagePreloadAmount: number;
   onTap: (event: React.PointerEvent) => void;
   containerRef: React.RefObject<HTMLDivElement | null>;
-  /** Fired while vertically scrolling (continuous vertical / webtoon). */
-  onScrollProgress?: (progress: number) => void;
+  onPageLoadStateChange?: (pageIndex: number, state: ComicPageLoadState) => void;
 };
 
-export const ComicReaderViewport = forwardRef<ComicReaderViewportHandle, ComicReaderViewportProps>(
-  function ComicReaderViewport(
-    {
-      publication,
-      pages,
-      mode,
-      direction,
-      scaleType,
-      cursorIndex,
-      setCursorIndex,
-      pageGapPx,
-      stretchSmallPages,
-      widthLimitEnabled,
-      widthLimitPercent,
-      imagePreloadAmount,
-      onTap,
-      containerRef,
-      onScrollProgress,
-    },
-    ref
-  ) {
+export const ComicReaderViewport = ({
+  publication,
+  pages,
+  mode,
+  direction,
+  scaleType,
+  cursorIndex,
+  setCursorIndex,
+  pageGapPx,
+  stretchSmallPages,
+  widthLimitEnabled,
+  widthLimitPercent,
+  imagePreloadAmount,
+  onTap,
+  containerRef,
+  onPageLoadStateChange,
+}: ComicReaderViewportProps) => {
   const itemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const scrollRef = useRef<HTMLDivElement | null>(null);
   /** When true, `cursorIndex` was updated from scroll measurement — skip `scrollIntoView`. */
@@ -369,51 +377,24 @@ export const ComicReaderViewport = forwardRef<ComicReaderViewportHandle, ComicRe
     });
   }, [isVerticalScrollMode, mode, setCursorIndex]);
 
-  const reportScrollProgress = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el || !isVerticalScrollMode) return;
-    onScrollProgress?.(verticalScrollProgress(el));
-  }, [isVerticalScrollMode, onScrollProgress]);
-
-  useImperativeHandle(
-    ref,
-    () => ({
-      getScrollProgress: () => {
-        const el = scrollRef.current;
-        if (!el || !isVerticalScrollMode) return 0;
-        return verticalScrollProgress(el);
-      },
-      setScrollProgress: (fraction: number) => {
-        const el = scrollRef.current;
-        if (!el || !isVerticalScrollMode) return;
-        const max = el.scrollHeight - el.clientHeight;
-        el.scrollTop = max <= 0 ? 0 : clamp01(fraction) * max;
-      },
-    }),
-    [isVerticalScrollMode]
-  );
-
   useEffect(() => {
     if (!isVerticalScrollMode) return;
     const el = scrollRef.current;
     if (!el) return;
     const onScroll = () => {
-      reportScrollProgress();
       updateActivePageFromScroll();
     };
     el.addEventListener("scroll", onScroll, { passive: true });
     const ro = new ResizeObserver(() => {
-      reportScrollProgress();
       updateActivePageFromScroll();
     });
     ro.observe(el);
-    reportScrollProgress();
     updateActivePageFromScroll();
     return () => {
       el.removeEventListener("scroll", onScroll);
       ro.disconnect();
     };
-  }, [isVerticalScrollMode, reportScrollProgress, updateActivePageFromScroll, pages.length]);
+  }, [isVerticalScrollMode, updateActivePageFromScroll, pages.length]);
 
   useEffect(() => {
     if (mode !== ComicReadingMode.continuousHorizontal) return;
@@ -451,11 +432,6 @@ export const ComicReaderViewport = forwardRef<ComicReaderViewportHandle, ComicRe
       ? [current, prevPage].filter(Boolean)
       : [current, nextPage].filter(Boolean);
   }, [current, direction, mode, nextPage, prevPage]);
-
-  const isContinuous =
-    mode === ComicReadingMode.continuousVertical ||
-    mode === ComicReadingMode.continuousHorizontal ||
-    mode === ComicReadingMode.webtoon;
 
   const isOriginalDouble = mode === ComicReadingMode.doublePage && scaleType === ComicScaleType.originalSize;
 
@@ -499,6 +475,7 @@ export const ComicReaderViewport = forwardRef<ComicReaderViewportHandle, ComicRe
               style={pageCellStyleVertical}
             >
               <ComicImage
+                pageIndex={page.index}
                 publication={publication}
                 link={page.link}
                 scaleType={scaleType}
@@ -507,7 +484,8 @@ export const ComicReaderViewport = forwardRef<ComicReaderViewportHandle, ComicRe
                 widthLimitPercent={widthLimitPercent}
                 layoutMode="verticalStack"
                 isDoublePageCell={false}
-                preload={Math.abs(page.index - cursorIndex) <= imagePreloadAmount}
+                shouldLoad={Math.abs(page.index - cursorIndex) <= imagePreloadAmount}
+                onPageLoadStateChange={onPageLoadStateChange}
               />
             </div>
           ))}
@@ -538,6 +516,7 @@ export const ComicReaderViewport = forwardRef<ComicReaderViewportHandle, ComicRe
               style={pageCellStyleHorizontal}
             >
               <ComicImage
+                pageIndex={page.index}
                 publication={publication}
                 link={page.link}
                 scaleType={scaleType}
@@ -546,7 +525,8 @@ export const ComicReaderViewport = forwardRef<ComicReaderViewportHandle, ComicRe
                 widthLimitPercent={widthLimitPercent}
                 layoutMode="viewportBound"
                 isDoublePageCell={false}
-                preload={Math.abs(page.index - cursorIndex) <= imagePreloadAmount}
+                shouldLoad={Math.abs(page.index - cursorIndex) <= imagePreloadAmount}
+                onPageLoadStateChange={onPageLoadStateChange}
               />
             </div>
           ))}
@@ -585,6 +565,7 @@ export const ComicReaderViewport = forwardRef<ComicReaderViewportHandle, ComicRe
                 }}
               >
                 <ComicImage
+                  pageIndex={page.index}
                   publication={publication}
                   link={page.link}
                   scaleType={scaleType}
@@ -593,7 +574,8 @@ export const ComicReaderViewport = forwardRef<ComicReaderViewportHandle, ComicRe
                   widthLimitPercent={widthLimitPercent}
                   layoutMode="viewportBound"
                   isDoublePageCell
-                  preload={Math.abs(page.index - cursorIndex) <= imagePreloadAmount}
+                  shouldLoad
+                  onPageLoadStateChange={onPageLoadStateChange}
                 />
               </div>
             ))}
@@ -614,6 +596,7 @@ export const ComicReaderViewport = forwardRef<ComicReaderViewportHandle, ComicRe
             {doublePages.map((page) => (
               <div key={page.href} style={{ display: "flex", flexDirection: "column", minHeight: 0, minWidth: 0, height: "100%" }}>
                 <ComicImage
+                  pageIndex={page.index}
                   publication={publication}
                   link={page.link}
                   scaleType={scaleType}
@@ -622,7 +605,8 @@ export const ComicReaderViewport = forwardRef<ComicReaderViewportHandle, ComicRe
                   widthLimitPercent={widthLimitPercent}
                   layoutMode="viewportBound"
                   isDoublePageCell
-                  preload={Math.abs(page.index - cursorIndex) <= imagePreloadAmount}
+                  shouldLoad
+                  onPageLoadStateChange={onPageLoadStateChange}
                 />
               </div>
             ))}
@@ -643,6 +627,7 @@ export const ComicReaderViewport = forwardRef<ComicReaderViewportHandle, ComicRe
           {current ? (
             <div style={{ flex: 1, minHeight: 0, minWidth: 0, display: "flex", flexDirection: "column" }}>
               <ComicImage
+                pageIndex={current.index}
                 publication={publication}
                 link={current.link}
                 scaleType={scaleType}
@@ -651,7 +636,8 @@ export const ComicReaderViewport = forwardRef<ComicReaderViewportHandle, ComicRe
                 widthLimitPercent={widthLimitPercent}
                 layoutMode="viewportBound"
                 isDoublePageCell={false}
-                preload={isContinuous}
+                shouldLoad
+                onPageLoadStateChange={onPageLoadStateChange}
               />
             </div>
           ) : null}
@@ -659,5 +645,4 @@ export const ComicReaderViewport = forwardRef<ComicReaderViewportHandle, ComicRe
       )}
     </div>
   );
-  }
-);
+};

@@ -31,7 +31,6 @@ import {
   StatefulComicImagePreloadAmount,
   StatefulComicPageGap,
   StatefulComicProgressBarPosition,
-  StatefulComicProgressBarSize,
   StatefulComicProgressBarType,
   StatefulComicReadingDirection,
   StatefulComicReadingMode,
@@ -142,9 +141,6 @@ export const createDefaultPlugin = (): ThPlugin => {
         },
         [ThSettingsKeys.comicProgressBarType]: {
           Comp: StatefulComicProgressBarType
-        },
-        [ThSettingsKeys.comicProgressBarSizePx]: {
-          Comp: StatefulComicProgressBarSize
         },
         [ThSettingsKeys.comicProgressBarPosition]: {
           Comp: StatefulComicProgressBarPosition
