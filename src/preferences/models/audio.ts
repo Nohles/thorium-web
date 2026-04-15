@@ -148,5 +148,11 @@ export const defaultAudioTocAction: ThAudioActionsTokens = {
       [ThBreakpoints.medium]: ThSheetTypes.fullscreen
     }
   },
-  docked: { dockable: ThDockingTypes.both }
+  docked: {
+    dockable: ThDockingTypes.both,
+    dragIndicator: false,
+    width: 360,
+    minWidth: 320,
+    maxWidth: 450
+  }
 };
