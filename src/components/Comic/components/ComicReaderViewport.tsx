@@ -12,6 +12,7 @@ import {
   useRef,
   useState,
 } from "react";
+import readerStyles from "@/components/assets/styles/thorium-web.reader.app.module.css";
 import {
   ComicReadingDirection,
   ComicReadingMode,
@@ -245,6 +246,52 @@ const pageCellStyleHorizontal: CSSProperties = {
 
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
 
+/** Page that contains the viewport center line; if none (gap), closest by page-mid distance. */
+const getActivePageIndexVertical = (root: HTMLDivElement, itemRefs: Map<number, HTMLDivElement>): number => {
+  const rootRect = root.getBoundingClientRect();
+  const yMid = rootRect.top + rootRect.height / 2;
+  const ordered = [...itemRefs.entries()].sort((a, b) => a[0] - b[0]);
+  for (const [idx, el] of ordered) {
+    const r = el.getBoundingClientRect();
+    if (r.top <= yMid && r.bottom >= yMid) return idx;
+  }
+  let bestIdx = ordered[0]?.[0] ?? 0;
+  let bestDist = Infinity;
+  itemRefs.forEach((el, idx) => {
+    const r = el.getBoundingClientRect();
+    const pageMid = r.top + r.height / 2;
+    const dist = Math.abs(pageMid - yMid);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestIdx = idx;
+    }
+  });
+  return bestIdx;
+};
+
+/** Same as vertical but for horizontal continuous scroll. */
+const getActivePageIndexHorizontal = (root: HTMLDivElement, itemRefs: Map<number, HTMLDivElement>): number => {
+  const rootRect = root.getBoundingClientRect();
+  const xMid = rootRect.left + rootRect.width / 2;
+  const ordered = [...itemRefs.entries()].sort((a, b) => a[0] - b[0]);
+  for (const [idx, el] of ordered) {
+    const r = el.getBoundingClientRect();
+    if (r.left <= xMid && r.right >= xMid) return idx;
+  }
+  let bestIdx = ordered[0]?.[0] ?? 0;
+  let bestDist = Infinity;
+  itemRefs.forEach((el, idx) => {
+    const r = el.getBoundingClientRect();
+    const pageMid = r.left + r.width / 2;
+    const dist = Math.abs(pageMid - xMid);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestIdx = idx;
+    }
+  });
+  return bestIdx;
+};
+
 const verticalScrollProgress = (el: HTMLDivElement): number => {
   const max = el.scrollHeight - el.clientHeight;
   if (max <= 0) return 0;
@@ -298,9 +345,29 @@ export const ComicReaderViewport = forwardRef<ComicReaderViewportHandle, ComicRe
   ) {
   const itemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  /** When true, `cursorIndex` was updated from scroll measurement — skip `scrollIntoView`. */
+  const syncFromScrollRef = useRef(false);
 
   const isVerticalScrollMode =
     mode === ComicReadingMode.continuousVertical || mode === ComicReadingMode.webtoon;
+
+  const updateActivePageFromScroll = useCallback(() => {
+    const root = scrollRef.current;
+    if (!root) return;
+    let idx: number;
+    if (isVerticalScrollMode) {
+      idx = getActivePageIndexVertical(root, itemRefs.current);
+    } else if (mode === ComicReadingMode.continuousHorizontal) {
+      idx = getActivePageIndexHorizontal(root, itemRefs.current);
+    } else {
+      return;
+    }
+    setCursorIndex((prev) => {
+      if (prev === idx) return prev;
+      syncFromScrollRef.current = true;
+      return idx;
+    });
+  }, [isVerticalScrollMode, mode, setCursorIndex]);
 
   const reportScrollProgress = useCallback(() => {
     const el = scrollRef.current;
@@ -330,44 +397,50 @@ export const ComicReaderViewport = forwardRef<ComicReaderViewportHandle, ComicRe
     if (!isVerticalScrollMode) return;
     const el = scrollRef.current;
     if (!el) return;
-    const onScroll = () => reportScrollProgress();
+    const onScroll = () => {
+      reportScrollProgress();
+      updateActivePageFromScroll();
+    };
     el.addEventListener("scroll", onScroll, { passive: true });
-    const ro = new ResizeObserver(() => reportScrollProgress());
+    const ro = new ResizeObserver(() => {
+      reportScrollProgress();
+      updateActivePageFromScroll();
+    });
     ro.observe(el);
     reportScrollProgress();
+    updateActivePageFromScroll();
     return () => {
       el.removeEventListener("scroll", onScroll);
       ro.disconnect();
     };
-  }, [isVerticalScrollMode, reportScrollProgress, pages.length]);
+  }, [isVerticalScrollMode, reportScrollProgress, updateActivePageFromScroll, pages.length]);
+
+  useEffect(() => {
+    if (mode !== ComicReadingMode.continuousHorizontal) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => updateActivePageFromScroll();
+    el.addEventListener("scroll", onScroll, { passive: true });
+    const ro = new ResizeObserver(() => updateActivePageFromScroll());
+    ro.observe(el);
+    updateActivePageFromScroll();
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      ro.disconnect();
+    };
+  }, [mode, updateActivePageFromScroll, pages.length]);
 
   useEffect(() => {
     if (mode !== ComicReadingMode.continuousVertical && mode !== ComicReadingMode.continuousHorizontal && mode !== ComicReadingMode.webtoon) {
+      return;
+    }
+    if (syncFromScrollRef.current) {
+      syncFromScrollRef.current = false;
       return;
     }
     const el = itemRefs.current.get(cursorIndex);
     el?.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
   }, [cursorIndex, mode]);
-
-  useEffect(() => {
-    if (mode !== ComicReadingMode.continuousVertical && mode !== ComicReadingMode.continuousHorizontal && mode !== ComicReadingMode.webtoon) {
-      return;
-    }
-    const root = scrollRef.current;
-    if (!root) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        const idx = Number((visible?.target as HTMLElement | undefined)?.dataset.pageIndex ?? -1);
-        if (idx >= 0) setCursorIndex(idx);
-      },
-      { root, threshold: [0.3, 0.6, 0.9] }
-    );
-    itemRefs.current.forEach((node) => observer.observe(node));
-    return () => observer.disconnect();
-  }, [mode, pages, setCursorIndex]);
 
   const current = pages[cursorIndex];
   const nextPage = pages[cursorIndex + 1];
@@ -403,6 +476,7 @@ export const ComicReaderViewport = forwardRef<ComicReaderViewportHandle, ComicRe
       {mode === ComicReadingMode.continuousVertical || mode === ComicReadingMode.webtoon ? (
         <div
           ref={scrollRef}
+          className={readerStyles.hiddenScrollbar}
           style={{
             height: "100%",
             overflowY: "auto",
@@ -420,6 +494,7 @@ export const ComicReaderViewport = forwardRef<ComicReaderViewportHandle, ComicRe
               data-page-index={page.index}
               ref={(el) => {
                 if (el) itemRefs.current.set(page.index, el);
+                else itemRefs.current.delete(page.index);
               }}
               style={pageCellStyleVertical}
             >
@@ -440,6 +515,7 @@ export const ComicReaderViewport = forwardRef<ComicReaderViewportHandle, ComicRe
       ) : mode === ComicReadingMode.continuousHorizontal ? (
         <div
           ref={scrollRef}
+          className={readerStyles.hiddenScrollbar}
           style={{
             height: "100%",
             overflowX: "auto",
@@ -457,6 +533,7 @@ export const ComicReaderViewport = forwardRef<ComicReaderViewportHandle, ComicRe
               data-page-index={page.index}
               ref={(el) => {
                 if (el) itemRefs.current.set(page.index, el);
+                else itemRefs.current.delete(page.index);
               }}
               style={pageCellStyleHorizontal}
             >
@@ -477,6 +554,7 @@ export const ComicReaderViewport = forwardRef<ComicReaderViewportHandle, ComicRe
       ) : mode === ComicReadingMode.doublePage ? (
         isOriginalDouble ? (
           <div
+            className={readerStyles.hiddenScrollbar}
             style={{
               height: "100%",
               width: "100%",

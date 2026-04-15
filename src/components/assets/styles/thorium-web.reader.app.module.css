@@ -176,6 +176,17 @@
   border-width: 0;
 }
 
+.hiddenScrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hiddenScrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 /* FXL: Loading spinner for resources */
 @keyframes loading {
   0% {

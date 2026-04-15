@@ -117,6 +117,8 @@ When upgrading between major or breaking versions, refer to the migration guide 
 | Version | Guide |
 |---|---|
 | 1.2.0 | [Migration Guide 1.2.0](./migrations/1.2.0.md) |
+| 1.3.0 | [Migration Guide 1.3.0](./migrations/1.3.0.md) |
+| 1.3.5 | [Migration Guide 1.3.5](./migrations/1.3.5.md) |
 
 ## Prerequisites for implementation
 
