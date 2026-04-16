@@ -22,6 +22,7 @@ import {
   ComicScaleType,
   ComicTapZones,
   defaultComicSettings,
+  LegacyComicSettings,
   normalizeComicSettings,
   setComicActiveKey,
   updateComicSettings,
@@ -71,7 +72,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
   const isImmersive = useAppSelector((s) => s.reader.isImmersive);
   const isHovering = useAppSelector((s) => s.reader.isHovering);
   const breakpoint = useAppSelector((s) => s.theming.breakpoint);
-  const merged = useMemo(() => normalizeComicSettings(settings), [settings]);
+  const merged = useMemo(() => normalizeComicSettings(settings as LegacyComicSettings), [settings]);
 
   const layoutUI = preferences.theming.layout.ui?.fxl ?? ThLayoutUI.layered;
 
