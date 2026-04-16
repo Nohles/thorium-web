@@ -74,9 +74,23 @@ const audiobooks = [
     cover: "https://www.archive.org/download/LibrivoxCdCoverArt12/Flatland_1109.jpg",
     url: "/read/flatland",
     rendition: "Audiobook"
+  },
+  {
+    title: "The Martian",
+    author: "Andy Weir",
+    cover: "https://www.archive.org/download/LibrivoxCdCoverArt12/Flatland_1109.jpg",
+    url: "/read/the-martian",
+    rendition: "Audiobook"
+  },
+  {
+    title: "Harry Potter and the Order of the Phoenix",
+    author: "J.K. Rowling",
+    cover: "https://www.archive.org/download/LibrivoxCdCoverArt12/Flatland_1109.jpg",
+    url: "/read/harry-potter-and-the-order-of-the-phoenix",
+    rendition: "Audiobook"
   }
 ]
-const comics = [ { title: "cbz", author: "John Doe", cover: "/images/cbz.jpg", url: "/read/manifest/http%3A%2F%2Flocalhost%3A8006%2Fwebpub%2FZmlsZTovLy9DaGFwdGVyIDEuY2J6%2Fmanifest.json", rendition: "Fixed-Layout CBZ" } ]
+const comics = [ { title: "cbz", author: "John Doe", cover: "/images/cbz.jpg", url: "/read/cbz", rendition: "Fixed-Layout CBZ" } ]
 
 export default function Home() {
   const [isManifestEnabled, setIsManifestEnabled] = useState<boolean>(true);

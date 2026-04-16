@@ -144,12 +144,25 @@ const initialState: ActionsReducerState = {
         active: false,
         collapsed: false
       }
+    },
+    comic: {
+      [ThDockingKeys.start]: {
+        actionKey: null,
+        active: false,
+        collapsed: false
+      },
+      [ThDockingKeys.end]: {
+        actionKey: null,
+        active: false,
+        collapsed: false
+      }
     }
   },
   keys: {
     epub: {},
     webPub: {},
-    audio: {}
+    audio: {},
+    comic: {}
   },
   overflow: {}
 }

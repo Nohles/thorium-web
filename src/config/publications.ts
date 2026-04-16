@@ -15,5 +15,8 @@ export const PUBLICATION_MANIFESTS = {
   "readium-css": "https://readium.org/css/docs/manifest.json",
   "moby-dick-webpub": "https://readium.org/webpub-manifest/examples/MobyDick/manifest.json",
   "molly-hopper": "https://publication-server.readium.org/webpub/Z3M6Ly9yZWFkaXVtLXBsYXlncm91bmQtZmlsZXMvZGVtby9tb2xseS1ob3BwZXItdjEuMS53ZWJwdWI/manifest.json",
-  "flatland": "https://readium.org/webpub-manifest/examples/Flatland/manifest.json"
+  "flatland": "https://readium.org/webpub-manifest/examples/Flatland/manifest.json",
+  "the-martian": "http://localhost:8100/webpub/ZmlsZTovLy9BbmR5IFdlaXIgLSBUaGUgTWFydGlhbi5tcDM/manifest.json",
+  "harry-potter-and-the-order-of-the-phoenix": "http://localhost:8008/webpub/Si5LLiBSb3dsaW5nIC0gSGFycnkgUG90dGVyIGFuZCB0aGUgSGFsZi1CbG9vZCBQcmluY2UgKDEpLm00Yg/manifest.json",
+  "cbz": "http://localhost:8006/webpub/ZmlsZTovLy9DaGFwdGVyIDEuY2J6/manifest.json",
 } as const;

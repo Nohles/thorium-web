@@ -106,11 +106,11 @@ const initialState: ComicSettingsReducerState = {
   byKey: {},
 };
 
-type LegacyComicSettings = Partial<ComicSettings> & Record<string, unknown>;
+export type LegacyComicSettings = Partial<ComicSettings> & Record<string, unknown>;
 
 const LEGACY_DEFAULT_SCALE = "default" as const;
 
-const normalizeScaleType = (raw: unknown): ComicScaleType => {
+export const normalizeComicScaleType = (raw: unknown): ComicScaleType => {
   if (raw === LEGACY_DEFAULT_SCALE) {
     return ComicScaleType.originalSize;
   }
@@ -123,7 +123,10 @@ const normalizeScaleType = (raw: unknown): ComicScaleType => {
   return defaultComicSettings.scaleType;
 };
 
-const migrateLegacyComicSettings = (entry: LegacyComicSettings): ComicSettings => {
+export const normalizeComicSettings = (entry?: LegacyComicSettings): ComicSettings => {
+  if (!entry) {
+    return { ...defaultComicSettings };
+  }
   const widthLimitEnabled =
     typeof entry.widthLimitEnabled === "boolean"
       ? entry.widthLimitEnabled
@@ -132,7 +135,7 @@ const migrateLegacyComicSettings = (entry: LegacyComicSettings): ComicSettings =
     typeof entry.widthLimitPercent === "number"
       ? entry.widthLimitPercent
       : defaultComicSettings.widthLimitPercent;
-  const scaleType = normalizeScaleType(entry.scaleType);
+  const scaleType = normalizeComicScaleType(entry.scaleType);
   return {
     ...defaultComicSettings,
     ...(entry as ComicSettings),
@@ -146,7 +149,7 @@ const ensureKey = (state: ComicSettingsReducerState, key: string): ComicSettings
   if (!state.byKey[key]) {
     state.byKey[key] = { ...defaultComicSettings };
   } else {
-    state.byKey[key] = migrateLegacyComicSettings(state.byKey[key] as LegacyComicSettings);
+    state.byKey[key] = normalizeComicSettings(state.byKey[key] as LegacyComicSettings);
   }
   return state.byKey[key];
 };
@@ -165,7 +168,7 @@ export const comicSettingsSlice = createSlice({
     ) => {
       const { key, patch } = action.payload;
       const current = ensureKey(state, key);
-      state.byKey[key] = { ...current, ...patch };
+      state.byKey[key] = normalizeComicSettings({ ...current, ...patch });
     },
     resetComicSettings: (state, action: PayloadAction<{ key: string }>) => {
       const { key } = action.payload;

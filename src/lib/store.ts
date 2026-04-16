@@ -56,7 +56,7 @@ const migrateFontFamily = (stateSlice: SettingsReducerState | WebPubSettingsRedu
 
 const updateActionsState = (state: ActionsReducerState) => {
   // Check if keys are already profile-keyed
-  if (state.keys && typeof state.keys === "object" && ("epub" in state.keys || "webPub" in state.keys || "audio" in state.keys)) {
+  if (state.keys && typeof state.keys === "object" && ("epub" in state.keys || "webPub" in state.keys || "audio" in state.keys || "comic" in state.keys)) {
     // Keys are already profile-keyed, update each profile
     const updatedKeys: any = {};
     for (const profile in state.keys) {
@@ -108,7 +108,7 @@ const updateActionsState = (state: ActionsReducerState) => {
 
 const migrateDockStateToProfileKeyed = (state: ActionsReducerState): ActionsReducerState => {
   // Check if dock state is in old format (not profile-keyed)
-  if (state.dock && typeof state.dock === "object" && !("epub" in state.dock || "webPub" in state.dock || "audio" in state.dock)) {
+  if (state.dock && typeof state.dock === "object" && !("epub" in state.dock || "webPub" in state.dock || "audio" in state.dock || "comic" in state.dock)) {
     // Old format: dock has direct start/end keys
     const oldDock = state.dock as any;
     if (oldDock[ThDockingKeys.start] || oldDock[ThDockingKeys.end]) {
@@ -130,13 +130,13 @@ const migrateDockStateToProfileKeyed = (state: ActionsReducerState): ActionsRedu
 const migrateKeysStateToProfileKeyed = (state: ActionsReducerState): ActionsReducerState => {
   // If keys is not profile-keyed, migrate to profile-keyed format
   // Old format: keys is a flat object like { [key]: ActionStateObject }
-  // New format: keys is profile-keyed like { epub: { [key]: ActionStateObject }, webPub: { ... }, audio: { ... } }
+  // New format: keys is profile-keyed like { epub: { [key]: ActionStateObject }, webPub: { ... }, audio: { ... }, comic: { ... } }
   if (!state.keys) {
     return state;
   }
   
   // Check if keys is already profile-keyed by looking for known profile keys
-  const isProfileKeyed = "epub" in state.keys || "webPub" in state.keys || "audio" in state.keys;
+  const isProfileKeyed = "epub" in state.keys || "webPub" in state.keys || "audio" in state.keys || "comic" in state.keys;
   
   if (!isProfileKeyed) {
     // Old flat format - migrate to epub profile
@@ -144,7 +144,8 @@ const migrateKeysStateToProfileKeyed = (state: ActionsReducerState): ActionsRedu
     const newKeys: any = {
       epub: { ...oldKeys },
       webPub: {},
-      audio: {}
+      audio: {},
+      comic: {}
     };
     return {
       ...state,
@@ -156,7 +157,8 @@ const migrateKeysStateToProfileKeyed = (state: ActionsReducerState): ActionsRedu
   const migratedKeys: any = {
     epub: state.keys.epub || {},
     webPub: state.keys.webPub || {},
-    audio: state.keys.audio || {}
+    audio: state.keys.audio || {},
+    comic: state.keys.comic || {}
   };
   
   return {
