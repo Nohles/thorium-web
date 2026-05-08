@@ -53,7 +53,9 @@ export enum ThSettingsKeys {
   hyphens = "hyphens",
   layout = "layout",
   letterSpacing = "letterSpacing",
+  ligatures = "ligatures",
   lineHeight = "lineHeight",
+  noRuby = "noRuby",
   paragraphIndent = "paragraphIndent",
   paragraphSpacing = "paragraphSpacing",
   publisherStyles = "publisherStyles",
@@ -71,6 +73,8 @@ export enum ThTextSettingsKeys {
   fontFamily = "fontFamily",
   fontWeight = "fontWeight",
   hyphens = "hyphens",
+  ligatures = "ligatures",
+  noRuby = "noRuby",
   textAlign = "textAlign",
   textNormalize = "textNormalize"
 }
@@ -138,7 +142,9 @@ export const defaultTextSettingsSubpanel = [
   ThTextSettingsKeys.textAlign,
   ThTextSettingsKeys.hyphens,
   ThTextSettingsKeys.fontWeight,
-  ThTextSettingsKeys.textNormalize
+  ThTextSettingsKeys.textNormalize,
+  ThTextSettingsKeys.ligatures,
+  ThTextSettingsKeys.noRuby
 ]
 
 export const defaultSpacingSettingsMain = [

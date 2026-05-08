@@ -197,7 +197,6 @@ const ThBottomSheetContainer = ({
 }
 
 export const ThBottomSheet = ({
-  id,
   isOpen,
   onOpenChange,
   ref,

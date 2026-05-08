@@ -8,6 +8,7 @@ import themeReducer, { ThemeReducerState } from "@/lib/themeReducer";
 import actionsReducer, { ActionsReducerState, ActionStateObject } from "@/lib/actionsReducer";
 import publicationReducer, { PublicationReducerState } from "./publicationReducer";
 import preferencesReducer, { PreferencesReducerState } from "./preferencesReducer";
+import globalPreferencesReducer, { GlobalPreferencesReducerState } from "./globalPreferencesReducer";
 import webPubSettingsReducer, { WebPubSettingsReducerState } from "./webPubSettingsReducer";
 import audioSettingsReducer, { AudioSettingsState } from "./audioSettingsReducer";
 import playerReducer, { PlayerReducerState } from "./playerReducer";
@@ -30,6 +31,7 @@ export type RootState = {
   actions: ActionsReducerState;
   publication: PublicationReducerState;
   preferences: PreferencesReducerState;
+  globalPreferences: GlobalPreferencesReducerState;
   webPubSettings: WebPubSettingsReducerState;
   audioSettings: AudioSettingsState;
   player: PlayerReducerState;
@@ -172,11 +174,12 @@ const loadState = (storageKey: string = DEFAULT_STORAGE_KEY) => {
     const resolvedKey = storageKey || DEFAULT_STORAGE_KEY;
     const serializedState = localStorage.getItem(resolvedKey);
     if (serializedState === null) {
-      return { 
-        actions: undefined, 
-        settings: undefined, 
+      return {
+        actions: undefined,
+        settings: undefined,
         theming: undefined,
         preferences: undefined,
+        globalPreferences: undefined,
         webPubSettings: undefined,
         audioSettings: undefined,
         comicSettings: undefined,
@@ -222,14 +225,15 @@ const loadState = (storageKey: string = DEFAULT_STORAGE_KEY) => {
     }
     
     return state;
-  } catch (err) {
-    return { 
-      actions: undefined, 
-      settings: undefined, 
+  } catch (_err) {
+    return {
+      actions: undefined,
+      settings: undefined,
       theming: undefined,
       preferences: undefined,
-      webPubSettings: undefined,
-      audioSettings: undefined,
+
+      globalPreferences: undefined,
+      webPubSettings: undefined
       comicSettings: undefined,
       comicPosition: undefined
     };
@@ -248,6 +252,7 @@ const saveState = (state: any, storageKey?: string, externalReducers: Record<str
     if (state.settings) stateToPersist.settings = state.settings;
     if (state.theming) stateToPersist.theming = state.theming;
     if (state.preferences) stateToPersist.preferences = state.preferences;
+    if (state.globalPreferences) stateToPersist.globalPreferences = state.globalPreferences;
     if (state.webPubSettings) stateToPersist.webPubSettings = state.webPubSettings;
     if (state.audioSettings) stateToPersist.audioSettings = state.audioSettings;
     if (state.comicSettings) stateToPersist.comicSettings = state.comicSettings;
@@ -276,6 +281,7 @@ export const makeStore = (storageKey?: string, externalReducers: Record<string, 
     actions: actionsReducer,
     publication: publicationReducer,
     preferences: preferencesReducer,
+    globalPreferences: globalPreferencesReducer,
     webPubSettings: webPubSettingsReducer,
     audioSettings: audioSettingsReducer,
     player: playerReducer,
@@ -296,6 +302,7 @@ export const makeStore = (storageKey?: string, externalReducers: Record<string, 
     settings: persistedState.settings,
     theming: persistedState.theming,
     preferences: persistedState.preferences,
+    globalPreferences: persistedState.globalPreferences,
     webPubSettings: persistedState.webPubSettings,
     audioSettings: persistedState.audioSettings,
     comicSettings: persistedState.comicSettings,
