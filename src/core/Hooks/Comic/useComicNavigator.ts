@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef } from "react";
+import { getScriptMode } from "@readium/navigator";
 import { Link, Locator, Publication } from "@readium/shared";
 
 type NavigationCallback = (ok: boolean) => void;
@@ -136,6 +137,12 @@ export const useComicNavigator = () => {
 
   const getCframes = useCallback(() => undefined, []);
 
+  const currentScriptMode = useCallback(() => {
+    const metadata = bindStore.current?.publication?.metadata;
+    if (!metadata) return undefined;
+    return getScriptMode(metadata);
+  }, []);
+
   return {
     isComicNavigator: true as const,
     bind,
@@ -150,6 +157,7 @@ export const useComicNavigator = () => {
     submitPreferences,
     preferencesEditor: undefined,
     getCframes,
+    getScriptMode: currentScriptMode,
   };
 };
 

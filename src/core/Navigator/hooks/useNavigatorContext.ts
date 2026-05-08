@@ -125,10 +125,12 @@ export const useNavigator = () => {
       isVisual: () => isVisual,
 
       getScriptMode: (): ScriptMode | undefined => {
-        if (isVisual && (navigator as ReturnType<typeof useEpubNavigator> | ReturnType<typeof useWebPubNavigator>).getScriptMode) {
-          return (navigator as ReturnType<typeof useEpubNavigator> | ReturnType<typeof useWebPubNavigator>).getScriptMode?.();
+        if (!isVisual) return undefined;
+        if (isComicNavigator(navigator as VisualNavigator)) {
+          return navigator.getScriptMode?.();
         }
-        return undefined;
+        const visual = navigator as ReturnType<typeof useEpubNavigator> | ReturnType<typeof useWebPubNavigator>;
+        return visual.getScriptMode?.();
       },
 
       getCframes: isVisual ? navigator.getCframes?.bind(navigator) : undefined,

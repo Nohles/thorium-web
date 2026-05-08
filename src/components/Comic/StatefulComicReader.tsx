@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import classNames from "classnames";
-import { I18nProvider } from "react-aria";
 import { Publication } from "@readium/shared";
 
 import readerStyles from "../assets/styles/thorium-web.reader.app.module.css";
@@ -223,8 +222,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
   }, [direction, merged.tapZones, merged.tapZonePreview]);
 
   return (
-    <I18nProvider locale={preferences.locale}>
-      <NavigatorProvider visualNavigator={comicNavigator}>
+    <NavigatorProvider visualNavigator={comicNavigator}>
         <main
           className={readerStyles.main}
           style={{
@@ -329,7 +327,6 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
           </StatefulDockingWrapper>
         </main>
       </NavigatorProvider>
-    </I18nProvider>
   );
 };
 

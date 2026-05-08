@@ -233,7 +233,7 @@ const loadState = (storageKey: string = DEFAULT_STORAGE_KEY) => {
       preferences: undefined,
 
       globalPreferences: undefined,
-      webPubSettings: undefined
+      webPubSettings: undefined,
       comicSettings: undefined,
       comicPosition: undefined
     };
