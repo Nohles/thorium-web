@@ -17,6 +17,7 @@ import {
   IEpubDefaults,
   IEpubPreferences,
   IInjectablesConfig,
+  IKeyboardPeripheralsConfig,
   getScriptMode,
   ScriptMode
 } from "@readium/navigator";
@@ -36,6 +37,7 @@ export interface EpubNavigatorLoadProps {
   defaults?: IEpubDefaults;
   injectables?: IInjectablesConfig;
   contentProtection?: IContentProtectionConfig;
+  keyboardPeripherals?: IKeyboardPeripheralsConfig;
 }
 
 export const useEpubNavigator = () => {
@@ -88,16 +90,17 @@ export const useEpubNavigator = () => {
       }
 
       navigatorInstance = new EpubNavigator(
-        config.container, 
-        config.publication, 
-        config.listeners, 
-        config.positionsList, 
-        config.initialPosition, 
-        { 
-          preferences: config.preferences || {}, 
-          defaults: config.defaults || {}, 
+        config.container,
+        config.publication,
+        config.listeners,
+        config.positionsList,
+        config.initialPosition,
+        {
+          preferences: config.preferences || {},
+          defaults: config.defaults || {},
           injectables: config.injectables || undefined,
-          contentProtection: config.contentProtection || undefined
+          contentProtection: config.contentProtection || undefined,
+          keyboardPeripherals: config.keyboardPeripherals || [],
         }
       );
 

@@ -10,16 +10,16 @@ importers:
     dependencies:
       '@edrlab/thorium-locales':
         specifier: github:edrlab/thorium-locales
-        version: thorium-locales@https://codeload.github.com/edrlab/thorium-locales/tar.gz/4a9e7d687d9469ffd1c9fa153cb2b7fc93b15cb8
+        version: thorium-locales@https://codeload.github.com/edrlab/thorium-locales/tar.gz/34a2891445d535c120a5cebcacd82170b37899ea
       '@readium/css':
-        specifier: ^2.0.2
-        version: 2.0.2
+        specifier: ^2.0.4
+        version: 2.0.4
       '@readium/navigator':
-        specifier: ^2.5.2
-        version: 2.5.2
+        specifier: ^2.5.3
+        version: 2.5.3
       '@readium/navigator-html-injectables':
-        specifier: ^2.4.1
-        version: 2.4.1
+        specifier: ^2.4.2
+        version: 2.4.2
       '@readium/shared':
         specifier: ^2.2.0
         version: 2.2.0
@@ -1856,15 +1856,15 @@ packages:
     peerDependencies:
       react: ^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1
 
-  '@readium/css@2.0.2':
-    resolution: {integrity: sha512-2cLkU3NPzLlVxVWPlyxoFTCFE2y5521cQ+sgHnPBAKnOdCh3SltQwd7XodvB+xTGgS4TdVbQmxfr3x1Ke6nZWA==}
+  '@readium/css@2.0.4':
+    resolution: {integrity: sha512-+WQoL7/GG0VECHtGd+XZlC5JyLBG6DiPEKDTz9QGg9CVaA7bZ0fcAVNB86MDHP+RGQ/DWDIuiw1stzpapylnrA==}
 
-  '@readium/navigator-html-injectables@2.4.1':
-    resolution: {integrity: sha512-Yt5xmwvBWMXX+GMvfYaFgMwFjvYiWAKHWYYNmpVw3IMGYcfAC04SGavA4Evu5oNrqAgb0ImseDGNrofq+/9NGQ==}
+  '@readium/navigator-html-injectables@2.4.2':
+    resolution: {integrity: sha512-C08vjzYek19VU9JnCvhTorO8xVsR8hcCzSCD0IondBYOtcRbBzu18Ezp3WQR47/a/9tQMGicOS9knmmll1fZuw==}
     engines: {node: '>=18'}
 
-  '@readium/navigator@2.5.2':
-    resolution: {integrity: sha512-npSbb9HQSUOlaGjxRbSgGPSPOTJRljwSWg3ZWlg0BQ6T+gp3qxAJ461eXPVwpEpVWERe33Kih/o8KcmNlqYl/A==}
+  '@readium/navigator@2.5.3':
+    resolution: {integrity: sha512-7YbMIu8FsmyusMHt//yLTKfKfWYCMAgv0CpzEXJbcDN4i7GjsckTJ00fOvqXQ0ZkqYzT1LS9t5iHPJ82Cf+hPw==}
     engines: {node: '>=18'}
 
   '@readium/shared@2.2.0':
@@ -3944,8 +3944,8 @@ packages:
   thenify@3.3.1:
     resolution: {integrity: sha512-RVZSIV5IG10Hk3enotrhvz0T9em6cyHBLkH/YAZuKqd8hRkKhSfCGIcP2KUY0EPxndzANBmNllzWPwak+bheSw==}
 
-  thorium-locales@https://codeload.github.com/edrlab/thorium-locales/tar.gz/4a9e7d687d9469ffd1c9fa153cb2b7fc93b15cb8:
-    resolution: {tarball: https://codeload.github.com/edrlab/thorium-locales/tar.gz/4a9e7d687d9469ffd1c9fa153cb2b7fc93b15cb8}
+  thorium-locales@https://codeload.github.com/edrlab/thorium-locales/tar.gz/34a2891445d535c120a5cebcacd82170b37899ea:
+    resolution: {tarball: https://codeload.github.com/edrlab/thorium-locales/tar.gz/34a2891445d535c120a5cebcacd82170b37899ea}
     version: 1.0.0
 
   tinyexec@0.3.2:
@@ -6351,15 +6351,15 @@ snapshots:
       '@react-types/shared': 3.33.0(react@19.2.4)
       react: 19.2.4
 
-  '@readium/css@2.0.2': {}
+  '@readium/css@2.0.4': {}
 
-  '@readium/navigator-html-injectables@2.4.1': {}
+  '@readium/navigator-html-injectables@2.4.2': {}
 
-  '@readium/navigator@2.5.2': {}
+  '@readium/navigator@2.5.3': {}
 
   '@readium/shared@2.2.0':
     dependencies:
-      '@edrlab/thorium-locales': thorium-locales@https://codeload.github.com/edrlab/thorium-locales/tar.gz/4a9e7d687d9469ffd1c9fa153cb2b7fc93b15cb8
+      '@edrlab/thorium-locales': thorium-locales@https://codeload.github.com/edrlab/thorium-locales/tar.gz/34a2891445d535c120a5cebcacd82170b37899ea
 
   '@reduxjs/toolkit@2.11.2(react-redux@9.2.0(@types/react@19.2.14)(react@19.2.4)(redux@5.0.1))(react@19.2.4)':
     dependencies:
@@ -8732,7 +8732,7 @@ snapshots:
     dependencies:
       any-promise: 1.3.0
 
-  thorium-locales@https://codeload.github.com/edrlab/thorium-locales/tar.gz/4a9e7d687d9469ffd1c9fa153cb2b7fc93b15cb8: {}
+  thorium-locales@https://codeload.github.com/edrlab/thorium-locales/tar.gz/34a2891445d535c120a5cebcacd82170b37899ea: {}
 
   tinyexec@0.3.2: {}
 

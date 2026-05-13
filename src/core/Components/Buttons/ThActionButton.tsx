@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+
 import { WithRef } from "../customTypes";
 
 import { Button, ButtonProps, Tooltip, TooltipProps, TooltipTrigger } from "react-aria-components";
@@ -18,9 +20,9 @@ export interface ThActionButtonProps extends ButtonProps {
      */
     tooltip?: WithRef<TooltipProps, HTMLDivElement>,
     /**
-     * String for the tooltip
+     * Content for the tooltip
      */
-    label: string 
+    label: React.ReactNode
   }
 }
 
