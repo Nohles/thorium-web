@@ -355,13 +355,31 @@ export const ComicReaderViewport = ({
   const scrollRef = useRef<HTMLDivElement | null>(null);
   /** When true, `cursorIndex` was updated from scroll measurement — skip `scrollIntoView`. */
   const syncFromScrollRef = useRef(false);
+  const programmaticScrollRafRef = useRef<number | null>(null);
+  const isProgrammaticScrollRef = useRef(false);
+  const firstViewportPageIndexRef = useRef<number | undefined>(undefined);
 
   const isVerticalScrollMode =
     mode === ComicReadingMode.continuousVertical || mode === ComicReadingMode.webtoon;
 
+  const suppressScrollSync = useCallback(() => {
+    isProgrammaticScrollRef.current = true;
+    if (programmaticScrollRafRef.current !== null) {
+      cancelAnimationFrame(programmaticScrollRafRef.current);
+    }
+    programmaticScrollRafRef.current = requestAnimationFrame(() => {
+      programmaticScrollRafRef.current = requestAnimationFrame(() => {
+        isProgrammaticScrollRef.current = false;
+        programmaticScrollRafRef.current = null;
+      });
+    });
+  }, []);
+
   const updateActivePageFromScroll = useCallback(() => {
     const root = scrollRef.current;
+    if (isProgrammaticScrollRef.current) return;
     if (!root) return;
+    if (itemRefs.current.size === 0) return;
     let idx: number;
     if (isVerticalScrollMode) {
       idx = getActivePageIndexVertical(root, itemRefs.current);
@@ -396,6 +414,19 @@ export const ComicReaderViewport = ({
     };
   }, [isVerticalScrollMode, updateActivePageFromScroll, pages.length]);
 
+  useLayoutEffect(() => {
+    const first = pages[0]?.index;
+    if (typeof first !== "number") return;
+    const prevFirst = firstViewportPageIndexRef.current;
+    firstViewportPageIndexRef.current = first;
+    if (prevFirst === undefined || prevFirst === first) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    suppressScrollSync();
+    el.scrollTop = 0;
+    el.scrollLeft = 0;
+  }, [pages, suppressScrollSync]);
+
   useEffect(() => {
     if (mode !== ComicReadingMode.continuousHorizontal) return;
     const el = scrollRef.current;
@@ -420,17 +451,28 @@ export const ComicReaderViewport = ({
       return;
     }
     const el = itemRefs.current.get(cursorIndex);
-    el?.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
-  }, [cursorIndex, mode]);
+    if (!el) return;
+    suppressScrollSync();
+    el.scrollIntoView({ block: "center", inline: "center", behavior: "auto" });
+  }, [cursorIndex, mode, suppressScrollSync]);
 
-  const current = pages[cursorIndex];
-  const nextPage = pages[cursorIndex + 1];
-  const prevPage = pages[cursorIndex - 1];
-  const doublePages = useMemo(() => {
+  useEffect(() => {
+    return () => {
+      if (programmaticScrollRafRef.current !== null) {
+        cancelAnimationFrame(programmaticScrollRafRef.current);
+      }
+    };
+  }, []);
+
+  const pagePos = useMemo(() => pages.findIndex((p) => p.index === cursorIndex), [pages, cursorIndex]);
+  const current = pagePos >= 0 ? pages[pagePos] : undefined;
+  const prevPage = pagePos > 0 ? pages[pagePos - 1] : undefined;
+  const nextPage = pagePos >= 0 && pagePos < pages.length - 1 ? pages[pagePos + 1] : undefined;
+  const doublePages = useMemo((): ComicPage[] => {
     if (mode !== ComicReadingMode.doublePage) return [];
     return direction === ComicReadingDirection.rtl
-      ? [current, prevPage].filter(Boolean)
-      : [current, nextPage].filter(Boolean);
+      ? [current, prevPage].filter((p): p is ComicPage => p != null)
+      : [current, nextPage].filter((p): p is ComicPage => p != null);
   }, [current, direction, mode, nextPage, prevPage]);
 
   const isOriginalDouble = mode === ComicReadingMode.doublePage && scaleType === ComicScaleType.originalSize;

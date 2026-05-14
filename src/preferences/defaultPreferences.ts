@@ -359,6 +359,7 @@ export const defaultPreferences: ThPreferences<DefaultKeys> = createPreferences<
       ThSettingsKeys.comicProgressBarType,
       ThSettingsKeys.comicProgressBarPosition,
       ThSettingsKeys.comicReadingMode,
+      ThSettingsKeys.comicChapterBoundaries,
       ThSettingsKeys.comicReadingModePreview,
       ThSettingsKeys.comicPageGap,
       ThSettingsKeys.comicReadingDirection,

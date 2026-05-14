@@ -30,10 +30,22 @@ const resolveEffectiveProgressPosition = (
   return ComicProgressBarPosition.bottom;
 };
 
+const chapterButtonStyle: CSSProperties = {
+  padding: "10px 16px",
+  borderRadius: 8,
+  border: "1px solid rgba(255,255,255,0.2)",
+  background: "rgba(30,30,30,0.92)",
+  color: "var(--th-theme-text, #fff)",
+  fontSize: 14,
+  fontWeight: 600,
+  cursor: "pointer",
+  maxWidth: "min(90vw, 360px)",
+};
+
 export const ComicReaderOverlay = ({
   mode,
   pageCount,
-  cursorIndex,
+  progressCurrentPage,
   progressItems,
   direction,
   canGoPrev,
@@ -44,10 +56,16 @@ export const ComicReaderOverlay = ({
   settings,
   isVisible,
   layoutUI,
+  showNextChapterCta = false,
+  showPrevChapterCta = false,
+  nextChapterTitle,
+  prevChapterTitle,
+  onNextChapter,
+  onPrevChapter,
 }: {
   mode: ComicReadingMode;
   pageCount: number;
-  cursorIndex: number;
+  progressCurrentPage: number;
   progressItems: ComicProgressItem[];
   direction: ComicReadingDirection;
   canGoPrev: boolean;
@@ -58,6 +76,12 @@ export const ComicReaderOverlay = ({
   settings: typeof defaultComicSettings;
   isVisible: boolean;
   layoutUI: ThLayoutUI;
+  showNextChapterCta?: boolean;
+  showPrevChapterCta?: boolean;
+  nextChapterTitle?: string;
+  prevChapterTitle?: string;
+  onNextChapter?: () => void;
+  onPrevChapter?: () => void;
 }) => {
   const { t } = useI18n();
   const effectivePosition = resolveEffectiveProgressPosition(settings, mode);
@@ -72,7 +96,8 @@ export const ComicReaderOverlay = ({
         : { left: 0, right: 0, bottom: layeredBarInset, height: progressRailSize };
 
   const showProgressBar = settings.progressBarType === ComicProgressBarType.standard;
-  if (!isVisible && !showProgressBar) return null;
+  const showChapterRow = showNextChapterCta || showPrevChapterCta;
+  if (!isVisible && !showProgressBar && !showChapterRow) return null;
 
   const isRtl = direction === ComicReadingDirection.rtl;
   const leftAria = isRtl ? t("reader.actions.goToNextPage.descriptive") : t("reader.actions.goToPreviousPage.descriptive");
@@ -81,6 +106,11 @@ export const ComicReaderOverlay = ({
   const rightOnPress = isRtl ? onPrev : onNext;
   const leftDisabled = isRtl ? !canGoNext : !canGoPrev;
   const rightDisabled = isRtl ? !canGoPrev : !canGoNext;
+
+  const chapterRowBottom =
+    showProgressBar && effectivePosition === ComicProgressBarPosition.bottom
+      ? "calc(var(--th-comic-chapter-row-offset, 52px) + env(safe-area-inset-bottom, 0px))"
+      : "calc(12px + env(safe-area-inset-bottom, 0px))";
 
   return (
     <>
@@ -94,6 +124,44 @@ export const ComicReaderOverlay = ({
           </div>
 
         </>
+      ) : null}
+
+      {showChapterRow ? (
+        <div
+          style={{
+            position: "absolute",
+            left: "50%",
+            transform: "translateX(-50%)",
+            bottom: chapterRowBottom,
+            zIndex: 14,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 8,
+            pointerEvents: "auto",
+          }}
+        >
+          {showPrevChapterCta && onPrevChapter ? (
+            <button type="button" style={chapterButtonStyle} onClick={onPrevChapter}>
+              {t("reader.comic.chapterBoundaries.previousChapter")}
+              {prevChapterTitle ? (
+                <span style={{ display: "block", fontWeight: 400, fontSize: 12, opacity: 0.85, marginTop: 4 }}>
+                  {prevChapterTitle}
+                </span>
+              ) : null}
+            </button>
+          ) : null}
+          {showNextChapterCta && onNextChapter ? (
+            <button type="button" style={chapterButtonStyle} onClick={onNextChapter}>
+              {t("reader.comic.chapterBoundaries.nextChapter")}
+              {nextChapterTitle ? (
+                <span style={{ display: "block", fontWeight: 400, fontSize: 12, opacity: 0.85, marginTop: 4 }}>
+                  {nextChapterTitle}
+                </span>
+              ) : null}
+            </button>
+          ) : null}
+        </div>
       ) : null}
 
       {showProgressBar ? (
@@ -111,7 +179,7 @@ export const ComicReaderOverlay = ({
           <ComicReaderProgressNavigator
             items={progressItems}
             position={effectivePosition}
-            currentPage={Math.min(cursorIndex + 1, pageCount)}
+            currentPage={progressCurrentPage}
             totalPages={pageCount}
             onJumpTo={onJumpTo}
           />

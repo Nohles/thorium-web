@@ -32,6 +32,9 @@ export function useTocContent({ isOpen, tocTree, tocEntry }: UseTocContentOption
   const [filterValue, setFilterValue] = useState("");
   const treeRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  /** Latest tree for expand-parents logic; avoids effect re-running on referentially unstable `tocTree` from Redux. */
+  const tocTreeRef = useRef(tocTree);
+  tocTreeRef.current = tocTree;
 
   const { contains } = useFilter({ sensitivity: "base" });
 
@@ -53,9 +56,13 @@ export function useTocContent({ isOpen, tocTree, tocEntry }: UseTocContentOption
     return () => document.removeEventListener("keydown", handleEscape, true);
   }, [isOpen, filterValue]);
 
-  // Expand parents of current entry
+  // Expand parents of current entry when the TOC is visible. Depends only on open state and `tocEntry`:
+  // `tocTree` is read from a ref so a new array
+  // reference on every timeline dispatch does not retrigger this effect (which would fight react-aria Tree
+  // controlled `expandedKeys` / `onExpandedChange` and can cause a maximum-update-depth loop).
   useEffect(() => {
-    if (!tocEntry || !tocTree) return;
+    const tree = tocTreeRef.current;
+    if (!isOpen || !tocEntry || !tree?.length) return;
     setExpandedKeys(prev => {
       const next = new Set<Key>(prev);
       let changed = false;
@@ -64,15 +71,18 @@ export function useTocContent({ isOpen, tocTree, tocEntry }: UseTocContentOption
           if (item.id === tocEntry) return true;
           if (item.children) {
             const found = expand(item.children);
-            if (found && !next.has(item.id)) { next.add(item.id); changed = true; }
+            if (found && !next.has(item.id)) {
+              next.add(item.id);
+              changed = true;
+            }
             return found;
           }
           return false;
         });
-      expand(tocTree);
+      expand(tree);
       return changed ? next : prev;
     });
-  }, [tocEntry, tocTree]);
+  }, [isOpen, tocEntry]);
 
   const displayedTocTree = filterTocTree(tocTree || [], filterValue, contains);
 

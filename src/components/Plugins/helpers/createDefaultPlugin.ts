@@ -30,6 +30,7 @@ import { StatefulTheme } from "../../Settings/StatefulTheme";
 import { StatefulWordSpacing } from "../../Settings/Spacing/StatefulWordSpacing";
 import { StatefulZoom } from "../../Settings/StatefulZoom";
 import {
+  StatefulComicChapterBoundaries,
   StatefulComicImagePreloadAmount,
   StatefulComicPageGap,
   StatefulComicProgressBarPosition,
@@ -148,6 +149,9 @@ export const createDefaultPlugin = (): ThPlugin => {
         ,
         [ThSettingsKeys.comicReadingMode]: {
           Comp: StatefulComicReadingMode
+        },
+        [ThSettingsKeys.comicChapterBoundaries]: {
+          Comp: StatefulComicChapterBoundaries
         },
         [ThSettingsKeys.comicProgressBarType]: {
           Comp: StatefulComicProgressBarType

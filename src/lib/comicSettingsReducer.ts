@@ -70,6 +70,8 @@ export interface ComicSettings {
   readingModePreview: boolean;
   tapZonePreview: boolean;
   imagePreloadAmount: number;
+  /** When true and the manifest TOC defines multiple segments, navigation stays within the current chapter until explicit next/previous chapter. */
+  comicChapterBoundaries: boolean;
 }
 
 export const defaultComicSettings: ComicSettings = {
@@ -94,6 +96,7 @@ export const defaultComicSettings: ComicSettings = {
   readingModePreview: true,
   tapZonePreview: false,
   imagePreloadAmount: 5,
+  comicChapterBoundaries: false,
 };
 
 export interface ComicSettingsReducerState {

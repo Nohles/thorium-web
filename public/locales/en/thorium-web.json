@@ -114,6 +114,11 @@
         "continuousHorizontal": "Continuous horizontal",
         "webtoon": "Webtoon"
       },
+      "chapterBoundaries": {
+        "label": "Navigate by manifest chapters (TOC)",
+        "nextChapter": "Next chapter",
+        "previousChapter": "Previous chapter"
+      },
       "pageGap": {
         "label": "Page gap"
       },

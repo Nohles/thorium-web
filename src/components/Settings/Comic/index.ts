@@ -1,5 +1,6 @@
 "use client";
 
+export * from "./StatefulComicChapterBoundaries";
 export * from "./StatefulComicReadingMode";
 export * from "./StatefulComicPageGap";
 export * from "./StatefulComicReadingDirection";

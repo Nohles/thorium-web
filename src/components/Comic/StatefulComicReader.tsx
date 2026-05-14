@@ -39,6 +39,16 @@ import { resolveTapAction } from "./hooks/useComicTapNavigation";
 import { ComicPage, useComicReaderController } from "./hooks/useComicReaderController";
 import { buildComicTimeline, buildComicTocTree } from "./buildComicTimeline";
 import { buildComicProgressItems, ComicPageLoadState } from "./lib/comicProgress";
+import {
+  buildComicChapterSegments,
+  canAdvanceWithinSegment,
+  canRetreatWithinSegment,
+  getSegmentForPageIndex,
+  getSegmentIndex,
+  hasMultiChapterStructure,
+  isAtFirstNavigablePositionInSegment,
+  isAtLastNavigablePositionInSegment,
+} from "./lib/comicChapters";
 
 import { usePreferences } from "@/preferences/hooks/usePreferences";
 import { ThLayoutUI, ThProgressionFormat } from "@/preferences/models";
@@ -55,7 +65,6 @@ const getReadingOrderImages = (publication: Publication): ComicPage[] => {
 const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderProps) => {
   const { preferences } = usePreferences();
   const { t } = useI18n();
-  const pages = useMemo(() => getReadingOrderImages(publication), [publication]);
   const dispatch = useAppDispatch();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [pageLoadStates, setPageLoadStates] = useState<Record<number, ComicPageLoadState>>({});
@@ -75,32 +84,147 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
 
   const layoutUI = preferences.theming.layout.ui?.fxl ?? ThLayoutUI.layered;
 
-  const { mode, direction, scaleType, step, cursorIndex, setCursorIndex, canGoPrev, canGoNext, goPrev, goNext } =
-    useComicReaderController({
-      pages,
-      settings: merged,
-      savedPosition,
-      onPersistPosition: (index) => dispatch(updateComicPosition({ key: activeKey, pageIndex: index })),
-    });
+  const allPages = useMemo(() => getReadingOrderImages(publication), [publication]);
+  const chapterSegments = useMemo(() => buildComicChapterSegments(publication, allPages), [publication, allPages]);
+  const chapterModeActive =
+    merged.comicChapterBoundaries && hasMultiChapterStructure(chapterSegments);
+
+  const persistComicPosition = useCallback(
+    (index: number) => {
+      if (!activeKey) return;
+      dispatch(updateComicPosition({ key: activeKey, pageIndex: index }));
+    },
+    [activeKey, dispatch]
+  );
+
+  const {
+    mode,
+    direction,
+    scaleType,
+    step,
+    cursorIndex,
+    setCursorIndex,
+    canGoPrev,
+    canGoNext,
+    goPrev,
+    goNext,
+    activeSegment,
+    segmentIndex,
+    hasNextChapter,
+    hasPrevChapter,
+    goNextChapter,
+    goPrevChapter,
+  } = useComicReaderController({
+    pages: allPages,
+    settings: merged,
+    savedPosition,
+    onPersistPosition: persistComicPosition,
+    chapterSegments,
+    chapterBoundariesEnabled: merged.comicChapterBoundaries,
+  });
+
+  const viewportPages = useMemo(() => {
+    if (!chapterModeActive) return allPages;
+    const seg = getSegmentForPageIndex(chapterSegments, cursorIndex);
+    if (!seg) return allPages;
+    return allPages.slice(seg.startIndex, seg.endIndex + 1);
+  }, [allPages, chapterModeActive, chapterSegments, cursorIndex]);
+
+  const progressChapterSegment = useMemo(() => {
+    if (!chapterModeActive) return undefined;
+    return getSegmentForPageIndex(chapterSegments, cursorIndex);
+  }, [chapterModeActive, chapterSegments, cursorIndex]);
+
+  const chapterPageCount =
+    progressChapterSegment !== undefined
+      ? progressChapterSegment.endIndex - progressChapterSegment.startIndex + 1
+      : allPages.length;
+
+  const progressCurrentPage = useMemo(() => {
+    if (progressChapterSegment) {
+      return Math.min(cursorIndex - progressChapterSegment.startIndex + 1, chapterPageCount);
+    }
+    return Math.min(cursorIndex + 1, allPages.length);
+  }, [allPages.length, chapterPageCount, cursorIndex, progressChapterSegment]);
+
+  const showNextChapterCta = useMemo(
+    () =>
+      !!(
+        chapterModeActive &&
+        activeSegment &&
+        hasNextChapter &&
+        isAtLastNavigablePositionInSegment(cursorIndex, activeSegment, step)
+      ),
+    [activeSegment, chapterModeActive, cursorIndex, hasNextChapter, step]
+  );
+
+  const showPrevChapterCta = useMemo(
+    () =>
+      !!(
+        chapterModeActive &&
+        activeSegment &&
+        hasPrevChapter &&
+        isAtFirstNavigablePositionInSegment(cursorIndex, activeSegment, step)
+      ),
+    [activeSegment, chapterModeActive, cursorIndex, hasPrevChapter, step]
+  );
+
+  const nextChapterTitle = useMemo(() => {
+    if (!chapterModeActive || segmentIndex < 0 || segmentIndex >= chapterSegments.length - 1) return undefined;
+    return chapterSegments[segmentIndex + 1]?.title;
+  }, [chapterModeActive, chapterSegments, segmentIndex]);
+
+  const prevChapterTitle = useMemo(() => {
+    if (!chapterModeActive || segmentIndex <= 0) return undefined;
+    return chapterSegments[segmentIndex - 1]?.title;
+  }, [chapterModeActive, chapterSegments, segmentIndex]);
 
   useLayoutEffect(() => {
     comicNavigator.bind({
       publication,
-      links: pages.map((p) => p.link),
+      links: allPages.map((p) => p.link),
       cursorIndex,
       setCursorIndex,
       step,
     });
-  }, [comicNavigator, publication, pages, cursorIndex, setCursorIndex, step]);
+  }, [comicNavigator, publication, allPages, cursorIndex, setCursorIndex, step]);
 
-  const tocTree = useMemo(() => buildComicTocTree(publication, pages), [publication, pages]);
+  const tocTree = useMemo(() => buildComicTocTree(publication, allPages), [publication, allPages]);
 
   useEffect(() => {
-    const timeline = buildComicTimeline(publication, pages, cursorIndex, tocTree);
+    const timeline = buildComicTimeline(publication, allPages, cursorIndex, tocTree);
     dispatch(setTimeline(timeline));
-    dispatch(setPublicationStart(cursorIndex <= 0));
-    dispatch(setPublicationEnd(cursorIndex >= pages.length - 1));
-  }, [cursorIndex, dispatch, pages, publication, tocTree]);
+    if (chapterModeActive) {
+      const seg = getSegmentForPageIndex(chapterSegments, cursorIndex);
+      if (seg) {
+        const si = getSegmentIndex(chapterSegments, cursorIndex);
+        dispatch(
+          setPublicationStart(si === 0 && !canRetreatWithinSegment(cursorIndex, seg, step))
+        );
+        dispatch(
+          setPublicationEnd(
+            si === chapterSegments.length - 1 &&
+              !canAdvanceWithinSegment(cursorIndex, seg, step)
+          )
+        );
+      } else {
+        dispatch(setPublicationStart(cursorIndex <= 0));
+        dispatch(setPublicationEnd(cursorIndex >= allPages.length - 1));
+      }
+    } else {
+      dispatch(setPublicationStart(cursorIndex <= 0));
+      dispatch(setPublicationEnd(cursorIndex >= allPages.length - 1));
+    }
+  }, [
+    allPages,
+    chapterModeActive,
+    chapterSegments,
+    cursorIndex,
+    dispatch,
+    publication,
+    step,
+    tocTree,
+  ]);
 
   const toggleMenu = useCallback(() => {
     dispatch(toggleImmersive());
@@ -167,7 +291,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
 
   useEffect(() => {
     setPageLoadStates({});
-  }, [pages]);
+  }, [allPages]);
 
   const onPageLoadStateChange = useCallback((pageIndex: number, state: ComicPageLoadState) => {
     setPageLoadStates((prev) => {
@@ -196,13 +320,14 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
   const progressItems = useMemo(
     () =>
       buildComicProgressItems({
-        pages,
+        pages: viewportPages,
         mode,
         direction,
         cursorIndex,
         pageLoadStates,
+        progressLabelOffset: progressChapterSegment?.startIndex,
       }),
-    [cursorIndex, direction, mode, pageLoadStates, pages]
+    [cursorIndex, direction, mode, pageLoadStates, progressChapterSegment?.startIndex, viewportPages]
   );
 
   const tapZonePreviewCells = useMemo(() => {
@@ -257,7 +382,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
               >
                 <ComicReaderViewport
                   publication={publication}
-                  pages={pages}
+                  pages={viewportPages}
                   mode={mode}
                   direction={direction}
                   scaleType={scaleType}
@@ -274,8 +399,8 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
                 />
                 <ComicReaderOverlay
                   mode={mode}
-                  pageCount={pages.length}
-                  cursorIndex={cursorIndex}
+                  pageCount={chapterPageCount}
+                  progressCurrentPage={progressCurrentPage}
                   progressItems={progressItems}
                   direction={direction}
                   canGoPrev={canGoPrev}
@@ -286,6 +411,12 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
                   settings={merged}
                   isVisible={showOverlay}
                   layoutUI={layoutUI}
+                  showNextChapterCta={showNextChapterCta}
+                  showPrevChapterCta={showPrevChapterCta}
+                  nextChapterTitle={nextChapterTitle}
+                  prevChapterTitle={prevChapterTitle}
+                  onNextChapter={goNextChapter}
+                  onPrevChapter={goPrevChapter}
                 />
                 {merged.tapZonePreview ? (
                   <div

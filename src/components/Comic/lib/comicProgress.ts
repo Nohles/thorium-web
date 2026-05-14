@@ -23,14 +23,22 @@ type BuildComicProgressItemsArgs = {
   direction: ComicReadingDirection;
   cursorIndex: number;
   pageLoadStates: Record<number, ComicPageLoadState>;
+  /** When set, progress labels use 1-based indices within the current chapter (reading-order index minus offset). */
+  progressLabelOffset?: number;
 };
 
 const isPageLoaded = (pageLoadStates: Record<number, ComicPageLoadState>, pageIndex: number) =>
   pageLoadStates[pageIndex] === "loaded";
 
-const getItemLabel = (pageIndices: number[], direction: ComicReadingDirection) => {
+const labelForReadingOrderIndices = (
+  pageIndices: number[],
+  direction: ComicReadingDirection,
+  progressLabelOffset: number | undefined
+) => {
   const displayIndices = direction === ComicReadingDirection.rtl ? [...pageIndices].reverse() : pageIndices;
-  return displayIndices.map((index) => index + 1).join("-");
+  return displayIndices
+    .map((index) => (progressLabelOffset === undefined ? index + 1 : index - progressLabelOffset + 1))
+    .join("-");
 };
 
 export const buildComicProgressItems = ({
@@ -39,23 +47,28 @@ export const buildComicProgressItems = ({
   direction,
   cursorIndex,
   pageLoadStates,
+  progressLabelOffset,
 }: BuildComicProgressItemsArgs): ComicProgressItem[] => {
   if (pages.length === 0) return [];
 
   if (mode === ComicReadingMode.doublePage) {
     const items: ComicProgressItem[] = [];
-    for (let startIndex = 0; startIndex < pages.length; startIndex += 2) {
-      const pageIndices = pages
-        .slice(startIndex, Math.min(startIndex + 2, pages.length))
-        .map((page) => page.index);
+    for (let arrayStart = 0; arrayStart < pages.length; arrayStart += 2) {
+      const slice = pages.slice(arrayStart, Math.min(arrayStart + 2, pages.length));
+      const pageIndices = slice.map((page) => page.index);
       const loadedCount = pageIndices.filter((pageIndex) => isPageLoaded(pageLoadStates, pageIndex)).length;
       const isCurrent = pageIndices.includes(cursorIndex);
+      const firstGlobal = pageIndices[0] ?? 0;
+      const targetIndex =
+        direction === ComicReadingDirection.rtl
+          ? (pageIndices[pageIndices.length - 1] ?? firstGlobal)
+          : firstGlobal;
       items.push({
-        id: `spread-${startIndex}`,
+        id: `spread-${firstGlobal}`,
         type: "spread",
         pageIndices,
-        targetIndex: direction === ComicReadingDirection.rtl ? pageIndices[pageIndices.length - 1] ?? startIndex : startIndex,
-        label: getItemLabel(pageIndices, direction),
+        targetIndex,
+        label: labelForReadingOrderIndices(pageIndices, direction, progressLabelOffset),
         isCurrent,
         isCompleted: isCurrent || pageIndices[0] < cursorIndex,
         isLoaded: loadedCount === pageIndices.length && pageIndices.length > 0,
@@ -70,7 +83,10 @@ export const buildComicProgressItems = ({
     type: "page",
     pageIndices: [page.index],
     targetIndex: page.index,
-    label: `${page.index + 1}`,
+    label:
+      progressLabelOffset === undefined
+        ? `${page.index + 1}`
+        : `${page.index - progressLabelOffset + 1}`,
     isCurrent: page.index === cursorIndex,
     isCompleted: page.index <= cursorIndex,
     isLoaded: isPageLoaded(pageLoadStates, page.index),
