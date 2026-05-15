@@ -37,7 +37,7 @@ import { ComicReaderViewport } from "./components/ComicReaderViewport";
 import { useComicKeyboardShortcuts } from "./hooks/useComicKeyboardShortcuts";
 import { resolveTapAction } from "./hooks/useComicTapNavigation";
 import { ComicPage, useComicReaderController } from "./hooks/useComicReaderController";
-import { buildComicTimeline, buildComicTocTree } from "./buildComicTimeline";
+import { buildComicChapterTocTree, buildComicTimeline, buildComicTocTree } from "./buildComicTimeline";
 import { buildComicProgressItems, ComicPageLoadState } from "./lib/comicProgress";
 import {
   buildComicChapterSegments,
@@ -189,10 +189,16 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
     });
   }, [comicNavigator, publication, allPages, cursorIndex, setCursorIndex, step]);
 
-  const tocTree = useMemo(() => buildComicTocTree(publication, allPages), [publication, allPages]);
+  const pageTocTree = useMemo(() => buildComicTocTree(publication, allPages), [publication, allPages]);
+  const chapterTocTree = useMemo(() => {
+    if (!hasMultiChapterStructure(chapterSegments)) return [];
+    return buildComicChapterTocTree(chapterSegments, allPages);
+  }, [chapterSegments, allPages]);
+  const tocTree = chapterModeActive ? chapterTocTree : pageTocTree;
+  const tocHighlightIndex = chapterModeActive ? getSegmentIndex(chapterSegments, cursorIndex) : undefined;
 
   useEffect(() => {
-    const timeline = buildComicTimeline(publication, allPages, cursorIndex, tocTree);
+    const timeline = buildComicTimeline(publication, allPages, cursorIndex, tocTree, tocHighlightIndex);
     dispatch(setTimeline(timeline));
     if (chapterModeActive) {
       const seg = getSegmentForPageIndex(chapterSegments, cursorIndex);
@@ -223,6 +229,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey }: StatefulReaderP
     dispatch,
     publication,
     step,
+    tocHighlightIndex,
     tocTree,
   ]);
 

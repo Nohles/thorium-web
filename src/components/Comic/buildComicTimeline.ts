@@ -1,9 +1,10 @@
-import { Publication } from "@readium/shared";
+import { Link, Publication } from "@readium/shared";
 
 import { UnstableTimeline, TimelineItem } from "@/core/Hooks/useTimeline";
 import { buildTocTree, TocItem, toEntryRef } from "@/helpers/buildTocTree";
 
 import { ComicPage } from "./hooks/useComicReaderController";
+import type { ComicChapterSegment } from "./lib/comicChapters";
 
 export function buildComicTocTree(publication: Publication, pages: ComicPage[]): TocItem[] {
   if (pages.length === 0) return [];
@@ -18,11 +19,36 @@ export function buildComicTocTree(publication: Publication, pages: ComicPage[]):
   );
 }
 
+/**
+ * One TOC row per manifest chapter (segment), href = first page of the segment so TOC jumps match {@link useComicNavigator}.
+ */
+export function buildComicChapterTocTree(segments: ComicChapterSegment[], pages: ComicPage[]): TocItem[] {
+  if (segments.length === 0 || pages.length === 0) return [];
+  const links: Link[] = [];
+  for (const seg of segments) {
+    const page = pages[seg.startIndex];
+    if (!page) continue;
+    links.push(
+      new Link({
+        href: page.link.href,
+        type: page.link.type,
+        templated: page.link.templated,
+        title: seg.title,
+      })
+    );
+  }
+  let id = 0;
+  const idGenerator = () => `toc-${++id}`;
+  return buildTocTree(links, idGenerator, undefined, undefined);
+}
+
 export function buildComicTimeline(
   publication: Publication,
   pages: ComicPage[],
   cursorIndex: number,
-  tocTree: TocItem[]
+  tocTree: TocItem[],
+  /** When set (e.g. chapter TOC), highlights that tree index instead of {@link cursorIndex}. */
+  tocHighlightIndex?: number
 ): UnstableTimeline {
   const title = publication.metadata.title.getTranslation("en");
   const currentPage = pages[cursorIndex];
@@ -45,8 +71,10 @@ export function buildComicTimeline(
   const total = pages.length;
   const rel = total <= 1 ? 0 : cursorIndex / (total - 1);
 
+  const highlightIdx =
+    typeof tocHighlightIndex === "number" && tocHighlightIndex >= 0 ? tocHighlightIndex : cursorIndex;
   const currentEntry =
-    tocTree[cursorIndex] !== undefined ? toEntryRef(tocTree[cursorIndex]) : undefined;
+    tocTree[highlightIdx] !== undefined ? toEntryRef(tocTree[highlightIdx]) : undefined;
 
   return {
     title,
