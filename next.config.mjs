@@ -14,6 +14,10 @@ const nextConfig = {
         protocol: "https",
         hostname: "www.archive.org",
       },
+      {
+        protocol: "https",
+        hostname: "covers.openlibrary.org",
+      },
     ],
   },
   

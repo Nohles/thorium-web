@@ -113,7 +113,17 @@ const audiobooks = [
     url: "/read/flatland",
     rendition: "Audiobook"
   }
-]
+];
+
+const readAlongExamples = [
+  {
+    title: "The Martian",
+    author: "Andy Weir",
+    cover: "https://covers.openlibrary.org/b/isbn/9780804139021-L.jpg",
+    url: "/read-along?id=the-martian",
+    rendition: "Read-along"
+  }
+];
 
 export default function Home() {
   const [isManifestEnabled, setIsManifestEnabled] = useState<boolean>(true);
@@ -143,7 +153,7 @@ export default function Home() {
       <h2>Our selection</h2>
 
       <PublicationGrid
-        publications={ [...books, ...webPublications, ...audiobooks] }
+        publications={ [...books, ...webPublications, ...audiobooks, ...readAlongExamples] }
         renderCover={ (publication) => (
           <Image
             src={ publication.cover }

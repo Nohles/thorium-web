@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Fetcher, GuidedNavigationDocument, Publication } from "@readium/shared";
 
 import { loadPublicationFromUrl } from "@/helpers/loadPublication";
@@ -53,9 +53,11 @@ export const useDualPublication = ({
   audioUrl,
   guidedNavigationUrl,
   fetcher,
-  onError = () => {},
+  onError,
 }: UseDualPublicationOptions): UseDualPublicationReturn => {
   const dispatch = useAppDispatch();
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<ProcessedError | null>(null);
@@ -150,7 +152,7 @@ export const useDualPublication = ({
         const processed = ErrorHandler.process(err, "Read-along load");
         setError(processed);
         setIsLoading(false);
-        onError(processed);
+        onErrorRef.current?.(processed);
       }
     };
 
@@ -159,11 +161,11 @@ export const useDualPublication = ({
     return () => {
       cancelled = true;
     };
-  }, [epubUrl, audioUrl, guidedNavigationUrl, fetcher, dispatch, onError]);
+  }, [epubUrl, audioUrl, guidedNavigationUrl, fetcher, dispatch]);
 
   useEffect(() => {
-    if (error) onError(error);
-  }, [error, onError]);
+    if (error) onErrorRef.current?.(error);
+  }, [error]);
 
   return {
     isLoading,
