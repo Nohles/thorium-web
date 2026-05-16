@@ -68,9 +68,14 @@ export const publicationSlice = createSlice({
       state.atPublicationEnd = action.payload
     },
     setTimeline: (state, action) => {
+      const previousToc = state.unstableTimeline?.toc;
+      const nextToc = action.payload.toc;
       state.unstableTimeline = {
         ...action.payload,
-        toc: action.payload.toc || { tree: undefined, currentEntry: undefined }
+        toc: {
+          tree: nextToc?.tree ?? previousToc?.tree,
+          currentEntry: nextToc?.currentEntry,
+        }
       };
     },
     setTocTree: (state, action) => {

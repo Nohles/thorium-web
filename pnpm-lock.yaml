@@ -12,11 +12,11 @@ importers:
         specifier: github:edrlab/thorium-locales
         version: thorium-locales@https://codeload.github.com/edrlab/thorium-locales/tar.gz/34a2891445d535c120a5cebcacd82170b37899ea
       '@readium/css':
-        specifier: ^2.0.4
-        version: 2.0.4
+        specifier: ^2.0.5
+        version: 2.0.5
       '@readium/navigator':
-        specifier: ^2.5.3
-        version: 2.5.3
+        specifier: ^2.5.4
+        version: 2.5.4
       '@readium/navigator-html-injectables':
         specifier: ^2.4.2
         version: 2.4.2
@@ -1856,15 +1856,15 @@ packages:
     peerDependencies:
       react: ^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1
 
-  '@readium/css@2.0.4':
-    resolution: {integrity: sha512-+WQoL7/GG0VECHtGd+XZlC5JyLBG6DiPEKDTz9QGg9CVaA7bZ0fcAVNB86MDHP+RGQ/DWDIuiw1stzpapylnrA==}
+  '@readium/css@2.0.5':
+    resolution: {integrity: sha512-rQWeDFSS9UfRTFFdWIhlko0jtkL9dOfNTqFjgMumlguromsyHC9/lGmbWDde7deEeE5ns+yBOSGKixMU0wqZ4A==}
 
   '@readium/navigator-html-injectables@2.4.2':
     resolution: {integrity: sha512-C08vjzYek19VU9JnCvhTorO8xVsR8hcCzSCD0IondBYOtcRbBzu18Ezp3WQR47/a/9tQMGicOS9knmmll1fZuw==}
     engines: {node: '>=18'}
 
-  '@readium/navigator@2.5.3':
-    resolution: {integrity: sha512-7YbMIu8FsmyusMHt//yLTKfKfWYCMAgv0CpzEXJbcDN4i7GjsckTJ00fOvqXQ0ZkqYzT1LS9t5iHPJ82Cf+hPw==}
+  '@readium/navigator@2.5.4':
+    resolution: {integrity: sha512-MV0US0k7JNMDf3fd//dj8I+EiU2xUg41p0O0h1V7FPp9/6cWuQFg+0QIsus1euDkNILpYrO7FFZ+QiS2/BTy7g==}
     engines: {node: '>=18'}
 
   '@readium/shared@2.2.0':
@@ -3086,8 +3086,8 @@ packages:
   immer@11.1.3:
     resolution: {integrity: sha512-6jQTc5z0KJFtr1UgFpIL3N9XSC3saRaI9PwWtzM2pSqkNGtiNkYY2OSwkOGDK2XcTRcLb1pi/aNkKZz0nxVH4Q==}
 
-  immutable@5.1.4:
-    resolution: {integrity: sha512-p6u1bG3YSnINT5RQmx/yRZBpenIl30kVxkTLDyHLIMk0gict704Q9n+thfDI7lTRm9vXdDYutVzXhzcThxTnXA==}
+  immutable@5.1.5:
+    resolution: {integrity: sha512-t7xcm2siw+hlUM68I+UEOK+z84RzmN59as9DZ7P1l0994DKUWV7UXBMQZVxaoMSRQ+PBZbHCOoBt7a2wxOMt+A==}
 
   import-fresh@3.3.1:
     resolution: {integrity: sha512-TR3KfrTZTYLPB6jUjfx6MF9WcWrHL9su5TObK4ZkYgBdWKPOFoSoQIdEuTuR82pmtxH2spWG9h6etwfr1pLBqQ==}
@@ -3554,6 +3554,10 @@ packages:
 
   picomatch@4.0.3:
     resolution: {integrity: sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q==}
+    engines: {node: '>=12'}
+
+  picomatch@4.0.4:
+    resolution: {integrity: sha512-QP88BAKvMam/3NxH6vj2o21R6MjxZUAd6nlwAS/pnGvN9IVLocLHxGYIzFhg6fUQ+5th6P4dv4eW9jX3DSIj7A==}
     engines: {node: '>=12'}
 
   pirates@4.0.7:
@@ -5292,7 +5296,7 @@ snapshots:
       detect-libc: 2.1.2
       is-glob: 4.0.3
       node-addon-api: 7.1.1
-      picomatch: 4.0.3
+      picomatch: 4.0.4
     optionalDependencies:
       '@parcel/watcher-android-arm64': 2.5.6
       '@parcel/watcher-darwin-arm64': 2.5.6
@@ -6351,11 +6355,11 @@ snapshots:
       '@react-types/shared': 3.33.0(react@19.2.4)
       react: 19.2.4
 
-  '@readium/css@2.0.4': {}
+  '@readium/css@2.0.5': {}
 
   '@readium/navigator-html-injectables@2.4.2': {}
 
-  '@readium/navigator@2.5.3': {}
+  '@readium/navigator@2.5.4': {}
 
   '@readium/shared@2.2.0':
     dependencies:
@@ -7707,7 +7711,7 @@ snapshots:
 
   immer@11.1.3: {}
 
-  immutable@5.1.4:
+  immutable@5.1.5:
     optional: true
 
   import-fresh@3.3.1:
@@ -8168,6 +8172,9 @@ snapshots:
 
   picomatch@4.0.3: {}
 
+  picomatch@4.0.4:
+    optional: true
+
   pirates@4.0.7: {}
 
   pkg-types@1.3.1:
@@ -8491,7 +8498,7 @@ snapshots:
   sass@1.83.0:
     dependencies:
       chokidar: 4.0.3
-      immutable: 5.1.4
+      immutable: 5.1.5
       source-map-js: 1.2.1
     optionalDependencies:
       '@parcel/watcher': 2.5.6

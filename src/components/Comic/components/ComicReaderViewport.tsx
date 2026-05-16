@@ -4,6 +4,7 @@ import { Link, Publication } from "@readium/shared";
 import {
   CSSProperties,
   Dispatch,
+  MutableRefObject,
   SetStateAction,
   useCallback,
   useEffect,
@@ -18,6 +19,7 @@ import {
   ComicReadingMode,
   ComicScaleType,
 } from "@/lib/comicSettingsReducer";
+import { useI18n } from "@/i18n/useI18n";
 import {
   ComicPageLayoutMode,
   getImagePlaceholderStyling,
@@ -28,10 +30,77 @@ import {
 import { ComicPage } from "../hooks/useComicReaderController";
 import { ComicPageLoadState } from "../lib/comicProgress";
 
+const MAX_CONCURRENT_COMIC_IMAGE_READS = 4;
+
+type QueuedImageRead = {
+  run: () => void;
+};
+
+const comicImageBlobCache = new WeakMap<Publication, Map<string, Promise<Blob>>>();
+const comicImageReadQueue: QueuedImageRead[] = [];
+let activeComicImageReads = 0;
+
+const drainComicImageReadQueue = () => {
+  while (activeComicImageReads < MAX_CONCURRENT_COMIC_IMAGE_READS && comicImageReadQueue.length > 0) {
+    const next = comicImageReadQueue.shift();
+    if (!next) return;
+    activeComicImageReads += 1;
+    next.run();
+  }
+};
+
+const enqueueComicImageRead = <T,>(read: () => Promise<T>): Promise<T> =>
+  new Promise((resolve, reject) => {
+    comicImageReadQueue.push({
+      run: () => {
+        read()
+          .then(resolve, reject)
+          .finally(() => {
+            activeComicImageReads = Math.max(0, activeComicImageReads - 1);
+            drainComicImageReadQueue();
+          });
+      },
+    });
+    drainComicImageReadQueue();
+  });
+
+const getComicImageBlob = (publication: Publication, link: Link): Promise<Blob> => {
+  let publicationCache = comicImageBlobCache.get(publication);
+  if (!publicationCache) {
+    publicationCache = new Map();
+    comicImageBlobCache.set(publication, publicationCache);
+  }
+
+  const cached = publicationCache.get(link.href);
+  if (cached) return cached;
+
+  const blobPromise = enqueueComicImageRead(async () => {
+    const bytes = await publication.get(link).read();
+    if (!bytes) {
+      throw new Error("Failed to load image bytes.");
+    }
+    const byteArray = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+    return new Blob([new Uint8Array(byteArray)], { type: link.type || "image/jpeg" });
+  }).catch((error) => {
+    publicationCache.delete(link.href);
+    throw error;
+  });
+
+  publicationCache.set(link.href, blobPromise);
+  return blobPromise;
+};
+
 const useObjectUrl = (publication: Publication, link: Link | undefined, shouldLoad = true) => {
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const href = link?.href;
+  const mediaType = link?.type;
+  const linkRef = useRef(link);
+
+  useEffect(() => {
+    linkRef.current = link;
+  }, [link]);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,7 +108,8 @@ const useObjectUrl = (publication: Publication, link: Link | undefined, shouldLo
 
     const run = async () => {
       setError(null);
-      if (!link || !shouldLoad) {
+      const currentLink = linkRef.current;
+      if (!currentLink || !shouldLoad) {
         setIsLoading(false);
         setObjectUrl((prev) => {
           if (prev) URL.revokeObjectURL(prev);
@@ -49,15 +119,8 @@ const useObjectUrl = (publication: Publication, link: Link | undefined, shouldLo
       }
       setIsLoading(true);
       try {
-        const bytes = await publication.get(link).read();
+        const blob = await getComicImageBlob(publication, currentLink);
         if (cancelled) return;
-        if (!bytes) {
-          setError("Failed to load image bytes.");
-          setObjectUrl(null);
-          return;
-        }
-        const byteArray = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-        const blob = new Blob([new Uint8Array(byteArray)], { type: link.type || "image/jpeg" });
         created = URL.createObjectURL(blob);
         setObjectUrl((prev) => {
           if (prev) URL.revokeObjectURL(prev);
@@ -78,7 +141,7 @@ const useObjectUrl = (publication: Publication, link: Link | undefined, shouldLo
       cancelled = true;
       if (created) URL.revokeObjectURL(created);
     };
-  }, [publication, link, shouldLoad]);
+  }, [publication, href, mediaType, shouldLoad]);
 
   return { objectUrl, error, isLoading };
 };
@@ -270,6 +333,57 @@ const pageCellStyleHorizontal: CSSProperties = {
   flexDirection: "column",
 };
 
+export type ComicBoundaryPageData = {
+  currentTitle?: string;
+  adjacentTitle?: string;
+};
+
+export type ComicBoundaryPageKind = "prev" | "next";
+
+export type ComicBoundaryScrollControls = {
+  scrollToBoundary: (kind: ComicBoundaryPageKind) => boolean;
+};
+
+const ComicChapterBoundaryPage = ({
+  kind,
+  currentTitle,
+  adjacentTitle,
+  isHorizontal,
+}: ComicBoundaryPageData & {
+  kind: ComicBoundaryPageKind;
+  isHorizontal: boolean;
+}) => {
+  const { t } = useI18n();
+  const label = kind === "next" ? t("reader.comic.chapterBoundaries.next") : t("reader.comic.chapterBoundaries.previous");
+
+  return (
+    <div
+      style={{
+        flex: isHorizontal ? "0 0 100%" : "0 0 auto",
+        width: "100%",
+        height: isHorizontal ? "100%" : "100vh",
+        minHeight: "100%",
+        boxSizing: "border-box",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 32,
+      }}
+    >
+      <div style={{ width: "min(90vw, 360px)", display: "grid", gap: 48 }}>
+        <section style={{ display: "grid", gap: 6 }}>
+          <strong style={{ fontSize: 18 }}>{t("reader.comic.chapterBoundaries.finished")}</strong>
+          {currentTitle ? <span style={{ fontSize: 22, fontWeight: 700 }}>{currentTitle}</span> : null}
+        </section>
+        <section style={{ display: "grid", gap: 6 }}>
+          <strong style={{ fontSize: 18 }}>{label}</strong>
+          {adjacentTitle ? <span style={{ fontSize: 22, fontWeight: 700 }}>{adjacentTitle}</span> : null}
+        </section>
+      </div>
+    </div>
+  );
+};
+
 /** Page that contains the viewport center line; if none (gap), closest by page-mid distance. */
 const getActivePageIndexVertical = (root: HTMLDivElement, itemRefs: Map<number, HTMLDivElement>): number => {
   const rootRect = root.getBoundingClientRect();
@@ -332,6 +446,12 @@ export type ComicReaderViewportProps = {
   onTap: (event: React.PointerEvent) => void;
   containerRef: React.RefObject<HTMLDivElement | null>;
   onPageLoadStateChange?: (pageIndex: number, state: ComicPageLoadState) => void;
+  boundaryPages?: {
+    previous?: ComicBoundaryPageData;
+    next?: ComicBoundaryPageData;
+  };
+  onBoundaryPageChange?: (kind: ComicBoundaryPageKind | null) => void;
+  boundaryScrollControlsRef?: MutableRefObject<ComicBoundaryScrollControls | null>;
 };
 
 export const ComicReaderViewport = ({
@@ -350,17 +470,53 @@ export const ComicReaderViewport = ({
   onTap,
   containerRef,
   onPageLoadStateChange,
+  boundaryPages,
+  onBoundaryPageChange,
+  boundaryScrollControlsRef,
 }: ComicReaderViewportProps) => {
   const itemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const boundaryRefs = useRef<Map<ComicBoundaryPageKind, HTMLDivElement>>(new Map());
   const scrollRef = useRef<HTMLDivElement | null>(null);
   /** When true, `cursorIndex` was updated from scroll measurement — skip `scrollIntoView`. */
   const syncFromScrollRef = useRef(false);
   const programmaticScrollRafRef = useRef<number | null>(null);
   const isProgrammaticScrollRef = useRef(false);
   const firstViewportPageIndexRef = useRef<number | undefined>(undefined);
+  const activeBoundaryPageRef = useRef<ComicBoundaryPageKind | null>(null);
 
   const isVerticalScrollMode =
     mode === ComicReadingMode.continuousVertical || mode === ComicReadingMode.webtoon;
+
+  const getActiveBoundaryPage = useCallback(
+    (root: HTMLDivElement): ComicBoundaryPageKind | null => {
+      const rootRect = root.getBoundingClientRect();
+      const yMid = rootRect.top + rootRect.height / 2;
+      const xMid = rootRect.left + rootRect.width / 2;
+      const edgeTolerance = 2;
+      const isAtStart =
+        mode === ComicReadingMode.continuousHorizontal
+          ? root.scrollLeft <= edgeTolerance
+          : root.scrollTop <= edgeTolerance;
+      const isAtEnd =
+        mode === ComicReadingMode.continuousHorizontal
+          ? root.scrollLeft + root.clientWidth >= root.scrollWidth - edgeTolerance
+          : root.scrollTop + root.clientHeight >= root.scrollHeight - edgeTolerance;
+      for (const kind of ["prev", "next"] as const) {
+        const el = boundaryRefs.current.get(kind);
+        if (!el) continue;
+        if (kind === "prev" && !isAtStart) continue;
+        if (kind === "next" && !isAtEnd) continue;
+        const r = el.getBoundingClientRect();
+        const containsMidpoint =
+          mode === ComicReadingMode.continuousHorizontal
+            ? r.left <= xMid && r.right >= xMid
+            : r.top <= yMid && r.bottom >= yMid;
+        if (containsMidpoint) return kind;
+      }
+      return null;
+    },
+    [mode]
+  );
 
   const suppressScrollSync = useCallback(() => {
     isProgrammaticScrollRef.current = true;
@@ -375,11 +531,26 @@ export const ComicReaderViewport = ({
     });
   }, []);
 
+  const emitBoundaryPageChange = useCallback(
+    (kind: ComicBoundaryPageKind | null) => {
+      if (activeBoundaryPageRef.current === kind) return;
+      activeBoundaryPageRef.current = kind;
+      onBoundaryPageChange?.(kind);
+    },
+    [onBoundaryPageChange]
+  );
+
   const updateActivePageFromScroll = useCallback(() => {
     const root = scrollRef.current;
     if (isProgrammaticScrollRef.current) return;
     if (!root) return;
     if (itemRefs.current.size === 0) return;
+    const activeBoundary = getActiveBoundaryPage(root);
+    if (activeBoundary) {
+      emitBoundaryPageChange(activeBoundary);
+      return;
+    }
+    emitBoundaryPageChange(null);
     let idx: number;
     if (isVerticalScrollMode) {
       idx = getActivePageIndexVertical(root, itemRefs.current);
@@ -393,7 +564,7 @@ export const ComicReaderViewport = ({
       syncFromScrollRef.current = true;
       return idx;
     });
-  }, [isVerticalScrollMode, mode, setCursorIndex]);
+  }, [emitBoundaryPageChange, getActiveBoundaryPage, isVerticalScrollMode, mode, setCursorIndex]);
 
   useEffect(() => {
     if (!isVerticalScrollMode) return;
@@ -412,7 +583,7 @@ export const ComicReaderViewport = ({
       el.removeEventListener("scroll", onScroll);
       ro.disconnect();
     };
-  }, [isVerticalScrollMode, updateActivePageFromScroll, pages.length]);
+  }, [isVerticalScrollMode, updateActivePageFromScroll, pages.length, boundaryPages?.next, boundaryPages?.previous]);
 
   useLayoutEffect(() => {
     const first = pages[0]?.index;
@@ -440,7 +611,7 @@ export const ComicReaderViewport = ({
       el.removeEventListener("scroll", onScroll);
       ro.disconnect();
     };
-  }, [mode, updateActivePageFromScroll, pages.length]);
+  }, [mode, updateActivePageFromScroll, pages.length, boundaryPages?.next, boundaryPages?.previous]);
 
   useEffect(() => {
     if (mode !== ComicReadingMode.continuousVertical && mode !== ComicReadingMode.continuousHorizontal && mode !== ComicReadingMode.webtoon) {
@@ -476,6 +647,33 @@ export const ComicReaderViewport = ({
   }, [current, direction, mode, nextPage, prevPage]);
 
   const isOriginalDouble = mode === ComicReadingMode.doublePage && scaleType === ComicScaleType.originalSize;
+  const setBoundaryRef = useCallback(
+    (kind: ComicBoundaryPageKind) => (el: HTMLDivElement | null) => {
+      if (el) boundaryRefs.current.set(kind, el);
+      else boundaryRefs.current.delete(kind);
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!boundaryScrollControlsRef) return;
+    boundaryScrollControlsRef.current = {
+      scrollToBoundary: (kind) => {
+        const el = boundaryRefs.current.get(kind);
+        if (!el) return false;
+        el.scrollIntoView({
+          block: kind === "next" ? "end" : "start",
+          inline: kind === "next" ? "end" : "start",
+          behavior: "auto",
+        });
+        window.requestAnimationFrame(updateActivePageFromScroll);
+        return true;
+      },
+    };
+    return () => {
+      boundaryScrollControlsRef.current = null;
+    };
+  }, [boundaryScrollControlsRef, updateActivePageFromScroll]);
 
   return (
     <div
@@ -506,6 +704,11 @@ export const ComicReaderViewport = ({
             gap: pageGapPx,
           }}
         >
+          {boundaryPages?.previous ? (
+            <div ref={setBoundaryRef("prev")} style={pageCellStyleVertical}>
+              <ComicChapterBoundaryPage kind="prev" isHorizontal={false} {...boundaryPages.previous} />
+            </div>
+          ) : null}
           {pages.map((page) => (
             <div
               key={page.href}
@@ -531,6 +734,11 @@ export const ComicReaderViewport = ({
               />
             </div>
           ))}
+          {boundaryPages?.next ? (
+            <div ref={setBoundaryRef("next")} style={pageCellStyleVertical}>
+              <ComicChapterBoundaryPage kind="next" isHorizontal={false} {...boundaryPages.next} />
+            </div>
+          ) : null}
         </div>
       ) : mode === ComicReadingMode.continuousHorizontal ? (
         <div
@@ -547,6 +755,11 @@ export const ComicReaderViewport = ({
             gap: pageGapPx,
           }}
         >
+          {boundaryPages?.previous ? (
+            <div ref={setBoundaryRef("prev")} style={pageCellStyleHorizontal}>
+              <ComicChapterBoundaryPage kind="prev" isHorizontal {...boundaryPages.previous} />
+            </div>
+          ) : null}
           {pages.map((page) => (
             <div
               key={page.href}
@@ -572,6 +785,11 @@ export const ComicReaderViewport = ({
               />
             </div>
           ))}
+          {boundaryPages?.next ? (
+            <div ref={setBoundaryRef("next")} style={pageCellStyleHorizontal}>
+              <ComicChapterBoundaryPage kind="next" isHorizontal {...boundaryPages.next} />
+            </div>
+          ) : null}
         </div>
       ) : mode === ComicReadingMode.doublePage ? (
         isOriginalDouble ? (

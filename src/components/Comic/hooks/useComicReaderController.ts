@@ -22,6 +22,11 @@ export type ComicPage = {
 export const getEffectiveReadingMode = (mode: ComicReadingMode): ComicReadingMode =>
   mode === ComicReadingMode.default ? ComicReadingMode.singlePage : mode;
 
+const isScrollReadingMode = (mode: ComicReadingMode): boolean =>
+  mode === ComicReadingMode.continuousVertical ||
+  mode === ComicReadingMode.continuousHorizontal ||
+  mode === ComicReadingMode.webtoon;
+
 export const useComicReaderController = ({
   pages,
   settings,
@@ -41,6 +46,7 @@ export const useComicReaderController = ({
   const scaleType = settings.scaleType;
   const direction = settings.direction;
   const step = mode === ComicReadingMode.doublePage ? 2 : 1;
+  const usesScrollBoundaries = isScrollReadingMode(mode);
 
   const useChapterBounds =
     chapterBoundariesEnabled && hasMultiChapterStructure(chapterSegments);
@@ -79,38 +85,50 @@ export const useComicReaderController = ({
   const canGoPrev = useMemo(() => {
     if (pages.length === 0) return false;
     if (useChapterBounds && activeSeg) {
-      return canRetreatWithinSegment(cursorIndex, activeSeg, step);
+      return usesScrollBoundaries
+        ? canRetreatWithinSegment(cursorIndex, activeSeg, step)
+        : canRetreatWithinSegment(cursorIndex, activeSeg, step) || segmentIndex > 0;
     }
     return cursorIndex > 0;
-  }, [activeSeg, cursorIndex, pages.length, step, useChapterBounds]);
+  }, [activeSeg, cursorIndex, pages.length, segmentIndex, step, useChapterBounds, usesScrollBoundaries]);
 
   const canGoNext = useMemo(() => {
     if (pages.length === 0) return false;
     if (useChapterBounds && activeSeg) {
-      return canAdvanceWithinSegment(cursorIndex, activeSeg, step);
+      return usesScrollBoundaries
+        ? canAdvanceWithinSegment(cursorIndex, activeSeg, step)
+        : canAdvanceWithinSegment(cursorIndex, activeSeg, step) || segmentIndex < chapterSegments.length - 1;
     }
     return cursorIndex < pages.length - 1;
-  }, [activeSeg, cursorIndex, pages.length, step, useChapterBounds]);
+  }, [activeSeg, chapterSegments.length, cursorIndex, pages.length, segmentIndex, step, useChapterBounds, usesScrollBoundaries]);
 
   const goPrev = useCallback(() => {
     setCursorIndex((i) => {
       const seg = segmentForCursor(i);
       if (useChapterBounds && seg) {
+        if (!usesScrollBoundaries && !canRetreatWithinSegment(i, seg, step)) {
+          const si = getSegmentIndex(chapterSegments, i);
+          return si > 0 ? (chapterSegments[si - 1]?.endIndex ?? i) : i;
+        }
         return Math.max(seg.startIndex, i - step);
       }
       return Math.max(0, i - step);
     });
-  }, [segmentForCursor, step, useChapterBounds]);
+  }, [chapterSegments, segmentForCursor, step, useChapterBounds, usesScrollBoundaries]);
 
   const goNext = useCallback(() => {
     setCursorIndex((i) => {
       const seg = segmentForCursor(i);
       if (useChapterBounds && seg) {
+        if (!usesScrollBoundaries && !canAdvanceWithinSegment(i, seg, step)) {
+          const si = getSegmentIndex(chapterSegments, i);
+          return si >= 0 && si < chapterSegments.length - 1 ? (chapterSegments[si + 1]?.startIndex ?? i) : i;
+        }
         return Math.min(seg.endIndex, i + step);
       }
       return Math.min(pages.length - 1, i + step);
     });
-  }, [pages.length, segmentForCursor, step, useChapterBounds]);
+  }, [chapterSegments, pages.length, segmentForCursor, step, useChapterBounds, usesScrollBoundaries]);
 
   const hasNextChapter = useMemo(
     () => useChapterBounds && segmentIndex >= 0 && segmentIndex < chapterSegments.length - 1,

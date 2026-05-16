@@ -20,7 +20,7 @@ export const PUBLICATION_MANIFESTS = {
   "flatland": "https://readium.org/webpub-manifest/examples/Flatland/manifest.json",
    "the-martian": "http://localhost:8100/webpub/ZmlsZTovLy9BbmR5IFdlaXIgLSBUaGUgTWFydGlhbi5tcDM/manifest.json",
   "harry-potter-and-the-order-of-the-phoenix": "http://localhost:8008/webpub/Si5LLiBSb3dsaW5nIC0gSGFycnkgUG90dGVyIGFuZCB0aGUgSGFsZi1CbG9vZCBQcmluY2UgKDEpLm00Yg/manifest.json",
-  "cbz": "http://127.0.0.1:3002/readium/f39b8d37-203e-401e-aaa0-c8abf101bd97/webpub/ZmlsZTovLy9BIENhZGV0IEJlY29tZXMgYSBQcm9waGV0XyEvQ2hhcHRlciAxLmNieg/manifest.json",
+  "cbz": "http://127.0.0.1:3002/readium/8c1b475b-4189-4971-8835-87cad200eed3/webpub/ZmlsZTovLy9BIENhZGV0IEJlY29tZXMgYSBQcm9waGV0XyEvQ2hhcHRlciAxLmNieg/manifest.json",
   // RTL + CJK
   "haruko": "https://publication-server.readium.org/webpub/aHR0cHM6Ly9naXRodWIuY29tL0lEUEYvZXB1YjMtc2FtcGxlcy9yZWxlYXNlcy9kb3dubG9hZC8yMDIzMDcwNC9oYXJ1a28taHRtbC1qcGVnLmVwdWI/manifest.json",
   "israel-sailing": "https://publication-server.readium.org/webpub/aHR0cHM6Ly9naXRodWIuY29tL0lEUEYvZXB1YjMtc2FtcGxlcy9yZWxlYXNlcy9kb3dubG9hZC8yMDIzMDcwNC9pc3JhZWxzYWlsaW5nLmVwdWI/manifest.json",

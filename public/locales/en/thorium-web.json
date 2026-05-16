@@ -117,7 +117,10 @@
       "chapterBoundaries": {
         "label": "Navigate by manifest chapters (TOC)",
         "nextChapter": "Next chapter",
-        "previousChapter": "Previous chapter"
+        "previousChapter": "Previous chapter",
+        "finished": "Finished:",
+        "next": "Next:",
+        "previous": "Previous:"
       },
       "pageGap": {
         "label": "Page gap"
