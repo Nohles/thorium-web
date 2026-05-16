@@ -12,6 +12,7 @@ import globalPreferencesReducer, { GlobalPreferencesReducerState } from "./globa
 import webPubSettingsReducer, { WebPubSettingsReducerState } from "./webPubSettingsReducer";
 import audioSettingsReducer, { AudioSettingsState } from "./audioSettingsReducer";
 import playerReducer, { PlayerReducerState } from "./playerReducer";
+import readAlongReducer, { ReadAlongReducerState } from "./readAlongReducer";
 
 import debounce from "debounce";
 
@@ -32,6 +33,7 @@ export type RootState = {
   webPubSettings: WebPubSettingsReducerState;
   audioSettings: AudioSettingsState;
   player: PlayerReducerState;
+  readAlong: ReadAlongReducerState;
   [key: string]: any; // For external reducers
 };
 
@@ -258,6 +260,7 @@ export const makeStore = (storageKey?: string, externalReducers: Record<string, 
     webPubSettings: webPubSettingsReducer,
     audioSettings: audioSettingsReducer,
     player: playerReducer,
+    readAlong: readAlongReducer,
     ...Object.entries(externalReducers).reduce((acc, [key, config]) => ({
       ...acc,
       [key]: config.reducer

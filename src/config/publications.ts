@@ -24,3 +24,14 @@ export const PUBLICATION_MANIFESTS = {
   "kusamakura": "https://publication-server.readium.org/webpub/aHR0cHM6Ly9naXRodWIuY29tL0lEUEYvZXB1YjMtc2FtcGxlcy9yZWxlYXNlcy9kb3dubG9hZC8yMDIzMDcwNC9rdXNhbWFrdXJhLWphcGFuZXNlLXZlcnRpY2FsLXdyaXRpbmcuZXB1Yg/manifest.json",
   "regime-anticancer-arabic": "https://publication-server.readium.org/webpub/aHR0cHM6Ly9naXRodWIuY29tL0lEUEYvZXB1YjMtc2FtcGxlcy9yZWxlYXNlcy9kb3dubG9hZC8yMDIzMDcwNC9yZWdpbWUtYW50aWNhbmNlci1hcmFiaWMuZXB1Yg/manifest.json"
 } as const;
+
+/** Preset EPUB + audiobook pairs for read-along mode (?id= key on /read-along). */
+export const READ_ALONG_PUBLICATIONS: Record<
+  string,
+  { epub: string; audio: string; guided?: string }
+> = {
+  "moby-dick-flatland": {
+    epub: PUBLICATION_MANIFESTS["moby-dick"],
+    audio: PUBLICATION_MANIFESTS["flatland"],
+  },
+};

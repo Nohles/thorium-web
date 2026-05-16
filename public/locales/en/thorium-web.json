@@ -103,6 +103,10 @@
           "trigger": "More spacing options"
         }
       }
+    },
+    "readAlong": {
+      "followAudioOn": "Following audio",
+      "followAudioOff": "Follow audio"
     }
   },
   "audio": {

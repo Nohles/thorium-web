@@ -15,3 +15,4 @@ export * from "../WebPub/webpub-core";
 
 // StatefulReaderWrapper
 export * from "./StatefulReaderWrapper";
+export * from "./StatefulReadAlongWrapper";
