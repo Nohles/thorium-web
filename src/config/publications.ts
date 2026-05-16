@@ -22,7 +22,9 @@ export const PUBLICATION_MANIFESTS = {
   "israel-sailing": "https://publication-server.readium.org/webpub/aHR0cHM6Ly9naXRodWIuY29tL0lEUEYvZXB1YjMtc2FtcGxlcy9yZWxlYXNlcy9kb3dubG9hZC8yMDIzMDcwNC9pc3JhZWxzYWlsaW5nLmVwdWI/manifest.json",
   "jlreq": "https://publication-server.readium.org/webpub/aHR0cHM6Ly9naXRodWIuY29tL0lEUEYvZXB1YjMtc2FtcGxlcy9yZWxlYXNlcy9kb3dubG9hZC8yMDIzMDcwNC9qbHJlcS1pbi1qYXBhbmVzZS5lcHVi/manifest.json",
   "kusamakura": "https://publication-server.readium.org/webpub/aHR0cHM6Ly9naXRodWIuY29tL0lEUEYvZXB1YjMtc2FtcGxlcy9yZWxlYXNlcy9kb3dubG9hZC8yMDIzMDcwNC9rdXNhbWFrdXJhLWphcGFuZXNlLXZlcnRpY2FsLXdyaXRpbmcuZXB1Yg/manifest.json",
-  "regime-anticancer-arabic": "https://publication-server.readium.org/webpub/aHR0cHM6Ly9naXRodWIuY29tL0lEUEYvZXB1YjMtc2FtcGxlcy9yZWxlYXNlcy9kb3dubG9hZC8yMDIzMDcwNC9yZWdpbWUtYW50aWNhbmNlci1hcmFiaWMuZXB1Yg/manifest.json"
+  "regime-anticancer-arabic": "https://publication-server.readium.org/webpub/aHR0cHM6Ly9naXRodWIuY29tL0lEUEYvZXB1YjMtc2FtcGxlcy9yZWxlYXNlcy9kb3dubG9hZC8yMDIzMDcwNC9yZWdpbWUtYW50aWNhbmNlci1hcmFiaWMuZXB1Yg/manifest.json",
+  "the-martian-audiobook": "http://localhost:63776/readium/b486f9d8-c00d-44e4-85a3-49b3ed237e5c/webpub/ZmlsZTovLy9BbmR5IFdlaXIvVGhlIE1hcnRpYW4vQW5keSBXZWlyIC0gVGhlIE1hcnRpYW4ubXAz/manifest.json",
+  "the-martian-epub":"http://localhost:63776/readium/b72f307d-95e8-4c4c-aa79-02977c97e07e/webpub/ZmlsZTovLy9BbmR5IFdlaXIvVGhlIE1hcnRpYW4vQW5keSBXZWlyIC0gVGhlIE1hcnRpYW4uZXB1Yg/manifest.json"
 } as const;
 
 /** Preset EPUB + audiobook pairs for read-along mode (?id= key on /read-along). */
@@ -30,8 +32,8 @@ export const READ_ALONG_PUBLICATIONS: Record<
   string,
   { epub: string; audio: string; guided?: string }
 > = {
-  "moby-dick-flatland": {
-    epub: PUBLICATION_MANIFESTS["moby-dick"],
-    audio: PUBLICATION_MANIFESTS["flatland"],
+  "the-martian": {
+    epub: PUBLICATION_MANIFESTS["the-martian-epub"],
+    audio: PUBLICATION_MANIFESTS["the-martian-audiobook"],
   },
 };
