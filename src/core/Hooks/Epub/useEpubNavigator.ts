@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useRef } from "react";
 
-import { 
-  Layout, 
-  Link, 
-  Locator, 
-  Publication 
+import {
+  Link,
+  Locator,
+  Publication
 } from "@readium/shared";
 import {
   EpubNavigator,
@@ -53,41 +52,12 @@ export const useEpubNavigator = () => {
     return navigatorInstance?.settings[settingKey] as EpubSettings[K];
   }, []);
 
-  // [TMP] Working around positionChanged not firing consistently for FXL
-  // We’re observing the FXLFramePoolManager spine div element’s style
-  // and checking whether its translate3d has changed.
-  // Sure IntersectionObserver should be the obvious one to use here,
-  // observing iframes instead of the style attribute on the spine element
-  // but there’s additional complexity to handle as a spread = 2 iframes
-  // And keeping in sync while the FramePool is re-aligning on resize can be suboptimal
-  const FXLPositionChangedCallbackRef = useRef<((locator: Locator) => void) | undefined>(undefined);
-  const FXLPositionChanged = useMemo(() => {  
-    return new MutationObserver((mutationsList: MutationRecord[]) => {
-      for (const mutation of mutationsList) {
-        const re = /translate3d\(([^)]+)\)/;
-        const newVal = (mutation.target as HTMLElement).getAttribute(mutation.attributeName as string);
-        const oldVal = mutation.oldValue;
-        if (newVal?.split(re)[1] !== oldVal?.split(re)[1]) {
-          const locator = navigatorInstance?.currentLocator;
-          if (locator && FXLPositionChangedCallbackRef.current) {
-            FXLPositionChangedCallbackRef.current(locator);
-          }
-        }
-      }
-    });
-  }, []);
-
-  const EpubNavigatorLoad = useCallback((config: EpubNavigatorLoadProps, cb: Function, fxlCallback?: (locator: Locator) => void) => {
+  const EpubNavigatorLoad = useCallback((config: EpubNavigatorLoadProps, cb: Function) => {
     if (config.container) {
       container.current = config.container;
       containerParent.current = container.current? container.current.parentElement : null;
       
       publication.current = config.publication;
-
-      // Register FXL callback immediately if provided
-      if (fxlCallback) {
-        FXLPositionChangedCallbackRef.current = fxlCallback;
-      }
 
       navigatorInstance = new EpubNavigator(
         config.container,
@@ -106,28 +76,17 @@ export const useEpubNavigator = () => {
 
       navigatorInstance.load().then(() => {
         cb();
-
-        if (navigatorInstance?.layout === Layout.fixed) {
-          // @ts-ignore
-          FXLPositionChanged.observe((navigatorInstance?.pool.spineElement as HTMLElement), {
-            attributeFilter: ["style"], 
-            attributeOldValue: true
-          });
-        }
       });
     }
-  }, [FXLPositionChanged]);
+  }, []);
 
   const EpubNavigatorDestroy = useCallback((cb: Function) => {
     cb();
 
-    if (navigatorInstance?.layout === Layout.fixed) {
-      FXLPositionChanged.disconnect();
-    }
     navigatorInstance?.destroy().then(() => {
       navigatorInstance = null; // Clear the singleton reference
     });
-  }, [FXLPositionChanged]);
+  }, []);
 
   const goRight = useCallback((animated: boolean, callback: cbb) => {
     navigatorInstance?.goRight(animated, callback);
@@ -244,8 +203,5 @@ export const useEpubNavigator = () => {
     submitPreferences,
     getCframes,
     getScriptMode: currentScriptMode,
-    onFXLPositionChange: (cb: (locator: Locator) => void) => {
-      FXLPositionChangedCallbackRef.current = cb;
-    }
   }
 }
