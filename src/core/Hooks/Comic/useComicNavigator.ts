@@ -12,6 +12,7 @@ export interface ComicNavigatorBind {
   cursorIndex: number;
   setCursorIndex: (index: number) => void;
   step: number;
+  onMissingLink?: (link: Link) => Promise<boolean> | boolean;
 }
 
 const normalizeHref = (href: string) => {
@@ -76,7 +77,12 @@ export const useComicNavigator = () => {
       const idx = indexForLink(link);
       const b = bindStore.current;
       if (idx < 0 || !b) {
-        callback(false);
+        const result = b?.onMissingLink?.(link);
+        if (result && typeof (result as Promise<boolean>).then === "function") {
+          (result as Promise<boolean>).then(callback, () => callback(false));
+        } else {
+          callback(!!result);
+        }
         return;
       }
       b.setCursorIndex(idx);

@@ -99,6 +99,30 @@ const detectProfile = (manifest: Manifest): ReaderProfile => {
   return "webPub";
 };
 
+const isLocalhostUrl = (url: string): boolean => {
+  try {
+    const { hostname } = new URL(url);
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+  } catch {
+    return false;
+  }
+};
+
+const assertLocalAudioLinksArePlayable = (manifest: Manifest, manifestUrl: string) => {
+  if (!isLocalhostUrl(manifestUrl)) return;
+
+  const audioLinks = manifest.readingOrder?.items.filter((link) => link.type?.startsWith("audio/")) ?? [];
+  const hasGeneratedLocalAssetPaths = audioLinks.some((link) => link.href.startsWith("/"));
+  const generatorVersion = manifest.metadata.otherMetadata?.["https://github.com/nohles/go-toolkit#version"];
+
+  if (hasGeneratedLocalAssetPaths && generatorVersion) {
+    throw new Error(
+      "This local audiobook manifest uses generated root-relative audio hrefs that the browser cannot play from the publication server. " +
+      "Regenerate the manifest with playable audio asset hrefs before opening it in Thorium Web."
+    );
+  }
+};
+
 export const usePublication = ({
   url,
   onError = () => {},
@@ -125,6 +149,7 @@ export const usePublication = ({
   const handleManifestError = (error: unknown, context: string) => {
     console.error(`${ context }:`, error);
     const processedError = ErrorHandler.process(error, context);
+    onError(processedError);
     setError(processedError);
     setIsLoading(false);
   };
@@ -173,6 +198,10 @@ export const usePublication = ({
 
             // Detect profile from parsed manifest
             const detectedProfile = detectProfile(manifestObj);
+            if (detectedProfile === "audio") {
+              assertLocalAudioLinksArePlayable(manifestObj, selfHref);
+            }
+
             setProfile(detectedProfile);
             dispatch(setReaderProfile(detectedProfile));
 

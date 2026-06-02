@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "@readium/shared";
 
 import { ComicReadingMode, defaultComicSettings } from "@/lib/comicSettingsReducer";
+import type { ComicArchivePageIdentity } from "../lib/comicArchiveSeries";
 import {
   canAdvanceWithinSegment,
   canRetreatWithinSegment,
@@ -17,6 +18,7 @@ export type ComicPage = {
   link: Link;
   href: string;
   title: string;
+  archive?: ComicArchivePageIdentity;
 };
 
 export const getEffectiveReadingMode = (mode: ComicReadingMode): ComicReadingMode =>

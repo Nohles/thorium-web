@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import classNames from "classnames";
-import { Publication } from "@readium/shared";
+import { Link, Manifest, Publication } from "@readium/shared";
 
 import readerStyles from "../assets/styles/thorium-web.reader.app.module.css";
 
@@ -49,11 +49,22 @@ import {
   isAtFirstNavigablePositionInSegment,
   isAtLastNavigablePositionInSegment,
 } from "./lib/comicChapters";
+import {
+  buildComicArchiveChapters,
+  isComicArchivePosition,
+  isComicArchiveSeriesManifest,
+  makeChapterTocLink,
+  makeComicArchivePosition,
+  readManifestFromUrl,
+  resolveChapterResourceHref,
+  type ComicArchiveChapter,
+} from "./lib/comicArchiveSeries";
 
 import { usePreferences } from "@/preferences/hooks/usePreferences";
 import { ThLayoutUI, ThProgressionFormat } from "@/preferences/models";
 import { useI18n } from "@/i18n/useI18n";
 import { usePositionStorage } from "@/hooks/usePositionStorage";
+import { buildTocTree } from "@/helpers/buildTocTree";
 
 const getReadingOrderImages = (publication: Publication): ComicPage[] => {
   const items = publication.readingOrder?.items ?? [];
@@ -61,6 +72,58 @@ const getReadingOrderImages = (publication: Publication): ComicPage[] => {
     .filter((item) => !item.templated)
     .filter((item) => typeof item.type === "string" && item.type.startsWith("image/"))
     .map((link, index) => ({ index, link, href: link.href, title: link.title || `Page ${index + 1}` }));
+};
+
+const getManifestSelfHref = (publication: Publication): string | undefined => {
+  const self = publication.manifest.links?.items?.find((link) => link.rels?.has("self"));
+  return self?.href || publication.baseURL;
+};
+
+const getChapterImages = (
+  chapter: ComicArchiveChapter,
+  manifest: Manifest,
+  manifestUrl: string,
+  startIndex: number
+): ComicPage[] => {
+  const items = manifest.readingOrder?.items ?? [];
+  return items
+    .filter((item) => !item.templated)
+    .filter((item) => typeof item.type === "string" && item.type.startsWith("image/"))
+    .map((link, pageIndexInChapter) => {
+      const href = resolveChapterResourceHref(manifestUrl, link.href);
+      const pageLink = new Link({
+        href,
+        type: link.type,
+        title: link.title || `${chapter.title} - Page ${pageIndexInChapter + 1}`,
+      });
+      const index = startIndex + pageIndexInChapter;
+      return {
+        index,
+        link: pageLink,
+        href,
+        title: pageLink.title || `Page ${index + 1}`,
+        archive: {
+          chapterIndex: chapter.index,
+          chapterHref: chapter.href,
+          pageIndexInChapter,
+          pageHref: link.href,
+        },
+      };
+    });
+};
+
+const buildSeriesSegments = (chapters: ComicArchiveChapter[], pages: ComicPage[]) => {
+  const segments = [];
+  for (const chapter of chapters) {
+    const chapterPages = pages.filter((page) => page.archive?.chapterIndex === chapter.index);
+    if (chapterPages.length === 0) continue;
+    segments.push({
+      title: chapter.title,
+      startIndex: chapterPages[0]!.index,
+      endIndex: chapterPages[chapterPages.length - 1]!.index,
+    });
+  }
+  return segments;
 };
 
 const normalizeHref = (href: string) => {
@@ -93,11 +156,82 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
 
   const layoutUI = preferences.theming.layout.ui?.fxl ?? ThLayoutUI.layered;
 
-  const allPages = useMemo(() => getReadingOrderImages(publication), [publication]);
+  const manifestSelfHref = useMemo(() => getManifestSelfHref(publication), [publication]);
+  const isArchiveSeries = useMemo(() => isComicArchiveSeriesManifest(publication.manifest), [publication.manifest]);
+  const archiveChapters = useMemo(
+    () => (isArchiveSeries && manifestSelfHref ? buildComicArchiveChapters(publication.manifest, manifestSelfHref) : []),
+    [isArchiveSeries, manifestSelfHref, publication.manifest]
+  );
+  const [chapterManifests, setChapterManifests] = useState<Record<number, { manifest: Manifest; manifestUrl: string }>>({});
+  const chapterManifestPromisesRef = useRef<Partial<Record<number, Promise<boolean>>>>({});
+  const [chapterLoadError, setChapterLoadError] = useState<string | null>(null);
   const { setLocalData, localData } = usePositionStorage(localDataKey, positionStorage);
+
+  const loadChapter = useCallback(
+    async (chapterIndex: number): Promise<boolean> => {
+      if (!isArchiveSeries) return false;
+      const chapter = archiveChapters[chapterIndex];
+      if (!chapter) return false;
+      if (chapterManifests[chapterIndex]) return true;
+      if (chapterManifestPromisesRef.current[chapterIndex]) {
+        return chapterManifestPromisesRef.current[chapterIndex]!;
+      }
+      if (!chapter.manifestUrl) {
+        setChapterLoadError("This comic series server does not expose chapter manifests Thorium Web can discover.");
+        return false;
+      }
+
+      const promise = readManifestFromUrl(chapter.manifestUrl)
+        .then((manifest) => {
+          setChapterManifests((prev) => ({
+            ...prev,
+            [chapterIndex]: { manifest, manifestUrl: chapter.manifestUrl! },
+          }));
+          setChapterLoadError(null);
+          return true;
+        })
+        .catch((error) => {
+          setChapterLoadError(error instanceof Error ? error.message : "Failed to load chapter manifest.");
+          return false;
+        })
+        .finally(() => {
+          delete chapterManifestPromisesRef.current[chapterIndex];
+        });
+      chapterManifestPromisesRef.current[chapterIndex] = promise;
+      return promise;
+    },
+    [archiveChapters, chapterManifests, isArchiveSeries]
+  );
+
+  const initialArchiveChapterIndex = useMemo(() => {
+    if (isComicArchivePosition(localData)) {
+      return localData.chapterIndex;
+    }
+    return 0;
+  }, [localData]);
+
+  useEffect(() => {
+    if (!isArchiveSeries || archiveChapters.length === 0) return;
+    loadChapter(initialArchiveChapterIndex).catch(() => undefined);
+  }, [archiveChapters.length, initialArchiveChapterIndex, isArchiveSeries, loadChapter]);
+
+  const allPages = useMemo(() => {
+    if (!isArchiveSeries) return getReadingOrderImages(publication);
+    let startIndex = 0;
+    const pages: ComicPage[] = [];
+    for (const chapter of archiveChapters) {
+      const loaded = chapterManifests[chapter.index];
+      if (!loaded) continue;
+      const chapterPages = getChapterImages(chapter, loaded.manifest, loaded.manifestUrl, startIndex);
+      pages.push(...chapterPages);
+      startIndex += chapterPages.length;
+    }
+    return pages;
+  }, [archiveChapters, chapterManifests, isArchiveSeries, publication]);
   const allPagesRef = useRef(allPages);
   const setLocalDataRef = useRef(setLocalData);
   const manifestRef = useRef(publication.manifest);
+  const currentArchiveIdentityRef = useRef<ComicPage["archive"] | undefined>(undefined);
 
   useEffect(() => {
     allPagesRef.current = allPages;
@@ -106,14 +240,26 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   }, [allPages, publication.manifest, setLocalData]);
 
   const storedPosition = useMemo(() => {
+    if (isComicArchivePosition(localData)) {
+      const index = allPages.findIndex(
+        (page) =>
+          page.archive?.chapterIndex === localData.chapterIndex &&
+          normalizeHref(page.archive.pageHref) === normalizeHref(localData.pageHref)
+      );
+      return index >= 0 ? index : undefined;
+    }
     if (!localData?.href) return undefined;
     const normalizedHref = normalizeHref(localData.href);
     const index = allPages.findIndex((page) => normalizeHref(page.href) === normalizedHref);
     return index >= 0 ? index : undefined;
   }, [allPages, localData]);
-  const chapterSegments = useMemo(() => buildComicChapterSegments(publication, allPages), [publication, allPages]);
+  const chapterSegments = useMemo(
+    () => (isArchiveSeries ? buildSeriesSegments(archiveChapters, allPages) : buildComicChapterSegments(publication, allPages)),
+    [archiveChapters, allPages, isArchiveSeries, publication]
+  );
   const chapterModeActive =
-    merged.comicChapterBoundaries && hasMultiChapterStructure(chapterSegments);
+    merged.comicChapterBoundaries &&
+    (isArchiveSeries ? archiveChapters.length >= 2 : hasMultiChapterStructure(chapterSegments));
   const isScrollMode =
     merged.readingMode === ComicReadingMode.continuousVertical ||
     merged.readingMode === ComicReadingMode.continuousHorizontal ||
@@ -122,7 +268,14 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   const persistComicPosition = useCallback(
     (index: number) => {
       if (!activeKey) return;
-      const locator = manifestRef.current?.locatorFromLink(allPagesRef.current[index]?.link);
+      const page = allPagesRef.current[index];
+      if (!page?.link) return;
+      if (page.archive) {
+        setLocalDataRef.current(makeComicArchivePosition(page.archive, page.href) as any);
+        dispatch(updateComicPosition({ key: activeKey, pageIndex: index }));
+        return;
+      }
+      const locator = manifestRef.current?.locatorFromLink(page.link);
       if (locator) {
         setLocalDataRef.current(locator);
       }
@@ -157,12 +310,38 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     chapterBoundariesEnabled: merged.comicChapterBoundaries,
   });
 
+  useEffect(() => {
+    currentArchiveIdentityRef.current = allPages[cursorIndex]?.archive;
+  }, [allPages, cursorIndex]);
+
+  useEffect(() => {
+    if (!isArchiveSeries) return;
+    const identity = currentArchiveIdentityRef.current;
+    if (!identity) return;
+    const nextIndex = allPages.findIndex(
+      (page) =>
+        page.archive?.chapterIndex === identity.chapterIndex &&
+        page.archive.pageIndexInChapter === identity.pageIndexInChapter
+    );
+    if (nextIndex >= 0 && nextIndex !== cursorIndex) {
+      setCursorIndex(nextIndex);
+    }
+  }, [allPages, cursorIndex, isArchiveSeries, setCursorIndex]);
+
   const viewportPages = useMemo(() => {
     if (!chapterModeActive) return allPages;
     const seg = getSegmentForPageIndex(chapterSegments, cursorIndex);
     if (!seg) return allPages;
     return allPages.slice(seg.startIndex, seg.endIndex + 1);
   }, [allPages, chapterModeActive, chapterSegments, cursorIndex]);
+
+  useEffect(() => {
+    if (!isArchiveSeries) return;
+    const page = allPages[cursorIndex];
+    const chapterIndex = page?.archive?.chapterIndex ?? initialArchiveChapterIndex;
+    if (chapterIndex > 0) loadChapter(chapterIndex - 1).catch(() => undefined);
+    if (chapterIndex < archiveChapters.length - 1) loadChapter(chapterIndex + 1).catch(() => undefined);
+  }, [allPages, archiveChapters.length, cursorIndex, initialArchiveChapterIndex, isArchiveSeries, loadChapter]);
 
   const progressChapterSegment = useMemo(() => {
     if (!chapterModeActive) return undefined;
@@ -251,23 +430,48 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
       cursorIndex,
       setCursorIndex,
       step,
+      onMissingLink: async (link) => {
+        if (!isArchiveSeries) return false;
+        const chapterIndex = archiveChapters.findIndex((chapter) => normalizeHref(chapter.href) === normalizeHref(link.href));
+        if (chapterIndex < 0) return false;
+        const ok = await loadChapter(chapterIndex);
+        if (!ok) return false;
+        const target = allPagesRef.current.find((page) => page.archive?.chapterIndex === chapterIndex);
+        if (!target) return false;
+        setCursorIndex(target.index);
+        return true;
+      },
     });
-  }, [comicNavigator, publication, allPages, cursorIndex, setCursorIndex, step]);
+  }, [archiveChapters, comicNavigator, isArchiveSeries, loadChapter, publication, allPages, cursorIndex, setCursorIndex, step]);
 
   const pageTocTree = useMemo(() => buildComicTocTree(publication, allPages), [publication, allPages]);
   const chapterTocTree = useMemo(() => {
+    if (isArchiveSeries) {
+      let id = 0;
+      const idGenerator = () => `toc-${++id}`;
+      return buildTocTree(archiveChapters.map(makeChapterTocLink), idGenerator, undefined, undefined);
+    }
     if (!hasMultiChapterStructure(chapterSegments)) return [];
     return buildComicChapterTocTree(chapterSegments, allPages);
-  }, [chapterSegments, allPages]);
+  }, [archiveChapters, chapterSegments, allPages, isArchiveSeries]);
   const tocTree = chapterModeActive ? chapterTocTree : pageTocTree;
-  const tocHighlightIndex = chapterModeActive ? getSegmentIndex(chapterSegments, cursorIndex) : undefined;
+  const tocHighlightIndex = chapterModeActive
+    ? isArchiveSeries
+      ? allPages[cursorIndex]?.archive?.chapterIndex
+      : getSegmentIndex(chapterSegments, cursorIndex)
+    : undefined;
 
   useEffect(() => {
     dispatch(setTocTree(tocTree));
   }, [dispatch, tocTree]);
 
   useEffect(() => {
-    const timeline = buildComicTimeline(publication, allPages, cursorIndex, tocTree, tocHighlightIndex);
+    const timelinePages = isArchiveSeries && chapterModeActive ? viewportPages : allPages;
+    const timelineCursorIndex =
+      isArchiveSeries && chapterModeActive
+        ? Math.max(0, timelinePages.findIndex((page) => page.index === cursorIndex))
+        : cursorIndex;
+    const timeline = buildComicTimeline(publication, timelinePages, timelineCursorIndex, tocTree, tocHighlightIndex);
     dispatch(
       setTimeline({
         ...timeline,
@@ -303,10 +507,12 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     chapterSegments,
     cursorIndex,
     dispatch,
+    isArchiveSeries,
     publication,
     step,
     tocHighlightIndex,
     tocTree,
+    viewportPages,
   ]);
 
   const toggleMenu = useCallback(() => {
@@ -532,6 +738,27 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
                   onBoundaryPageChange={handleBoundaryPageChange}
                   boundaryScrollControlsRef={boundaryScrollControlsRef}
                 />
+                {chapterLoadError ? (
+                  <div
+                    role="status"
+                    style={{
+                      position: "absolute",
+                      left: "50%",
+                      bottom: 24,
+                      transform: "translateX(-50%)",
+                      maxWidth: "min(520px, calc(100% - 32px))",
+                      padding: "10px 14px",
+                      borderRadius: 6,
+                      background: "rgba(20, 20, 20, 0.88)",
+                      color: "#fff",
+                      fontSize: 14,
+                      lineHeight: 1.4,
+                      zIndex: 30,
+                    }}
+                  >
+                    {chapterLoadError}
+                  </div>
+                ) : null}
                 <ComicReaderOverlay
                   mode={mode}
                   pageCount={chapterPageCount}

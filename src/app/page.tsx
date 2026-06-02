@@ -15,29 +15,29 @@ const books = [
     author: "Herman Melville",
     cover: "/images/MobyDick.jpg",
     url: "/read/moby-dick",
-    rendition: "Reflowable EPUB"
+    rendition: "Reflowable EPUB",
   },
   {
     title: "The House of the Seven Gables",
     author: "Nathaniel Hawthorne",
     cover: "/images/TheHouseOfTheSevenGables.jpg",
     url: "/read/the-house-of-seven-gables",
-    rendition: "Reflowable EPUB"
+    rendition: "Reflowable EPUB",
   },
   {
     title: "Les Diaboliques",
     author: "Jules Barbey d'Aurevilly",
     cover: "/images/LesDiaboliques.png",
     url: "/read/les-diaboliques",
-    rendition: "Reflowable EPUB"
+    rendition: "Reflowable EPUB",
   },
   {
     title: "Bella the Dragon",
     author: "Barbara Nick, Elaine Steckler",
     cover: "/images/Bella.jpg",
     url: "/read/bella-the-dragon",
-    rendition: "Fixed-Layout EPUB"
-  }
+    rendition: "Fixed-Layout EPUB",
+  },
 ];
 
 const epub3samples = [
@@ -46,36 +46,36 @@ const epub3samples = [
     author: "Riko Kratsuka",
     cover: "/images/Haruko.jpg",
     url: "/read/haruko",
-    rendition: "Fixed-Layout EPUB"
+    rendition: "Fixed-Layout EPUB",
   },
   {
     title: "מפליגים בישראל",
     author: "אורי עידן",
     cover: "/images/israelSailing.jpg",
     url: "/read/israel-sailing",
-    rendition: "Reflowable EPUB"
+    rendition: "Reflowable EPUB",
   },
   {
     title: "日本語組版処理の要件（日本語版）",
     author: "W3C® (MIT, ERCIM, Keio)",
     cover: "/images/jlreq.png",
     url: "/read/jlreq",
-    rendition: "Reflowable EPUB"
+    rendition: "Reflowable EPUB",
   },
   {
     title: "草枕",
     author: "夏目 漱石",
     cover: "/images/Kusamakura.png",
     url: "/read/kusamakura",
-    rendition: "Reflowable EPUB"
+    rendition: "Reflowable EPUB",
   },
   {
     title: "السرطان من  للوقاية الصحيح الغذائي  النظام",
     author: "دافيد  خيّاط لبروفيسورا",
     cover: "/images/RegimeAnticancerArabic.jpg",
     url: "/read/regime-anticancer-arabic",
-    rendition: "Reflowable EPUB"
-  }
+    rendition: "Reflowable EPUB",
+  },
 ];
 
 const onlineBooks = [
@@ -84,15 +84,15 @@ const onlineBooks = [
     author: "Matt Garrish",
     cover: "/images/accessibleEpub3.jpg",
     url: "/read/manifest/https%3A%2F%2Fpublication-server.readium.org%2Fwebpub%2FaHR0cHM6Ly9naXRodWIuY29tL0lEUEYvZXB1YjMtc2FtcGxlcy9yZWxlYXNlcy9kb3dubG9hZC8yMDIzMDcwNC9hY2Nlc3NpYmxlX2VwdWJfMy5lcHVi%2Fmanifest.json",
-    rendition: "Reflowable EPUB"
+    rendition: "Reflowable EPUB",
   },
   {
     title: "Children Literature",
     author: "Charles Madison Curry, Erle Elsworth Clippinger",
     cover: "/images/ChildrensLiterature.png",
     url: "/read/manifest/https%3A%2F%2Fpublication-server.readium.org%2Fwebpub%2FaHR0cHM6Ly9naXRodWIuY29tL0lEUEYvZXB1YjMtc2FtcGxlcy9yZWxlYXNlcy9kb3dubG9hZC8yMDIzMDcwNC9jaGlsZHJlbnMtbGl0ZXJhdHVyZS5lcHVi%2Fmanifest.json",
-    rendition: "Reflowable EPUB"
-  }
+    rendition: "Reflowable EPUB",
+  },
 ];
 
 const webPublications = [
@@ -101,34 +101,100 @@ const webPublications = [
     author: "Jiminy Panoz",
     cover: "/images/readium-css.jpg",
     url: "/read/readium-css",
-    rendition: "Web Publication"
-  }
+    rendition: "Web Publication",
+  },
 ];
 
 const audiobooks = [
   {
     title: "Flatland",
     author: "Edwin Abbott Abbott",
-    cover: "https://www.archive.org/download/LibrivoxCdCoverArt12/Flatland_1109.jpg",
+    cover:
+      "https://www.archive.org/download/LibrivoxCdCoverArt12/Flatland_1109.jpg",
     url: "/read/flatland",
-    rendition: "Audiobook"
+    rendition: "Audiobook",
   },
   {
     title: "The Martian",
     author: "Andy Weir",
-    cover: "https://www.archive.org/download/LibrivoxCdCoverArt12/Flatland_1109.jpg",
+    cover:
+      "https://www.archive.org/download/LibrivoxCdCoverArt12/Flatland_1109.jpg",
     url: "/read/the-martian",
-    rendition: "Audiobook"
+    rendition: "Audiobook",
   },
   {
     title: "Harry Potter and the Order of the Phoenix",
     author: "J.K. Rowling",
-    cover: "https://www.archive.org/download/LibrivoxCdCoverArt12/Flatland_1109.jpg",
+    cover:
+      "https://www.archive.org/download/LibrivoxCdCoverArt12/Flatland_1109.jpg",
     url: "/read/harry-potter-and-the-order-of-the-phoenix",
-    rendition: "Audiobook"
-  }
-]
-const comics = [ { title: "cbz", author: "John Doe", cover: "/images/cbz.jpg", url: "/read/cbz", rendition: "Fixed-Layout CBZ" } ]
+    rendition: "Audiobook",
+  },
+  {
+    title: "Aces Abroad",
+    author: "",
+    cover:
+      "https://www.archive.org/download/LibrivoxCdCoverArt12/Flatland_1109.jpg",
+    url: "/read/aces-abroad",
+    rendition: "Audiobook",
+  },
+  {
+    title: "Harry Potter and the Chamber of Secrets",
+    author: "J.K. Rowling",
+    cover:
+      "https://www.archive.org/download/LibrivoxCdCoverArt12/Flatland_1109.jpg",
+    url: "/read/harry-potter-and-the-chamber-of-secrets",
+    rendition: "Audiobook",
+  },
+  {
+    title: "Harry Potter and the Chamber of Secrets (Full-Cast Edition)",
+    author: "J.K. Rowling",
+    cover:
+      "https://www.archive.org/download/LibrivoxCdCoverArt12/Flatland_1109.jpg",
+    url: "/read/harry-potter-and-the-chamber-of-secrets-full-cast-edition",
+    rendition: "Audiobook",
+  },
+  {
+    title: "The Christmas Pig",
+    author: "J.K. Rowling",
+    cover:
+      "https://www.archive.org/download/LibrivoxCdCoverArt12/Flatland_1109.jpg",
+    url: "/read/the-christmas-pig",
+    rendition: "Audiobook",
+  },
+  {
+    title: "The Ickabog",
+    author: "J.K. Rowling",
+    cover:
+      "https://www.archive.org/download/LibrivoxCdCoverArt12/Flatland_1109.jpg",
+    url: "/read/the-ickabog",
+    rendition: "Audiobook",
+  },
+  {
+    title: "The Tales of Beedle the Bard",
+    author: "J.K. Rowling",
+    cover:
+      "https://www.archive.org/download/LibrivoxCdCoverArt12/Flatland_1109.jpg",
+    url: "/read/the-tales-of-beedle-the-bard",
+    rendition: "Audiobook",
+  },
+];
+const comics = [
+  {
+    title: "cbz",
+    author: "John Doe",
+    cover: "/images/cbz.jpg",
+    url: "/read/cbz",
+    rendition: "Fixed-Layout CBZ",
+  },
+  {
+    title: "A Cadet Becomes a Prophet!",
+    author: "",
+    cover: "/images/a-cadet-becomes-a-prophet.jpg",
+    url: "/read/a-cadet-becomes-a-prophet",
+    rendition: "Fixed-Layout CBZ",
+  },
+];
 
 export default function Home() {
   const [isManifestEnabled, setIsManifestEnabled] = useState<boolean>(true);
@@ -152,59 +218,64 @@ export default function Home() {
       <header className="header">
         <h1>Welcome to Thorium Web</h1>
 
-        <p className="subtitle">An open-source ebook/audiobook/comics Web Reader</p>
+        <p className="subtitle">
+          An open-source ebook/audiobook/comics Web Reader
+        </p>
       </header>
 
       <h2>Our selection</h2>
 
       <PublicationGrid
-        publications={ [...books, ...webPublications, ...audiobooks, ...comics] }
-        renderCover={ (publication) => (
+        publications={[...books, ...webPublications, ...audiobooks, ...comics]}
+        renderCover={(publication) => (
           <Image
-            src={ publication.cover }
+            src={publication.cover}
             alt=""
             loading="lazy"
-            width={ 120 }
-            height={ 180 }
+            width={120}
+            height={180}
           />
-        ) }
+        )}
       />
 
       <h2>EPUB3 Samples</h2>
 
       <PublicationGrid
-        publications={ epub3samples }
-        renderCover={ (publication) => (
+        publications={epub3samples}
+        renderCover={(publication) => (
           <Image
-            src={ publication.cover }
+            src={publication.cover}
             alt=""
             loading="lazy"
-            width={ 120 }
-            height={ 180 }
+            width={120}
+            height={180}
           />
-        ) }
+        )}
       />
 
-      { isManifestEnabled && (
+      {isManifestEnabled && (
         <>
-        <div className="dev-books">
-          <p>In dev you can also use the <code>/manifest/</code> route to load any publication. For instance:</p>
-          
-          <PublicationGrid
-            publications={ onlineBooks }
-            renderCover={ (publication) => (
-              <Image
-                src={ publication.cover }
-                alt=""
-                loading="lazy"
-                width={ 120 }
-                height={ 180 }
-              />
-            ) }
-          />
-        </div>
+          <div className="dev-books">
+            <p>
+              In dev you can also use the <code>/manifest/</code> route to load
+              any publication. For instance:
+            </p>
+
+            <PublicationGrid
+              publications={onlineBooks}
+              renderCover={(publication) => (
+                <Image
+                  src={publication.cover}
+                  alt=""
+                  loading="lazy"
+                  width={120}
+                  height={180}
+                />
+              )}
+            />
+          </div>
         </>
-      ) }
+      )}
     </main>
   );
 }
