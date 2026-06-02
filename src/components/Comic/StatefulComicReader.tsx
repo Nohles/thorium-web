@@ -323,10 +323,9 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
         page.archive?.chapterIndex === identity.chapterIndex &&
         page.archive.pageIndexInChapter === identity.pageIndexInChapter
     );
-    if (nextIndex >= 0 && nextIndex !== cursorIndex) {
-      setCursorIndex(nextIndex);
-    }
-  }, [allPages, cursorIndex, isArchiveSeries, setCursorIndex]);
+    if (nextIndex < 0) return;
+    setCursorIndex((prev) => (prev === nextIndex ? prev : nextIndex));
+  }, [allPages, isArchiveSeries, setCursorIndex]);
 
   const viewportPages = useMemo(() => {
     if (!chapterModeActive) return allPages;
@@ -334,6 +333,12 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     if (!seg) return allPages;
     return allPages.slice(seg.startIndex, seg.endIndex + 1);
   }, [allPages, chapterModeActive, chapterSegments, cursorIndex]);
+
+  const viewportChapterKey = useMemo(() => {
+    if (!chapterModeActive) return "all";
+    const seg = getSegmentForPageIndex(chapterSegments, cursorIndex);
+    return seg ? `${seg.startIndex}:${seg.endIndex}` : "all";
+  }, [chapterModeActive, chapterSegments, cursorIndex]);
 
   useEffect(() => {
     if (!isArchiveSeries) return;
@@ -622,7 +627,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
 
   useEffect(() => {
     setPageLoadStates({});
-  }, [allPages]);
+  }, [viewportChapterKey]);
 
   const onPageLoadStateChange = useCallback((pageIndex: number, state: ComicPageLoadState) => {
     setPageLoadStates((prev) => {

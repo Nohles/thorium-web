@@ -96,7 +96,7 @@ export const defaultComicSettings: ComicSettings = {
   readingModePreview: true,
   tapZonePreview: false,
   imagePreloadAmount: 5,
-  comicChapterBoundaries: false,
+  comicChapterBoundaries: true,
 };
 
 export interface ComicSettingsReducerState {
@@ -142,6 +142,7 @@ export const normalizeComicSettings = (entry?: LegacyComicSettings): ComicSettin
   return {
     ...defaultComicSettings,
     ...(entry as ComicSettings),
+    comicChapterBoundaries: true,
     scaleType,
     widthLimitEnabled,
     widthLimitPercent,
@@ -184,4 +185,3 @@ export const { setComicActiveKey, updateComicSettings, resetComicSettings } =
   comicSettingsSlice.actions;
 
 export default comicSettingsSlice.reducer;
-

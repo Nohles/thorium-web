@@ -122,6 +122,10 @@
         "next": "Next:",
         "previous": "Previous:"
       },
+      "imageLoad": {
+        "failed": "Failed to load image.",
+        "retry": "Try again"
+      },
       "pageGap": {
         "label": "Page gap"
       },

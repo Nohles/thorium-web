@@ -26,6 +26,13 @@ export type ComicArchivePosition = ComicArchivePageIdentity & {
   href?: string;
 };
 
+const walkLinks = (links: Link[] | undefined, callback: (link: Link) => void) => {
+  for (const link of links ?? []) {
+    callback(link);
+    walkLinks(link.children?.items, callback);
+  }
+};
+
 export const isComicArchiveType = (type?: string): boolean => {
   if (!type) return false;
   return COMIC_ARCHIVE_MEDIA_TYPES.has(type.toLowerCase());
@@ -65,7 +72,7 @@ const decodeHrefPath = (href: string): string => {
   }
 };
 
-export const deriveCliChildManifestUrl = (parentManifestUrl: string, chapterHref: string): string | null => {
+export const deriveCliChildManifestUrl = (parentManifestUrl: string, chapterName: string): string | null => {
   let url: URL;
   try {
     url = new URL(parentManifestUrl);
@@ -81,7 +88,7 @@ export const deriveCliChildManifestUrl = (parentManifestUrl: string, chapterHref
 
   try {
     const parentPath = decodeBase64Url(token);
-    const childPath = `${parentPath.replace(/\/+$/, "")}/${decodeHrefPath(chapterHref).replace(/^\/+/, "")}`;
+    const childPath = `${parentPath.replace(/\/+$/, "")}/${chapterName.replace(/^\/+/, "")}`;
     const child = new URL(url.href);
     child.pathname = `${prefix}${encodeBase64Url(childPath)}/manifest.json`;
     child.search = "";
@@ -94,18 +101,36 @@ export const deriveCliChildManifestUrl = (parentManifestUrl: string, chapterHref
 
 export const buildComicArchiveChapters = (manifest: Manifest, parentManifestUrl: string): ComicArchiveChapter[] => {
   const readingOrder = manifest.readingOrder?.items ?? [];
-  const tocItems = manifest.toc?.items ?? [];
+  const readingOrderByHref = new Map(readingOrder.map((link) => [stripHashAndQuery(link.href), link]));
+  const chapters: ComicArchiveChapter[] = [];
+
+  walkLinks(manifest.toc?.items, (toc) => {
+    const chapterName = decodeHrefPath(toc.href).replace(/^\/+/, "");
+    if (!chapterName) return;
+
+    const readingOrderLink = readingOrderByHref.get(stripHashAndQuery(toc.href));
+    chapters.push({
+      index: chapters.length,
+      href: toc.href,
+      title: toc.title || readingOrderLink?.title || chapterName.replace(/\.[^.]+$/, "") || `Chapter ${chapters.length + 1}`,
+      type: readingOrderLink?.type || toc.type,
+      manifestUrl: deriveCliChildManifestUrl(parentManifestUrl, chapterName) ?? undefined,
+    });
+  });
+
+  if (chapters.length > 0) return chapters;
+
   return readingOrder
     .filter((link) => !link.templated && isComicArchiveType(link.type))
     .map((link, index) => {
-      const tocTitle = tocItems.find((toc) => stripHashAndQuery(toc.href) === stripHashAndQuery(link.href))?.title;
-      const title = tocTitle || link.title || decodeHrefPath(link.href).replace(/\.[^.]+$/, "") || `Chapter ${index + 1}`;
+      const chapterName = decodeHrefPath(link.href).replace(/^\/+/, "");
+      const title = link.title || chapterName.replace(/\.[^.]+$/, "") || `Chapter ${index + 1}`;
       return {
         index,
         href: link.href,
         title,
         type: link.type,
-        manifestUrl: deriveCliChildManifestUrl(parentManifestUrl, link.href) ?? undefined,
+        manifestUrl: deriveCliChildManifestUrl(parentManifestUrl, chapterName) ?? undefined,
       };
     });
 };
