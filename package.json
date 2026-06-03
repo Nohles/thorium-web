@@ -10,8 +10,8 @@
   ],
   "license": "BSD-3-Clause",
   "author": {
-    "name": "EDRLab",
-    "url": "https://www.edrlab.org"
+    "name": "Nohles",
+    "url": "https://www.nohles.com"
   },
   "repository": {
     "type": "git",
@@ -20,7 +20,7 @@
   "bugs": {
     "url": "https://github.com/nohles/thorium-web/issues"
   },
-  "version": "1.5.3",
+  "version": "1.5.4",
   "private": false,
   "publishConfig": {
     "registry": "http://192.168.1.202:4873/",

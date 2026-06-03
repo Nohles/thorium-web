@@ -32,7 +32,7 @@
 
 .audioMetadataAuthors {
   margin: 0;
-  color: var(--th-theme-subdue-text);
+  color: color-mix(in srgb, var(--th-theme-text) 70%, var(--th-theme-background));
 }
 
 @container (max-width: 300px) {

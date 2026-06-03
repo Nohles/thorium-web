@@ -50,6 +50,7 @@ export interface StatefulReaderProps {
   localDataKey: string | null;
   plugins?: ThPlugin[];
   positionStorage?: PositionStorage;
+  coverUrl?: string;
   containerRefSetter?: (el: Element | null) => void;
 }
 
@@ -71,6 +72,7 @@ export interface ReaderComponentProps<
   localDataKey: string | null;
   isLoading?: boolean;
   positionStorage?: PositionStorage;
+  coverUrl?: string;
   plugins?: ReaderPlugins;
   i18n?: Partial<InitOptions>;
   preferences?: P extends "audio"
@@ -82,7 +84,7 @@ export interface ReaderComponentProps<
 
 // ─── Outer wrapper — selects provider based on profile ────────────────────────
 
-export const StatefulReaderWrapper = ({ profile, plugins, isLoading, preferences, i18n: i18nOptions, ...props }: ReaderComponentProps<any, any>) => {
+export const StatefulReaderWrapper = ({ profile, plugins, isLoading, preferences, i18n: i18nOptions, coverUrl: readerCoverUrl, ...props }: ReaderComponentProps<any, any>) => {
   const [resolvedPlugins, setResolvedPlugins] = useState<ThPlugin[] | undefined>(undefined);
 
   const pendingFactory = profile === "epub" ? plugins?.epub
@@ -103,7 +105,8 @@ export const StatefulReaderWrapper = ({ profile, plugins, isLoading, preferences
 
   if (pendingFactory && resolvedPlugins === undefined) return null;
 
-  const coverUrl = props.publication?.getCover()?.toURL(props.publication.baseURL);
+  const manifestCoverUrl = props.publication?.getCover()?.toURL(props.publication.baseURL);
+  const coverUrl = readerCoverUrl ?? manifestCoverUrl;
 
   if (profile === "audio") {
     return (

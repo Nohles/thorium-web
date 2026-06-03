@@ -13,6 +13,7 @@
   height: 100dvh;
   max-height: 100%;
   background-color: var(--th-theme-background);
+  color: var(--th-theme-text);
 }
 
 .topBar {
@@ -22,4 +23,5 @@
   gap: 2px;
   touch-action: manipulation;
   background-color: var(--th-theme-background);
+  color: var(--th-theme-text);
 }

@@ -112,6 +112,10 @@ const StatefulPlayerInner = ({ publication, localDataKey, positionStorage, cover
   const { t } = useI18n();
   const profile = useAppSelector(state => state.reader.profile);
   const keyboardPeripherals = useAudioKeyboardPeripherals();
+  const effectiveCoverUrl = useMemo(
+    () => coverUrl ?? publication?.getCover()?.toURL(publication.baseURL),
+    [coverUrl, publication]
+  );
 
   const wrapperRef = useRef<HTMLElement>(null);
   const coverSectionRef = useRef<HTMLElement>(null);
@@ -326,7 +330,7 @@ const StatefulPlayerInner = ({ publication, localDataKey, positionStorage, cover
   const renderPlayerComponent = useCallback((component: ThAudioPlayerComponent) => {
     switch (component) {
       case ThAudioPlayerComponent.cover:
-        return <StatefulAudioCover key={ component } ref={ coverSectionRef } coverUrl={ coverUrl } title={ publication?.metadata?.title?.getTranslation("en") } />;
+        return <StatefulAudioCover key={ component } ref={ coverSectionRef } coverUrl={ effectiveCoverUrl } title={ publication?.metadata?.title?.getTranslation("en") } />;
       case ThAudioPlayerComponent.metadata:
         return publication ? <StatefulAudioMetadata key={ component } publication={ publication } /> : null;
       case ThAudioPlayerComponent.playbackControls:
@@ -336,7 +340,7 @@ const StatefulPlayerInner = ({ publication, localDataKey, positionStorage, cover
       case ThAudioPlayerComponent.mediaActions:
         return <StatefulAudioMediaActions key={ component } />;
     }
-  }, [coverUrl, publication]);
+  }, [effectiveCoverUrl, publication]);
 
   const renderCompactComponents = useCallback(() => {
     const coverIdx = compact.order.indexOf(ThAudioPlayerComponent.cover);

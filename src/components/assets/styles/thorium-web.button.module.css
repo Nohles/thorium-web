@@ -7,6 +7,7 @@
   text-align: center;
   border-radius: var(--th-layout-radius);
   line-height: 0;
+  color: var(--th-theme-text);
 }
 
 .backButton {
