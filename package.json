@@ -1,5 +1,5 @@
 {
-  "name": "@edrlab/thorium-web",
+  "name": "@nohles/thorium-web",
   "description": "Play with the capabilities of the Readium Web toolkit",
   "keywords": [
     "edrlab",
@@ -15,13 +15,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/edrlab/thorium-web.git"
+    "url": "https://github.com/nohles/thorium-web.git"
   },
   "bugs": {
-    "url": "https://github.com/edrlab/thorium-web/issues"
+    "url": "https://github.com/nohles/thorium-web/issues"
   },
-  "version": "1.5.2",
+  "version": "1.5.3",
   "private": false,
+  "publishConfig": {
+    "registry": "http://192.168.1.202:4873/",
+    "access": "public"
+  },
   "files": [
     "./dist"
   ],
@@ -63,7 +67,12 @@
     "check-locales": "node scripts/check-locales.mjs",
     "update-locales": "pnpm remove @edrlab/thorium-locales && pnpm add @edrlab/thorium-locales@github:edrlab/thorium-locales && pnpm extract-locales && pnpm check-locales --summary --show-missing",
     "bundle": "pnpm extract-locales && tsup --config tsup.config.ts && pnpm copy-locales && pnpm copy-fonts",
-    "increment": "node scripts/increment.mjs"
+    "increment": "node scripts/increment.mjs",
+    "prepublishOnly": "pnpm bundle",
+    "publish:verdaccio": "pnpm publish",
+    "release:patch": "pnpm increment patch && pnpm publish:verdaccio",
+    "release:minor": "pnpm increment minor && pnpm publish:verdaccio",
+    "release:major": "pnpm increment major && pnpm publish:verdaccio"
   },
   "peerDependencies": {
     "@readium/css": ">=2.0.5",
