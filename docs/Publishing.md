@@ -8,7 +8,7 @@ This package is published to the team [Verdaccio](https://verdaccio.org/) regist
 | **Registry** | `http://192.168.1.202:4873/` |
 | **Web UI** | [Package detail page](http://192.168.1.202:4873/-/web/detail/@nohles/thorium-web) |
 
-The repo is already configured so `pnpm publish` targets that registry (`publishConfig` in `package.json`, `@nohles` scope in `.npmrc`).
+The repo is already configured so `pnpm publish` targets that registry (`publishConfig` in `package.json`, `@nohles` scope in `.npmrc`). Releases are expected from the **`ComicReader`** branch (`publishBranch` in `pnpm-workspace.yaml`).
 
 ## One-time setup
 
@@ -126,6 +126,7 @@ Install peer dependencies as described in [packages ReadMe](./packages/ReadMe.md
 | `401 Unauthorized` | `npm login --registry http://192.168.1.202:4873/` |
 | `403` on publish | User lacks publish rights for `@nohles` on Verdaccio |
 | `You cannot publish over the previously published versions` | Run `pnpm increment patch` (or higher) then publish again |
+| `publish-branch` is set to `master\|main` | Publish from `ComicReader`, or change `publishBranch` in `pnpm-workspace.yaml` |
 | pnpm refuses to publish with uncommitted changes | Commit/stash first, or `pnpm publish --no-git-checks` (use sparingly) |
 | Wrong registry | Confirm `publishConfig.registry` in `package.json` and `@nohles:registry` in `.npmrc` |
 
