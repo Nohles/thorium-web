@@ -1,4 +1,4 @@
-import { Link, Manifest } from "@readium/shared";
+import { Link, Locator, Manifest } from "@readium/shared";
 
 export const COMIC_ARCHIVE_MEDIA_TYPES = new Set([
   "application/vnd.comicbook+zip",
@@ -24,6 +24,9 @@ export type ComicArchivePageIdentity = {
 
 export type ComicArchivePosition = ComicArchivePageIdentity & {
   href?: string;
+  locator?: Locator;
+  archiveLocator?: Locator;
+  directoryLocator?: Locator;
 };
 
 const walkLinks = (links: Link[] | undefined, callback: (link: Link) => void) => {
@@ -157,9 +160,14 @@ export const readManifestFromUrl = async (manifestUrl: string): Promise<Manifest
   return manifest;
 };
 
-export const makeComicArchivePosition = (identity: ComicArchivePageIdentity, href: string): ComicArchivePosition => ({
+export const makeComicArchivePosition = (
+  identity: ComicArchivePageIdentity,
+  href: string,
+  locators?: Pick<ComicArchivePosition, "archiveLocator" | "directoryLocator" | "locator">
+): ComicArchivePosition => ({
   ...identity,
   href,
+  ...locators,
 });
 
 export const isComicArchivePosition = (value: unknown): value is ComicArchivePosition =>

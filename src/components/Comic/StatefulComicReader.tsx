@@ -271,7 +271,22 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
       const page = allPagesRef.current[index];
       if (!page?.link) return;
       if (page.archive) {
-        setLocalDataRef.current(makeComicArchivePosition(page.archive, page.href) as any);
+        const archiveLocator = manifestRef.current?.locatorFromLink(new Link({ href: page.archive.chapterHref }));
+        const directoryLocator = new Link({
+          href: page.archive.pageHref,
+          type: page.link.type,
+          title: page.link.title || page.title,
+        }).locator.copyWithLocations({
+          progression: 0,
+          position: page.archive.pageIndexInChapter + 1,
+        });
+        setLocalDataRef.current(
+          makeComicArchivePosition(page.archive, page.href, {
+            locator: directoryLocator ?? archiveLocator,
+            archiveLocator,
+            directoryLocator,
+          }) as any
+        );
         dispatch(updateComicPosition({ key: activeKey, pageIndex: index }));
         return;
       }
