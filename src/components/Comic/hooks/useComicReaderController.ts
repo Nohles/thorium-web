@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@readium/shared";
 
 import { ComicReadingMode, defaultComicSettings } from "@/lib/comicSettingsReducer";
@@ -69,12 +69,17 @@ export const useComicReaderController = ({
   }, [pages.length, savedPosition]);
 
   const [cursorIndex, setCursorIndex] = useState(initialIndex);
+  const skipInitialPersistRef = useRef(true);
 
   useEffect(() => {
     setCursorIndex(initialIndex);
   }, [initialIndex]);
 
   useEffect(() => {
+    if (skipInitialPersistRef.current) {
+      skipInitialPersistRef.current = false;
+      return;
+    }
     onPersistPosition(cursorIndex);
   }, [cursorIndex, onPersistPosition]);
 

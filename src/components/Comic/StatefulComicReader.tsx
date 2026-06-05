@@ -58,6 +58,7 @@ import {
   readManifestFromUrl,
   resolveChapterResourceHref,
   type ComicArchiveChapter,
+  type ComicArchivePageIdentity,
 } from "./lib/comicArchiveSeries";
 
 import { usePreferences } from "@/preferences/hooks/usePreferences";
@@ -167,6 +168,18 @@ const getArchiveIdentityFromLocatorHref = (
   return undefined;
 };
 
+const findArchivePageInPages = (
+  pages: ComicPage[],
+  identity: Pick<ComicArchivePageIdentity, "chapterIndex" | "pageIndexInChapter" | "pageHref">
+): number =>
+  pages.findIndex(
+    (page) =>
+      page.archive?.chapterIndex === identity.chapterIndex &&
+      (page.archive.pageIndexInChapter === identity.pageIndexInChapter ||
+        (identity.pageHref &&
+          normalizeComparableHref(page.archive.pageHref) === normalizeComparableHref(identity.pageHref)))
+  );
+
 const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }: StatefulReaderProps) => {
   const { preferences } = usePreferences();
   const { t } = useI18n();
@@ -183,7 +196,8 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     [localDataKey, publication.baseURL]
   );
   const settings = useAppSelector((s) => (activeKey ? s.comicSettings.byKey[activeKey] : undefined));
-  const savedPosition = useAppSelector((s) => (activeKey ? s.comicPosition.byKey[activeKey]?.pageIndex : undefined));
+  const savedComicPosition = useAppSelector((s) => (activeKey ? s.comicPosition.byKey[activeKey] : undefined));
+  const savedPosition = savedComicPosition?.pageIndex;
   const isImmersive = useAppSelector((s) => s.reader.isImmersive);
   const isHovering = useAppSelector((s) => s.reader.isHovering);
   const breakpoint = useAppSelector((s) => s.theming.breakpoint);
@@ -209,6 +223,34 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
         : getArchiveIdentityFromLocatorHref(localData?.href, archiveChapters),
     [archiveChapters, localData]
   );
+
+  const restoreArchiveIdentity = useMemo((): Pick<
+    ComicArchivePageIdentity,
+    "chapterIndex" | "pageIndexInChapter" | "pageHref"
+  > | null => {
+    if (isComicArchivePosition(localData)) {
+      return {
+        chapterIndex: localData.chapterIndex,
+        pageIndexInChapter: localData.pageIndexInChapter,
+        pageHref: localData.pageHref,
+      };
+    }
+    if (locatorArchiveIdentity) {
+      return {
+        chapterIndex: locatorArchiveIdentity.chapterIndex,
+        pageIndexInChapter: 0,
+        pageHref: locatorArchiveIdentity.pageHref,
+      };
+    }
+    if (typeof savedComicPosition?.chapterIndex === "number") {
+      return {
+        chapterIndex: savedComicPosition.chapterIndex,
+        pageIndexInChapter: savedComicPosition.pageIndexInChapter ?? 0,
+        pageHref: savedComicPosition.pageHref ?? "",
+      };
+    }
+    return null;
+  }, [localData, locatorArchiveIdentity, savedComicPosition]);
 
   const loadChapter = useCallback(
     async (chapterIndex: number): Promise<boolean> => {
@@ -247,14 +289,11 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   );
 
   const initialArchiveChapterIndex = useMemo(() => {
-    if (isComicArchivePosition(localData)) {
-      return localData.chapterIndex;
-    }
-    if (locatorArchiveIdentity) {
-      return locatorArchiveIdentity.chapterIndex;
+    if (restoreArchiveIdentity) {
+      return restoreArchiveIdentity.chapterIndex;
     }
     return 0;
-  }, [localData, locatorArchiveIdentity]);
+  }, [restoreArchiveIdentity]);
 
   useEffect(() => {
     if (!isArchiveSeries || archiveChapters.length === 0) return;
@@ -278,6 +317,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   const setLocalDataRef = useRef(setLocalData);
   const manifestRef = useRef(publication.manifest);
   const currentArchiveIdentityRef = useRef<ComicPage["archive"] | undefined>(undefined);
+  const restoreCompleteRef = useRef(!isArchiveSeries || !restoreArchiveIdentity);
 
   useEffect(() => {
     allPagesRef.current = allPages;
@@ -286,27 +326,15 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   }, [allPages, publication.manifest, setLocalData]);
 
   const storedPosition = useMemo(() => {
-    if (isComicArchivePosition(localData)) {
-      const index = allPages.findIndex(
-        (page) =>
-          page.archive?.chapterIndex === localData.chapterIndex &&
-          normalizeHref(page.archive.pageHref) === normalizeHref(localData.pageHref)
-      );
-      return index >= 0 ? index : undefined;
-    }
-    if (locatorArchiveIdentity) {
-      const index = allPages.findIndex(
-        (page) =>
-          page.archive?.chapterIndex === locatorArchiveIdentity.chapterIndex &&
-          normalizeComparableHref(page.archive.pageHref) === normalizeComparableHref(locatorArchiveIdentity.pageHref)
-      );
+    if (restoreArchiveIdentity) {
+      const index = findArchivePageInPages(allPages, restoreArchiveIdentity);
       return index >= 0 ? index : undefined;
     }
     if (!localData?.href) return undefined;
     const normalizedHref = normalizeHref(localData.href);
     const index = allPages.findIndex((page) => normalizeHref(page.href) === normalizedHref);
     return index >= 0 ? index : undefined;
-  }, [allPages, localData, locatorArchiveIdentity]);
+  }, [allPages, localData, restoreArchiveIdentity]);
   const chapterSegments = useMemo(
     () => (isArchiveSeries ? buildSeriesSegments(archiveChapters, allPages) : buildComicChapterSegments(publication, allPages)),
     [archiveChapters, allPages, isArchiveSeries, publication]
@@ -342,7 +370,15 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
             fileLocator,
           }) as any
         );
-        dispatch(updateComicPosition({ key: activeKey, pageIndex: index }));
+        dispatch(
+          updateComicPosition({
+            key: activeKey,
+            pageIndex: index,
+            chapterIndex: page.archive.chapterIndex,
+            pageIndexInChapter: page.archive.pageIndexInChapter,
+            pageHref: page.archive.pageHref,
+          })
+        );
         return;
       }
       const locator = manifestRef.current?.locatorFromLink(page.link);
@@ -374,18 +410,39 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   } = useComicReaderController({
     pages: allPages,
     settings: merged,
-    savedPosition: storedPosition ?? savedPosition,
+    savedPosition:
+      isArchiveSeries && restoreArchiveIdentity && storedPosition === undefined
+        ? undefined
+        : storedPosition ?? savedPosition,
     onPersistPosition: persistComicPosition,
     chapterSegments,
     chapterBoundariesEnabled: merged.comicChapterBoundaries,
   });
 
   useEffect(() => {
+    if (!isArchiveSeries) {
+      restoreCompleteRef.current = true;
+      return;
+    }
+    if (!restoreArchiveIdentity) {
+      restoreCompleteRef.current = true;
+      return;
+    }
+    restoreCompleteRef.current =
+      typeof storedPosition === "number" && cursorIndex === storedPosition;
+  }, [cursorIndex, isArchiveSeries, restoreArchiveIdentity, storedPosition]);
+
+  useEffect(() => {
+    if (typeof storedPosition !== "number") return;
+    setCursorIndex((prev) => (prev === storedPosition ? prev : storedPosition));
+  }, [storedPosition, setCursorIndex]);
+
+  useEffect(() => {
     currentArchiveIdentityRef.current = allPages[cursorIndex]?.archive;
   }, [allPages, cursorIndex]);
 
   useEffect(() => {
-    if (!isArchiveSeries) return;
+    if (!isArchiveSeries || !restoreCompleteRef.current) return;
     const identity = currentArchiveIdentityRef.current;
     if (!identity) return;
     const nextIndex = allPages.findIndex(
