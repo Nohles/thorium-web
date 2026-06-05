@@ -76,8 +76,8 @@
   },
   "peerDependencies": {
     "@readium/css": ">=2.0.5",
-    "@readium/navigator": ">=2.5.5",
-    "@readium/navigator-html-injectables": "^2.4.2",
+    "@readium/navigator": ">=2.5.8",
+    "@readium/navigator-html-injectables": ">=2.4.4",
     "@readium/shared": "^2.2.0",
     "@reduxjs/toolkit": "^2.11.2",
     "i18next": "^25.8.13",
@@ -97,8 +97,8 @@
   "dependencies": {
     "@edrlab/thorium-locales": "github:edrlab/thorium-locales",
     "@readium/css": ">=2.0.5",
-    "@readium/navigator": "^2.5.7",
-    "@readium/navigator-html-injectables": "^2.4.3",
+    "@readium/navigator": ">=2.5.8",
+    "@readium/navigator-html-injectables": ">=2.4.4",
     "@readium/shared": "^2.2.1",
     "@reduxjs/toolkit": "^2.11.2",
     "classnames": "^2.5.1",
@@ -110,14 +110,14 @@
     "motion": "^12.34.3",
     "next": "16.1.6",
     "react": "^19.2.4",
-    "react-aria": "^3.46.0",
-    "react-aria-components": "^1.15.1",
+    "react-aria": "^3.49.0",
+    "react-aria-components": "^1.18.0",
     "react-dom": "^19.2.4",
     "react-i18next": "^16.5.4",
     "react-modal-sheet": "5.2.1",
     "react-redux": "^9.2.0",
     "react-resizable-panels": "^3.0.6",
-    "react-stately": "^3.44.0"
+    "react-stately": "^3.47.0"
   },
   "devDependencies": {
     "@svgr/webpack": "^8.1.0",
