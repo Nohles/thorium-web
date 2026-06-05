@@ -27,6 +27,7 @@ export type ComicArchivePosition = ComicArchivePageIdentity & {
   locator?: Locator;
   archiveLocator?: Locator;
   directoryLocator?: Locator;
+  fileLocator?: Locator;
 };
 
 const walkLinks = (links: Link[] | undefined, callback: (link: Link) => void) => {
@@ -163,7 +164,7 @@ export const readManifestFromUrl = async (manifestUrl: string): Promise<Manifest
 export const makeComicArchivePosition = (
   identity: ComicArchivePageIdentity,
   href: string,
-  locators?: Pick<ComicArchivePosition, "archiveLocator" | "directoryLocator" | "locator">
+  locators?: Pick<ComicArchivePosition, "archiveLocator" | "directoryLocator" | "fileLocator" | "locator">
 ): ComicArchivePosition => ({
   ...identity,
   href,
