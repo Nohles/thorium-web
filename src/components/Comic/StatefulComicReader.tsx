@@ -132,6 +132,41 @@ const normalizeHref = (href: string) => {
   return path;
 };
 
+const normalizeComparableHref = (href: string) => {
+  try {
+    return decodeURIComponent(normalizeHref(href)).replace(/^\/+/, "");
+  } catch {
+    return normalizeHref(href).replace(/^\/+/, "");
+  }
+};
+
+const stripChapterHrefFromLocatorHref = (href: string, chapterHref: string): string | null => {
+  const normalizedHref = normalizeComparableHref(href);
+  const normalizedChapter = normalizeComparableHref(chapterHref);
+  if (normalizedHref === normalizedChapter) return "";
+  const prefix = `${normalizedChapter}/`;
+  return normalizedHref.startsWith(prefix) ? normalizedHref.slice(prefix.length) : null;
+};
+
+const getArchiveIdentityFromLocatorHref = (
+  href: string | undefined,
+  chapters: ComicArchiveChapter[]
+): { chapterIndex: number; pageHref: string } | undefined => {
+  if (!href) return undefined;
+
+  for (const chapter of chapters) {
+    const pageHref = stripChapterHrefFromLocatorHref(href, chapter.href);
+    if (pageHref) {
+      return {
+        chapterIndex: chapter.index,
+        pageHref,
+      };
+    }
+  }
+
+  return undefined;
+};
+
 const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }: StatefulReaderProps) => {
   const { preferences } = usePreferences();
   const { t } = useI18n();
@@ -166,6 +201,14 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   const chapterManifestPromisesRef = useRef<Partial<Record<number, Promise<boolean>>>>({});
   const [chapterLoadError, setChapterLoadError] = useState<string | null>(null);
   const { setLocalData, localData } = usePositionStorage(localDataKey, positionStorage);
+
+  const locatorArchiveIdentity = useMemo(
+    () =>
+      isComicArchivePosition(localData)
+        ? undefined
+        : getArchiveIdentityFromLocatorHref(localData?.href, archiveChapters),
+    [archiveChapters, localData]
+  );
 
   const loadChapter = useCallback(
     async (chapterIndex: number): Promise<boolean> => {
@@ -207,8 +250,11 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     if (isComicArchivePosition(localData)) {
       return localData.chapterIndex;
     }
+    if (locatorArchiveIdentity) {
+      return locatorArchiveIdentity.chapterIndex;
+    }
     return 0;
-  }, [localData]);
+  }, [localData, locatorArchiveIdentity]);
 
   useEffect(() => {
     if (!isArchiveSeries || archiveChapters.length === 0) return;
@@ -248,11 +294,19 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
       );
       return index >= 0 ? index : undefined;
     }
+    if (locatorArchiveIdentity) {
+      const index = allPages.findIndex(
+        (page) =>
+          page.archive?.chapterIndex === locatorArchiveIdentity.chapterIndex &&
+          normalizeComparableHref(page.archive.pageHref) === normalizeComparableHref(locatorArchiveIdentity.pageHref)
+      );
+      return index >= 0 ? index : undefined;
+    }
     if (!localData?.href) return undefined;
     const normalizedHref = normalizeHref(localData.href);
     const index = allPages.findIndex((page) => normalizeHref(page.href) === normalizedHref);
     return index >= 0 ? index : undefined;
-  }, [allPages, localData]);
+  }, [allPages, localData, locatorArchiveIdentity]);
   const chapterSegments = useMemo(
     () => (isArchiveSeries ? buildSeriesSegments(archiveChapters, allPages) : buildComicChapterSegments(publication, allPages)),
     [archiveChapters, allPages, isArchiveSeries, publication]
