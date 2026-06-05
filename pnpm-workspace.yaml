@@ -1,7 +1,15 @@
 # Branch allowed for `pnpm publish` / `pnpm publish:verdaccio` (pnpm git-checks)
 publishBranch: ComicReader
 
+# @readium/shared lists git-only @edrlab/thorium-locales; use the root direct dependency instead.
+overrides:
+  "@readium/shared>@edrlab/thorium-locales": "-"
+
 allowBuilds:
   esbuild: false
   sharp: false
   unrs-resolver: false
+
+minimumReleaseAgeExclude:
+  - '@readium/navigator-html-injectables@2.4.4'
+  - '@readium/navigator@2.5.8'
