@@ -25,6 +25,8 @@ type cbb = (ok: boolean) => void;
 
 // Module scoped, singleton instance of navigator
 let navigatorInstance: EpubNavigator | null = null;
+let navigatorDestroyPromise: Promise<void> = Promise.resolve();
+let navigatorGeneration = 0;
 
 export interface EpubNavigatorLoadProps {
   container: HTMLDivElement | null;
@@ -52,14 +54,18 @@ export const useEpubNavigator = () => {
     return navigatorInstance?.settings[settingKey] as EpubSettings[K];
   }, []);
 
-  const EpubNavigatorLoad = useCallback((config: EpubNavigatorLoadProps, cb: Function) => {
-    if (config.container) {
+  const EpubNavigatorLoad = useCallback((config: EpubNavigatorLoadProps, cb: () => void) => {
+    const generation = ++navigatorGeneration;
+
+    void navigatorDestroyPromise.then(async () => {
+      if (!config.container || generation !== navigatorGeneration) return;
+
       container.current = config.container;
       containerParent.current = container.current? container.current.parentElement : null;
       
       publication.current = config.publication;
 
-      navigatorInstance = new EpubNavigator(
+      const instance = new EpubNavigator(
         config.container,
         config.publication,
         config.listeners,
@@ -73,19 +79,24 @@ export const useEpubNavigator = () => {
           keyboardPeripherals: config.keyboardPeripherals || [],
         }
       );
+      navigatorInstance = instance;
 
-      navigatorInstance.load().then(() => {
+      await instance.load();
+      if (navigatorInstance === instance && generation === navigatorGeneration) {
         cb();
-      });
-    }
+      }
+    });
   }, []);
 
-  const EpubNavigatorDestroy = useCallback((cb: Function) => {
+  const EpubNavigatorDestroy = useCallback((cb: () => void) => {
+    navigatorGeneration += 1;
+    const instance = navigatorInstance;
+    navigatorInstance = null;
     cb();
 
-    navigatorInstance?.destroy().then(() => {
-      navigatorInstance = null; // Clear the singleton reference
-    });
+    if (instance) {
+      navigatorDestroyPromise = instance.destroy();
+    }
   }, []);
 
   const goRight = useCallback((animated: boolean, callback: cbb) => {
