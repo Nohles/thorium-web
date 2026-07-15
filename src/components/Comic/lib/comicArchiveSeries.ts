@@ -1,4 +1,4 @@
-import { Link, Locator, Manifest } from "@readium/shared";
+import { Link, Locator, Manifest, Publication } from "@readium/shared";
 
 export const COMIC_ARCHIVE_MEDIA_TYPES = new Set([
   "application/vnd.comicbook+zip",
@@ -28,6 +28,12 @@ export type ComicArchivePosition = ComicArchivePageIdentity & {
   archiveLocator?: Locator;
   directoryLocator?: Locator;
   fileLocator?: Locator;
+};
+
+export type ComicPositionListDocument = {
+  total?: number;
+  positions?: unknown[];
+  currentChapter?: unknown;
 };
 
 const walkLinks = (links: Link[] | undefined, callback: (link: Link) => void) => {
@@ -159,6 +165,18 @@ export const readManifestFromUrl = async (manifestUrl: string): Promise<Manifest
   }
   manifest.setSelfLink(manifestUrl);
   return manifest;
+};
+
+export const readComicPositionListDocument = async (
+  publication: Publication
+): Promise<ComicPositionListDocument | null> => {
+  const positionsLink = publication.manifest.links?.items?.find(
+    (link) => link.type === "application/vnd.readium.position-list+json"
+  );
+  if (!positionsLink) return null;
+
+  const data = await publication.get(positionsLink).readAsJSON();
+  return data && typeof data === "object" ? (data as ComicPositionListDocument) : null;
 };
 
 export const makeComicArchivePosition = (

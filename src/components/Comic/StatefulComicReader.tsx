@@ -55,6 +55,7 @@ import {
   isComicArchiveSeriesManifest,
   makeChapterTocLink,
   makeComicArchivePosition,
+  readComicPositionListDocument,
   readManifestFromUrl,
   resolveChapterResourceHref,
   type ComicArchiveChapter,
@@ -157,7 +158,7 @@ const getArchiveIdentityFromLocatorHref = (
 
   for (const chapter of chapters) {
     const pageHref = stripChapterHrefFromLocatorHref(href, chapter.href);
-    if (pageHref) {
+    if (pageHref !== null) {
       return {
         chapterIndex: chapter.index,
         pageHref,
@@ -166,6 +167,45 @@ const getArchiveIdentityFromLocatorHref = (
   }
 
   return undefined;
+};
+
+const getChapterIndexFromHint = (value: unknown, chapters: ComicArchiveChapter[]): number | undefined => {
+  if (typeof value === "number" && Number.isInteger(value)) {
+    if (value === 0) return 0;
+    if (value >= 1 && value <= chapters.length) return value - 1;
+  }
+
+  if (typeof value === "string") {
+    const index = chapters.findIndex((chapter) => normalizeComparableHref(chapter.href) === normalizeComparableHref(value));
+    return index >= 0 ? index : undefined;
+  }
+
+  if (!value || typeof value !== "object") return undefined;
+  const record = value as {
+    href?: unknown;
+    position?: unknown;
+    locations?: { position?: unknown };
+  };
+
+  const position = record.locations?.position ?? record.position;
+  if (typeof position === "number" && Number.isInteger(position) && position >= 1 && position <= chapters.length) {
+    return position - 1;
+  }
+
+  return typeof record.href === "string" ? getChapterIndexFromHint(record.href, chapters) : undefined;
+};
+
+const getArchiveIdentityFromCurrentChapter = (
+  value: unknown,
+  chapters: ComicArchiveChapter[]
+): Pick<ComicArchivePageIdentity, "chapterIndex" | "pageIndexInChapter" | "pageHref"> | null => {
+  const chapterIndex = getChapterIndexFromHint(value, chapters);
+  if (chapterIndex === undefined) return null;
+  return {
+    chapterIndex,
+    pageIndexInChapter: 0,
+    pageHref: "",
+  };
 };
 
 const findArchivePageInPages = (
@@ -215,6 +255,10 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   const chapterManifestPromisesRef = useRef<Partial<Record<number, Promise<boolean>>>>({});
   const [chapterLoadError, setChapterLoadError] = useState<string | null>(null);
   const { setLocalData, localData } = usePositionStorage(localDataKey, positionStorage);
+  const [manifestCurrentChapterIdentity, setManifestCurrentChapterIdentity] = useState<Pick<
+    ComicArchivePageIdentity,
+    "chapterIndex" | "pageIndexInChapter" | "pageHref"
+  > | null>(null);
 
   const locatorArchiveIdentity = useMemo(
     () =>
@@ -249,8 +293,34 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
         pageHref: savedComicPosition.pageHref ?? "",
       };
     }
+    if (manifestCurrentChapterIdentity) {
+      return manifestCurrentChapterIdentity;
+    }
     return null;
-  }, [localData, locatorArchiveIdentity, savedComicPosition]);
+  }, [localData, locatorArchiveIdentity, manifestCurrentChapterIdentity, savedComicPosition]);
+
+  useEffect(() => {
+    if (!isArchiveSeries || archiveChapters.length === 0) {
+      setManifestCurrentChapterIdentity(null);
+      return;
+    }
+
+    let cancelled = false;
+    readComicPositionListDocument(publication)
+      .then((document) => {
+        if (cancelled) return;
+        setManifestCurrentChapterIdentity(
+          getArchiveIdentityFromCurrentChapter(document?.currentChapter, archiveChapters)
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setManifestCurrentChapterIdentity(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [archiveChapters, isArchiveSeries, publication]);
 
   const loadChapter = useCallback(
     async (chapterIndex: number): Promise<boolean> => {
@@ -667,6 +737,12 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   }, [goPrevChapter]);
 
   const handleNext = useCallback(() => {
+    if (
+      mode === ComicReadingMode.webtoon &&
+      boundaryScrollControlsRef.current?.scrollByViewport("next", merged.scrollAmountPercent)
+    ) {
+      return;
+    }
     if (activeBoundaryPage === "next") {
       goNextFromBoundary();
       return;
@@ -678,9 +754,15 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
       return;
     }
     goNext();
-  }, [activeBoundaryPage, goNext, goNextFromBoundary, scrollBoundaryPages.next]);
+  }, [activeBoundaryPage, goNext, goNextFromBoundary, merged.scrollAmountPercent, mode, scrollBoundaryPages.next]);
 
   const handlePrev = useCallback(() => {
+    if (
+      mode === ComicReadingMode.webtoon &&
+      boundaryScrollControlsRef.current?.scrollByViewport("prev", merged.scrollAmountPercent)
+    ) {
+      return;
+    }
     if (activeBoundaryPage === "prev") {
       goPrevFromBoundary();
       return;
@@ -692,7 +774,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
       return;
     }
     goPrev();
-  }, [activeBoundaryPage, goPrev, goPrevFromBoundary, scrollBoundaryPages.previous]);
+  }, [activeBoundaryPage, goPrev, goPrevFromBoundary, merged.scrollAmountPercent, mode, scrollBoundaryPages.previous]);
 
   const updateSettings = useCallback(
     (patch: Partial<typeof defaultComicSettings>) => {

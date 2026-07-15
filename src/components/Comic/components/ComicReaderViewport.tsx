@@ -451,6 +451,7 @@ export type ComicBoundaryPageData = {
 export type ComicBoundaryPageKind = "prev" | "next";
 
 export type ComicBoundaryScrollControls = {
+  scrollByViewport: (kind: ComicBoundaryPageKind, amountPercent: number) => boolean;
   scrollToBoundary: (kind: ComicBoundaryPageKind) => boolean;
 };
 
@@ -586,6 +587,7 @@ export const ComicReaderViewport = ({
 }: ComicReaderViewportProps) => {
   const itemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const boundaryRefs = useRef<Map<ComicBoundaryPageKind, HTMLDivElement>>(new Map());
+  const activePointersRef = useRef<Set<number>>(new Set());
   const scrollRef = useRef<HTMLDivElement | null>(null);
   /** When true, `cursorIndex` was updated from scroll measurement — skip `scrollIntoView`. */
   const syncFromScrollRef = useRef(false);
@@ -747,6 +749,27 @@ export const ComicReaderViewport = ({
     };
   }, []);
 
+  useEffect(() => {
+    const handleDocumentPointerDown = (event: PointerEvent) => {
+      const container = containerRef.current;
+      if (container?.contains(event.target as Node)) {
+        activePointersRef.current.add(event.pointerId);
+      } else {
+        activePointersRef.current.delete(event.pointerId);
+      }
+    };
+    document.addEventListener("pointerdown", handleDocumentPointerDown, true);
+    return () => document.removeEventListener("pointerdown", handleDocumentPointerDown, true);
+  }, [containerRef]);
+
+  const handlePointerUp = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (!activePointersRef.current.delete(event.pointerId)) return;
+      onTap(event);
+    },
+    [onTap]
+  );
+
   const pagePos = useMemo(() => pages.findIndex((p) => p.index === cursorIndex), [pages, cursorIndex]);
   const current = pagePos >= 0 ? pages[pagePos] : undefined;
   const prevPage = pagePos > 0 ? pages[pagePos - 1] : undefined;
@@ -770,6 +793,19 @@ export const ComicReaderViewport = ({
   useEffect(() => {
     if (!boundaryScrollControlsRef) return;
     boundaryScrollControlsRef.current = {
+      scrollByViewport: (kind, amountPercent) => {
+        const root = scrollRef.current;
+        if (!root || mode !== ComicReadingMode.webtoon) return false;
+
+        const maxScrollTop = root.scrollHeight - root.clientHeight;
+        const direction = kind === "next" ? 1 : -1;
+        const distance = (root.clientHeight * Math.min(100, Math.max(1, amountPercent))) / 100;
+        const target = Math.min(maxScrollTop, Math.max(0, root.scrollTop + direction * distance));
+        if (Math.abs(target - root.scrollTop) < 1) return false;
+
+        root.scrollTo({ top: target, behavior: "smooth" });
+        return true;
+      },
       scrollToBoundary: (kind) => {
         const el = boundaryRefs.current.get(kind);
         if (!el) return false;
@@ -785,12 +821,13 @@ export const ComicReaderViewport = ({
     return () => {
       boundaryScrollControlsRef.current = null;
     };
-  }, [boundaryScrollControlsRef, updateActivePageFromScroll]);
+  }, [boundaryScrollControlsRef, mode, updateActivePageFromScroll]);
 
   return (
     <div
       ref={containerRef}
-      onPointerUp={onTap}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={(event) => activePointersRef.current.delete(event.pointerId)}
       style={{
         flex: 1,
         minHeight: 0,
