@@ -3,6 +3,8 @@ import styles from "./assets/styles/thorium-web.audioMetadata.module.css";
 import { Publication } from "@readium/shared";
 import { useAudioPreferences } from "@/preferences/hooks/useAudioPreferences";
 import { ThAudioPublicationMetadataComponent } from "@/preferences/models";
+import { Link } from "react-aria-components";
+import { useReaderNavigation } from "../Reader/ReaderNavigationContext";
 
 interface StatefulAudioMetadataProps {
   publication: Publication;
@@ -10,6 +12,7 @@ interface StatefulAudioMetadataProps {
 
 export function StatefulAudioMetadata({ publication }: StatefulAudioMetadataProps) {
   const { preferences } = useAudioPreferences();
+  const { publicationHref } = useReaderNavigation();
   const { metadata } = publication;
 
   const title = metadata.title.getTranslation("en");
@@ -17,17 +20,20 @@ export function StatefulAudioMetadata({ publication }: StatefulAudioMetadataProp
   const authors = metadata.authors?.items.map(a => a.name.getTranslation("en"));
 
   const metadataOrder = preferences.theming.layout.publicationMetadata.order;
+  const titleContent = publicationHref
+    ? <Link href={ publicationHref }>{ title }</Link>
+    : title;
 
   const renderMetadataComponents = () => {
     return metadataOrder.map((component: ThAudioPublicationMetadataComponent) => {
       switch (component) {
         case ThAudioPublicationMetadataComponent.title:
-          return <h1 key="title" className={ styles.audioMetadataTitle }>{ title }</h1>;
+          return <h1 key="title" className={ styles.audioMetadataTitle }>{ titleContent }</h1>;
 
         case ThAudioPublicationMetadataComponent.titleWithSubtitle:
           return (
             <hgroup key="title-with-subtitle">
-              <h1 className={ styles.audioMetadataTitle }>{ title }</h1>
+              <h1 className={ styles.audioMetadataTitle }>{ titleContent }</h1>
               { subtitle && <p className={ styles.audioMetadataSubtitle }>{ subtitle }</p> }
             </hgroup>
           );
@@ -36,7 +42,7 @@ export function StatefulAudioMetadata({ publication }: StatefulAudioMetadataProp
           return (
             <hgroup key="subtitle-with-title">
               { subtitle && <p className={ styles.audioMetadataSubtitle }>{ subtitle }</p> }
-              <h1 className={ styles.audioMetadataTitle }>{ title }</h1>
+              <h1 className={ styles.audioMetadataTitle }>{ titleContent }</h1>
             </hgroup>
           );
 

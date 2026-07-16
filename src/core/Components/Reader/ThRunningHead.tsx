@@ -3,15 +3,18 @@
 import React from "react";
 
 import { HTMLAttributesWithRef } from "../customTypes";
+import { Link } from "react-aria-components";
 
 export interface ThRunningHeadProps extends HTMLAttributesWithRef<HTMLHeadingElement> {
   ref?: React.RefObject<HTMLHeadingElement>
   label: string;
+  href?: string;
 }
 
 export const ThRunningHead = ({ 
   ref,
   label,
+  href,
   ...props
 }: ThRunningHeadProps) => {
 
@@ -21,7 +24,7 @@ export const ThRunningHead = ({
       ref={ ref }
       { ...props }
     >
-        { label }
+        { href ? <Link href={ href }>{ label }</Link> : label }
       </h1>
     </>
   )

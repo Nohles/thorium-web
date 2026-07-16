@@ -93,13 +93,13 @@ Shows all pages in a horizontally scrollable row. The active page is the page co
 
 `webtoon`
 
-Currently uses the same layout path as `continuousVertical`: a vertically scrollable column, hidden scrollbar, vertical panning, and center-line active page detection. The separate mode value exists so callers can distinguish webtoon intent even though the current rendering behavior matches vertical continuous scrolling.
+Uses the same vertically scrollable layout as `continuousVertical`, but previous/next actions scroll by `scrollAmountPercent` of the viewport instead of jumping to the adjacent image. The default 95 percent step leaves a small overlap so readers do not lose their place.
 
 ## Navigation
 
 The comic reader cursor is a global zero-based page index.
 
-For single-page and continuous modes, previous and next move by 1 page. For double-page mode, previous and next move by 2 pages.
+For single-page and continuous modes, previous and next move by 1 page. For double-page mode, previous and next move by 2 pages. In webtoon mode, previous and next scroll by the configured viewport percentage.
 
 The overlay arrow buttons are mapped through reading direction:
 
@@ -138,9 +138,9 @@ When chapter-boundary mode is active:
 - The TOC switches from page entries to chapter entries.
 - Progress labels and counts are relative to the active chapter.
 - In paginated modes, next/previous can move to adjacent chapter boundaries.
-- In scroll modes, reaching a boundary shows a full-page boundary screen. The first next/previous action scrolls to that boundary screen; the second action moves into the adjacent chapter.
+- In scroll modes, reaching a boundary shows a full-page boundary screen with an in-flow previous/next chapter button. Arrow navigation can also scroll to that screen and then move into the adjacent chapter.
 
-The overlay contains support for next/previous chapter call-to-action buttons, but those flags are currently hard-coded to `false`, so the CTA buttons do not appear.
+The overlay contains separate support for floating chapter call-to-action buttons, but those flags remain hard-coded to `false`; chapter navigation is presented in the scroll flow instead.
 
 ## Progress Bar
 
@@ -324,7 +324,7 @@ On image load failure, the reader renders an alert with a retry button.
 | `stretchSmallPages` | boolean | `false` | Yes, conditional | Can upscale naturally small images when scale allows |
 | `widthLimitEnabled` | boolean | `false` | Yes, conditional | Enables width limiting for `fitWidth`/`fitScreen` |
 | `widthLimitPercent` | 10-100 in UI | `50` | Yes, conditional | Sets content width when width limit applies |
-| `scrollAmountPercent` | 10-100, step 5 in UI | `95` | Yes | Stored only; no current comic runtime use found |
+| `scrollAmountPercent` | 10-100, step 5 in UI | `95` | Yes | Sets the viewport percentage used by previous/next actions in webtoon mode |
 | `autoScrollEnabled` | boolean | `false` | Component exists, not default order | Stored/toggled by Space; no current scrolling loop found |
 | `autoScrollSpeedSeconds` | 1-20, step 1 in UI | `5` | Component exists, not default order | Stored only; no current scrolling loop found |
 | `autoScrollSmooth` | boolean | `true` | Component exists, not default order | Stored only; no current scrolling loop found |

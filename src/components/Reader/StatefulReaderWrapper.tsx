@@ -33,6 +33,7 @@ import { ThAudioPreferences } from "@/preferences/audioPreferences";
 import { ThPreferencesAdapter } from "@/preferences/adapters/ThPreferencesAdapter";
 import { ThAudioPreferencesAdapter } from "@/preferences/adapters/ThAudioPreferencesAdapter";
 import { InitOptions } from "i18next";
+import { ReaderNavigationProvider, type ReaderNavigation } from "./ReaderNavigationContext";
 
 const StatefulEpubReader = lazy(() => import("@/components/Epub").then(mod => ({ default: mod.StatefulReader })));
 const StatefulWebPubReader = lazy(() => import("@/components/WebPub").then(mod => ({ default: mod.ExperimentalWebPubStatefulReader })));
@@ -75,6 +76,7 @@ export interface ReaderComponentProps<
   coverUrl?: string;
   plugins?: ReaderPlugins;
   i18n?: Partial<InitOptions>;
+  navigation?: ReaderNavigation;
   preferences?: P extends "audio"
     ? { initialPreferences?: ThAudioPreferences<K>; adapter?: ThAudioPreferencesAdapter<K> }
     : P extends "epub" | "webPub" | "comic"
@@ -84,7 +86,7 @@ export interface ReaderComponentProps<
 
 // ─── Outer wrapper — selects provider based on profile ────────────────────────
 
-export const StatefulReaderWrapper = ({ profile, plugins, isLoading, preferences, i18n: i18nOptions, coverUrl: readerCoverUrl, ...props }: ReaderComponentProps<any, any>) => {
+export const StatefulReaderWrapper = ({ profile, plugins, isLoading, preferences, navigation, i18n: i18nOptions, coverUrl: readerCoverUrl, ...props }: ReaderComponentProps<any, any>) => {
   const [resolvedPlugins, setResolvedPlugins] = useState<ThPlugin[] | undefined>(undefined);
 
   const pendingFactory = profile === "epub" ? plugins?.epub
@@ -110,30 +112,34 @@ export const StatefulReaderWrapper = ({ profile, plugins, isLoading, preferences
 
   if (profile === "audio") {
     return (
-      <ThAudioPreferencesProvider
-        devMode={ process.env.NODE_ENV !== "production" }
-        initialPreferences={ preferences?.initialPreferences as ThAudioPreferences<any> | undefined }
-        adapter={ preferences?.adapter as ThAudioPreferencesAdapter<any> | undefined }
-      >
-        <ThI18nProvider { ...i18nOptions }>
-          <StatefulAudioContent { ...props } coverUrl={ coverUrl } externalLoading={ isLoading ?? false } />
-        </ThI18nProvider>
-      </ThAudioPreferencesProvider>
+      <ReaderNavigationProvider value={ navigation ?? {} }>
+        <ThAudioPreferencesProvider
+          devMode={ process.env.NODE_ENV !== "production" }
+          initialPreferences={ preferences?.initialPreferences as ThAudioPreferences<any> | undefined }
+          adapter={ preferences?.adapter as ThAudioPreferencesAdapter<any> | undefined }
+        >
+          <ThI18nProvider { ...i18nOptions }>
+            <StatefulAudioContent { ...props } coverUrl={ coverUrl } externalLoading={ isLoading ?? false } />
+          </ThI18nProvider>
+        </ThAudioPreferencesProvider>
+      </ReaderNavigationProvider>
     );
   }
 
   return (
-    <ThPreferencesProvider
-      devMode={ process.env.NODE_ENV !== "production" }
-      initialPreferences={ preferences?.initialPreferences as ThPreferences<any> | undefined }
-      adapter={ preferences?.adapter as ThPreferencesAdapter<any> | undefined }
-    >
-      <ThI18nProvider { ...i18nOptions }>
-        <StatefulLoader isLoading={ isLoading ?? false }>
-          <StatefulReaderContent profile={ profile } { ...props } coverUrl={ coverUrl } plugins={ resolvedPlugins } />
-        </StatefulLoader>
-      </ThI18nProvider>
-    </ThPreferencesProvider>
+    <ReaderNavigationProvider value={ navigation ?? {} }>
+      <ThPreferencesProvider
+        devMode={ process.env.NODE_ENV !== "production" }
+        initialPreferences={ preferences?.initialPreferences as ThPreferences<any> | undefined }
+        adapter={ preferences?.adapter as ThPreferencesAdapter<any> | undefined }
+      >
+        <ThI18nProvider { ...i18nOptions }>
+          <StatefulLoader isLoading={ isLoading ?? false }>
+            <StatefulReaderContent profile={ profile } { ...props } coverUrl={ coverUrl } plugins={ resolvedPlugins } />
+          </StatefulLoader>
+        </ThI18nProvider>
+      </ThPreferencesProvider>
+    </ReaderNavigationProvider>
   );
 };
 

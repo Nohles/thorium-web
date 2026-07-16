@@ -446,6 +446,7 @@ const pageCellStyleHorizontal: CSSProperties = {
 export type ComicBoundaryPageData = {
   currentTitle?: string;
   adjacentTitle?: string;
+  onNavigate: () => void;
 };
 
 export type ComicBoundaryPageKind = "prev" | "next";
@@ -459,13 +460,17 @@ const ComicChapterBoundaryPage = ({
   kind,
   currentTitle,
   adjacentTitle,
+  onNavigate,
   isHorizontal,
 }: ComicBoundaryPageData & {
   kind: ComicBoundaryPageKind;
   isHorizontal: boolean;
 }) => {
   const { t } = useI18n();
-  const label = kind === "next" ? t("reader.comic.chapterBoundaries.next") : t("reader.comic.chapterBoundaries.previous");
+  const actionLabel =
+    kind === "next"
+      ? t("reader.comic.chapterBoundaries.nextChapter")
+      : t("reader.comic.chapterBoundaries.previousChapter");
 
   return (
     <div
@@ -486,9 +491,25 @@ const ComicChapterBoundaryPage = ({
           <strong style={{ fontSize: 18 }}>{t("reader.comic.chapterBoundaries.finished")}</strong>
           {currentTitle ? <span style={{ fontSize: 22, fontWeight: 700 }}>{currentTitle}</span> : null}
         </section>
-        <section style={{ display: "grid", gap: 6 }}>
-          <strong style={{ fontSize: 18 }}>{label}</strong>
+        <section style={{ display: "grid", gap: 12 }}>
           {adjacentTitle ? <span style={{ fontSize: 22, fontWeight: 700 }}>{adjacentTitle}</span> : null}
+          <button
+            type="button"
+            onPointerUp={(event) => event.stopPropagation()}
+            onClick={onNavigate}
+            style={{
+              padding: "12px 18px",
+              borderRadius: 8,
+              border: "1px solid rgba(255,255,255,0.2)",
+              background: "rgba(30,30,30,0.92)",
+              color: "var(--th-theme-text, #fff)",
+              fontSize: 16,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            {actionLabel}
+          </button>
         </section>
       </div>
     </div>
@@ -593,6 +614,7 @@ export const ComicReaderViewport = ({
   const syncFromScrollRef = useRef(false);
   const programmaticScrollRafRef = useRef<number | null>(null);
   const isProgrammaticScrollRef = useRef(false);
+  const scrollMeasurementRafRef = useRef<number | null>(null);
   const firstViewportPageIndexRef = useRef<number | undefined>(undefined);
   const activeBoundaryPageRef = useRef<ComicBoundaryPageKind | null>(null);
   /** Briefly ignore scroll measurement after the visible chapter slice changes. */
@@ -600,6 +622,15 @@ export const ComicReaderViewport = ({
 
   const isVerticalScrollMode =
     mode === ComicReadingMode.continuousVertical || mode === ComicReadingMode.webtoon;
+
+  const setScrollRef = useCallback((el: HTMLDivElement | null) => {
+    scrollRef.current = el;
+  }, []);
+
+  const setPageRef = useCallback((pageIndex: number, element: HTMLDivElement | null) => {
+    if (element) itemRefs.current.set(pageIndex, element);
+    else itemRefs.current.delete(pageIndex);
+  }, []);
 
   const getActiveBoundaryPage = useCallback(
     (root: HTMLDivElement): ComicBoundaryPageKind | null => {
@@ -681,18 +712,24 @@ export const ComicReaderViewport = ({
     });
   }, [emitBoundaryPageChange, getActiveBoundaryPage, isVerticalScrollMode, mode, setCursorIndex]);
 
+  const scheduleActivePageUpdate = useCallback(() => {
+    if (scrollMeasurementRafRef.current !== null) return;
+    scrollMeasurementRafRef.current = requestAnimationFrame(() => {
+      scrollMeasurementRafRef.current = null;
+      updateActivePageFromScroll();
+    });
+  }, [updateActivePageFromScroll]);
+
   useEffect(() => {
     if (!isVerticalScrollMode) return;
     const el = scrollRef.current;
     if (!el) return;
-    const onScroll = () => {
-      updateActivePageFromScroll();
-    };
+    const onScroll = scheduleActivePageUpdate;
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       el.removeEventListener("scroll", onScroll);
     };
-  }, [isVerticalScrollMode, updateActivePageFromScroll]);
+  }, [isVerticalScrollMode, scheduleActivePageUpdate]);
 
   useLayoutEffect(() => {
     const first = pages[0]?.index;
@@ -700,26 +737,33 @@ export const ComicReaderViewport = ({
     const prevFirst = firstViewportPageIndexRef.current;
     firstViewportPageIndexRef.current = first;
     if (prevFirst === undefined || prevFirst === first) return;
-    itemRefs.current.clear();
-    boundaryRefs.current.clear();
     scrollSyncSuppressUntilRef.current = performance.now() + 600;
     const el = scrollRef.current;
     if (!el) return;
     suppressScrollSync();
-    el.scrollTop = 0;
-    el.scrollLeft = 0;
-  }, [pages, suppressScrollSync]);
+    syncFromScrollRef.current = true;
+    const firstPage = itemRefs.current.get(first);
+    if (mode === ComicReadingMode.continuousHorizontal) {
+      el.scrollLeft = firstPage
+        ? el.scrollLeft + firstPage.getBoundingClientRect().left - el.getBoundingClientRect().left
+        : 0;
+      return;
+    }
+    el.scrollTop = firstPage
+      ? el.scrollTop + firstPage.getBoundingClientRect().top - el.getBoundingClientRect().top
+      : 0;
+  }, [mode, pages, suppressScrollSync]);
 
   useEffect(() => {
     if (mode !== ComicReadingMode.continuousHorizontal) return;
     const el = scrollRef.current;
     if (!el) return;
-    const onScroll = () => updateActivePageFromScroll();
+    const onScroll = scheduleActivePageUpdate;
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       el.removeEventListener("scroll", onScroll);
     };
-  }, [mode, updateActivePageFromScroll]);
+  }, [mode, scheduleActivePageUpdate]);
 
   useEffect(() => {
     if (mode !== ComicReadingMode.continuousVertical && mode !== ComicReadingMode.continuousHorizontal && mode !== ComicReadingMode.webtoon) {
@@ -745,6 +789,9 @@ export const ComicReaderViewport = ({
     return () => {
       if (programmaticScrollRafRef.current !== null) {
         cancelAnimationFrame(programmaticScrollRafRef.current);
+      }
+      if (scrollMeasurementRafRef.current !== null) {
+        cancelAnimationFrame(scrollMeasurementRafRef.current);
       }
     };
   }, []);
@@ -840,7 +887,7 @@ export const ComicReaderViewport = ({
     >
       {mode === ComicReadingMode.continuousVertical || mode === ComicReadingMode.webtoon ? (
         <div
-          ref={scrollRef}
+          ref={setScrollRef}
           className={readerStyles.hiddenScrollbar}
           style={{
             height: "100%",
@@ -862,10 +909,7 @@ export const ComicReaderViewport = ({
             <div
               key={page.href}
               data-page-index={page.index}
-              ref={(el) => {
-                if (el) itemRefs.current.set(page.index, el);
-                else itemRefs.current.delete(page.index);
-              }}
+              ref={(element) => setPageRef(page.index, element)}
               style={pageCellStyleVertical}
             >
               <ComicImage
@@ -891,7 +935,7 @@ export const ComicReaderViewport = ({
         </div>
       ) : mode === ComicReadingMode.continuousHorizontal ? (
         <div
-          ref={scrollRef}
+          ref={setScrollRef}
           className={readerStyles.hiddenScrollbar}
           style={{
             height: "100%",
@@ -913,10 +957,7 @@ export const ComicReaderViewport = ({
             <div
               key={page.href}
               data-page-index={page.index}
-              ref={(el) => {
-                if (el) itemRefs.current.set(page.index, el);
-                else itemRefs.current.delete(page.index);
-              }}
+              ref={(element) => setPageRef(page.index, element)}
               style={pageCellStyleHorizontal}
             >
               <ComicImage

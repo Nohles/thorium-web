@@ -17,6 +17,23 @@ import { useI18n } from "@/i18n";
 import { useSharedPreferences } from "@/preferences/hooks/useSharedPreferences";
 
 import classNames from "classnames";
+import type { LinkProps } from "react-aria-components";
+
+const goBack: NonNullable<LinkProps["onClick"]> = (event) => {
+  if (
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey ||
+    window.history.length <= 1
+  ) {
+    return;
+  }
+
+  event.preventDefault();
+  window.history.back();
+};
 
 export const StatefulBackLink = ({ 
   className 
@@ -57,6 +74,7 @@ export const StatefulBackLink = ({
             className={ backLinkClassName } 
             href={ href } 
             direction={ isRTL ? "right" : "left" }
+            onClick={ goBack }
             aria-label={ t("reader.app.header.backLink.trigger") }
             compounds={ compounds }
           />
@@ -69,6 +87,7 @@ export const StatefulBackLink = ({
           <ThHome 
             className={ backLinkClassName } 
             href={ href } 
+            onClick={ goBack }
             aria-label={ t("reader.app.header.backLink.trigger") }
             compounds={ compounds }
           />
@@ -81,6 +100,7 @@ export const StatefulBackLink = ({
           <ThLibrary 
             className={ backLinkClassName } 
             href={ href } 
+            onClick={ goBack }
             aria-label={ t("reader.app.header.backLink.trigger") }
             compounds={ compounds }
           />
@@ -127,6 +147,7 @@ export const StatefulBackLink = ({
           <ThLink 
             className={ backLinkClassName } 
             href={ href } 
+            onClick={ goBack }
             aria-label={ t("reader.app.header.backLink.trigger") }
             compounds={ compounds }
           >

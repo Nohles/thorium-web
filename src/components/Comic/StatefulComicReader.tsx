@@ -588,6 +588,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
           ? {
               currentTitle: currentChapterTitle,
               adjacentTitle: prevChapterTitle,
+              onNavigate: goPrevChapter,
             }
           : undefined,
       next:
@@ -599,6 +600,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
           ? {
               currentTitle: currentChapterTitle,
               adjacentTitle: nextChapterTitle,
+              onNavigate: goNextChapter,
             }
           : undefined,
     }),
@@ -610,6 +612,8 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
       hasNextChapter,
       hasPrevChapter,
       isScrollMode,
+      goNextChapter,
+      goPrevChapter,
       nextChapterTitle,
       prevChapterTitle,
       step,

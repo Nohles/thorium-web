@@ -26,6 +26,22 @@
   transition: opacity 200ms ease-in-out;
 }
 
+.header h1 a {
+  color: inherit;
+  text-decoration: none;
+  border-radius: calc(var(--th-layout-radius) / 2);
+}
+
+.header h1 a[data-hovered] {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.header h1 a[data-focus-visible] {
+  outline: 2px solid var(--th-theme-focus);
+  outline-offset: 3px;
+}
+
 .actionsWrapper {
   grid-area: header-end;
   min-width: 0;
