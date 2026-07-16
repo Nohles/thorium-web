@@ -69,11 +69,17 @@ export const useComicReaderController = ({
   }, [pages.length, savedPosition]);
 
   const [cursorIndex, setCursorIndex] = useState(initialIndex);
+  const initialPositionAppliedRef = useRef(
+    typeof savedPosition === "number" && savedPosition >= 0 && savedPosition < pages.length
+  );
   const skipInitialPersistRef = useRef(true);
 
   useEffect(() => {
-    setCursorIndex(initialIndex);
-  }, [initialIndex]);
+    if (initialPositionAppliedRef.current) return;
+    if (typeof savedPosition !== "number" || savedPosition < 0 || savedPosition >= pages.length) return;
+    initialPositionAppliedRef.current = true;
+    setCursorIndex(savedPosition);
+  }, [pages.length, savedPosition]);
 
   useEffect(() => {
     if (skipInitialPersistRef.current) {

@@ -197,6 +197,24 @@
   }
 }
 
+.comicImageSpinner {
+  display: block;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 5px solid color-mix(in srgb, var(--th-theme-text, #fff) 20%, transparent);
+  border-top-color: var(--th-theme-text, #fff);
+  animation: loading 0.8s linear infinite;
+}
+
+.comicImage {
+  visibility: hidden;
+}
+
+.comicImage[data-ready="true"] {
+  visibility: visible;
+}
+
 .iframeContainer :global(div:has(> .readium-navigator-iframe.blank))::after {
   content: "";
   position: absolute;

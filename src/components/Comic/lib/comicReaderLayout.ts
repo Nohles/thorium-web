@@ -141,10 +141,10 @@ export const getImagePlaceholderStyling = (
 ): CSSProperties => {
   const img = getReaderImageStyling(scale, shouldStretch, layoutMode);
   const inScrollStack = layoutMode === "verticalStack";
-  const minH = inScrollStack ? "40vh" : "50%";
+  const minH = inScrollStack ? "100dvh" : "50%";
   return {
     ...img,
-    minHeight: scale === ComicScaleType.originalSize ? "4rem" : minH,
+    minHeight: inScrollStack || scale !== ComicScaleType.originalSize ? minH : "4rem",
     minWidth: scale === ComicScaleType.fitHeight ? "4rem" : undefined,
     background: "color-mix(in srgb, var(--th-theme-text, #fff) 8%, transparent)",
   };

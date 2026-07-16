@@ -9,6 +9,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  memo,
   useMemo,
   useRef,
   useState,
@@ -31,29 +32,62 @@ import {
 import { ComicPage } from "../hooks/useComicReaderController";
 import { ComicPageLoadState } from "../lib/comicProgress";
 
-const MAX_CONCURRENT_COMIC_IMAGE_READS = 4;
+const MAX_CONCURRENT_COMIC_IMAGE_READS = 5;
+/** Keep encoded blob data bounded for publications that cannot use direct HTTP URLs. */
+const MAX_COMIC_IMAGE_BLOB_CACHE = 12;
+const COMIC_IMAGE_LOAD_TIMEOUT_MS = 15_000;
 
 type QueuedImageRead = {
+  priority: number;
+  signal: AbortSignal;
   run: () => void;
+  cancel: () => void;
 };
 
-const comicImageBlobCache = new WeakMap<Publication, Map<string, Promise<Blob>>>();
+const comicImageBlobCache = new WeakMap<Publication, Map<string, Blob>>();
+const comicImageAspectRatioCache = new WeakMap<Publication, Map<string, number>>();
 const comicImageReadQueue: QueuedImageRead[] = [];
 let activeComicImageReads = 0;
+let comicImageReadDrainScheduled = false;
 
 const drainComicImageReadQueue = () => {
+  comicImageReadQueue.sort((left, right) => right.priority - left.priority);
   while (activeComicImageReads < MAX_CONCURRENT_COMIC_IMAGE_READS && comicImageReadQueue.length > 0) {
     const next = comicImageReadQueue.shift();
     if (!next) return;
+    if (next.signal.aborted) {
+      next.cancel();
+      continue;
+    }
     activeComicImageReads += 1;
     next.run();
   }
 };
 
-const enqueueComicImageRead = <T,>(read: () => Promise<T>): Promise<T> =>
+const scheduleComicImageReadDrain = () => {
+  if (comicImageReadDrainScheduled) return;
+  comicImageReadDrainScheduled = true;
+  queueMicrotask(() => {
+    comicImageReadDrainScheduled = false;
+    drainComicImageReadQueue();
+  });
+};
+
+const enqueueComicImageRead = <T,>(
+  read: () => Promise<T>,
+  priority: number,
+  signal: AbortSignal
+): Promise<T> =>
   new Promise((resolve, reject) => {
-    comicImageReadQueue.push({
+    let started = false;
+    const abortError = new DOMException("Image read cancelled.", "AbortError");
+    const queuedRead: QueuedImageRead = {
+      priority,
+      signal,
+      cancel: () => reject(abortError),
       run: () => {
+        started = true;
+        signal.removeEventListener("abort", handleAbort);
         read()
           .then(resolve, reject)
           .finally(() => {
@@ -61,11 +95,34 @@ const enqueueComicImageRead = <T,>(read: () => Promise<T>): Promise<T> =>
             drainComicImageReadQueue();
           });
       },
-    });
-    drainComicImageReadQueue();
+    };
+    const handleAbort = () => {
+      if (started) return;
+      const queueIndex = comicImageReadQueue.indexOf(queuedRead);
+      if (queueIndex >= 0) comicImageReadQueue.splice(queueIndex, 1);
+      reject(abortError);
+    };
+
+    signal.addEventListener("abort", handleAbort, { once: true });
+    comicImageReadQueue.push(queuedRead);
+    scheduleComicImageReadDrain();
   });
 
-const getComicImageBlob = (publication: Publication, link: Link): Promise<Blob> => {
+const touchComicImageBlobCache = (cache: Map<string, Blob>, href: string, value: Blob) => {
+  cache.delete(href);
+  cache.set(href, value);
+  while (cache.size > MAX_COMIC_IMAGE_BLOB_CACHE) {
+    const oldest = cache.keys().next().value;
+    if (oldest === undefined) break;
+    cache.delete(oldest);
+  }
+};
+
+const getComicImageBlob = async (
+  publication: Publication,
+  link: Link,
+  signal: AbortSignal
+): Promise<Blob> => {
   let publicationCache = comicImageBlobCache.get(publication);
   if (!publicationCache) {
     publicationCache = new Map();
@@ -73,26 +130,85 @@ const getComicImageBlob = (publication: Publication, link: Link): Promise<Blob> 
   }
 
   const cached = publicationCache.get(link.href);
-  if (cached) return cached;
+  if (cached) {
+    touchComicImageBlobCache(publicationCache, link.href, cached);
+    return cached;
+  }
 
-  const blobPromise = enqueueComicImageRead(async () => {
-    const bytes = await publication.get(link).read();
-    if (!bytes) {
-      throw new Error("Failed to load image bytes.");
-    }
-    const byteArray = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-    return new Blob([new Uint8Array(byteArray)], { type: link.type || "image/jpeg" });
-  }).catch((error) => {
-    publicationCache.delete(link.href);
-    throw error;
-  });
+  const bytes = await publication.get(link).read();
+  if (!bytes) {
+    throw new Error("Failed to load image bytes.");
+  }
+  if (signal.aborted) throw new DOMException("Image read cancelled.", "AbortError");
+  const byteArray = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  const blob = new Blob([new Uint8Array(byteArray)], { type: link.type || "image/jpeg" });
 
-  publicationCache.set(link.href, blobPromise);
-  return blobPromise;
+  if (!signal.aborted) touchComicImageBlobCache(publicationCache, link.href, blob);
+  return blob;
 };
 
 const invalidateComicImageBlob = (publication: Publication, href: string) => {
   comicImageBlobCache.get(publication)?.delete(href);
+};
+
+const getComicImageAspectRatio = (publication: Publication, link: Link): number | undefined => {
+  if (link.width && link.height) return link.width / link.height;
+  return comicImageAspectRatioCache.get(publication)?.get(link.href);
+};
+
+const rememberComicImageAspectRatio = (publication: Publication, link: Link, ratio: number) => {
+  if (!Number.isFinite(ratio) || ratio <= 0) return;
+  let publicationCache = comicImageAspectRatioCache.get(publication);
+  if (!publicationCache) {
+    publicationCache = new Map();
+    comicImageAspectRatioCache.set(publication, publicationCache);
+  }
+  publicationCache.set(link.href, ratio);
+};
+
+const getDirectionalLoadSet = (
+  pages: readonly ComicPage[],
+  cursorIndex: number,
+  previousCursorIndex: number,
+  imagePreloadAmount: number
+): Set<number> => {
+  if (pages.length === 0) return new Set();
+
+  const positionByIndex = new Map(pages.map((page, position) => [page.index, position]));
+  const cursorPosition = positionByIndex.get(cursorIndex) ?? 0;
+  const direction = previousCursorIndex <= cursorIndex ? 1 : -1;
+  const selected = new Set<number>();
+  const preloadAmount = Math.max(0, imagePreloadAmount);
+  for (let offset = 0; offset <= preloadAmount; offset += 1) {
+    const position = cursorPosition + offset * direction;
+    const page = pages[position];
+    if (!page) continue;
+    selected.add(page.index);
+  }
+  return selected;
+};
+
+/** Match Suwayomi's continuous reader: load the current page plus a directional preload batch. */
+const useDirectionalLoadSet = (
+  enabled: boolean,
+  pages: readonly ComicPage[],
+  cursorIndex: number,
+  imagePreloadAmount: number,
+  loadDirection: 1 | -1
+) => {
+  const allowed = useMemo(
+    () =>
+      enabled
+        ? getDirectionalLoadSet(
+            pages,
+            cursorIndex,
+            cursorIndex - loadDirection,
+            imagePreloadAmount
+          )
+        : new Set([cursorIndex]),
+    [cursorIndex, enabled, imagePreloadAmount, loadDirection, pages]
+  );
+  return useCallback((pageIndex: number) => allowed.has(pageIndex), [allowed]);
 };
 
 const isHttpUrl = (href: string | undefined): href is string => {
@@ -105,11 +221,34 @@ const isHttpUrl = (href: string | undefined): href is string => {
   }
 };
 
+const isSameOriginHttpUrl = (href: string): boolean => {
+  if (!isHttpUrl(href) || typeof window === "undefined") return false;
+  return new URL(href).origin === window.location.origin;
+};
+
+const withComicImageTimeout = <T,>(
+  operation: () => Promise<T>,
+  abortController: AbortController
+): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  return new Promise<T>((resolve, reject) => {
+    timeoutId = setTimeout(() => {
+      const timeoutError = new DOMException("Image loading timed out.", "TimeoutError");
+      reject(timeoutError);
+      abortController.abort(timeoutError);
+    }, COMIC_IMAGE_LOAD_TIMEOUT_MS);
+    operation().then(resolve, reject);
+  }).finally(() => {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+  });
+};
+
 const useObjectUrl = (
   publication: Publication,
   link: Link | undefined,
   shouldLoad = true,
-  reloadKey = 0
+  reloadKey = 0,
+  loadPriority = 0
 ) => {
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -117,47 +256,73 @@ const useObjectUrl = (
   const href = link?.href;
   const mediaType = link?.type;
   const linkRef = useRef(link);
+  const loadPriorityRef = useRef(loadPriority);
 
   useEffect(() => {
     linkRef.current = link;
   }, [link]);
 
   useEffect(() => {
+    loadPriorityRef.current = loadPriority;
+  }, [loadPriority]);
+
+  useEffect(() => {
     let cancelled = false;
     let created: string | null = null;
+    let handedOffObjectUrl = false;
+    const abortController = new AbortController();
 
     const run = async () => {
       setError(null);
       const currentLink = linkRef.current;
-      if (!currentLink || !shouldLoad) {
+      if (!currentLink) {
         setIsLoading(false);
-        setObjectUrl((prev) => {
-          if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
-          return null;
-        });
+        setObjectUrl(null);
+        return;
+      }
+      if (!shouldLoad) {
+        setIsLoading(false);
         return;
       }
 
-      if (isHttpUrl(currentLink.href)) {
+      // Cross-origin images may not allow fetch(), so retain the direct DOM path
+      // for them. Reader-server assets are same-origin and use the queued blob path.
+      if (isHttpUrl(currentLink.href) && !isSameOriginHttpUrl(currentLink.href)) {
         setIsLoading(false);
-        setObjectUrl((prev) => {
-          if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
-          return currentLink.href;
-        });
+        setObjectUrl(currentLink.href);
         return;
       }
 
       setIsLoading(true);
       try {
-        const blob = await getComicImageBlob(publication, currentLink);
+        const sourceUrl = await enqueueComicImageRead(
+          () =>
+            withComicImageTimeout(async () => {
+              const blob = isHttpUrl(currentLink.href)
+                ? await fetch(currentLink.href, { signal: abortController.signal }).then(
+                    async (response) => {
+                      if (!response.ok) {
+                        throw new Error(`Failed to load image (${response.status}).`);
+                      }
+                      return response.blob();
+                    }
+                  )
+                : await getComicImageBlob(publication, currentLink, abortController.signal);
+              if (abortController.signal.aborted) {
+                throw new DOMException("Image read cancelled.", "AbortError");
+              }
+              created = URL.createObjectURL(blob);
+              return created;
+            }, abortController),
+          loadPriorityRef.current,
+          abortController.signal
+        );
         if (cancelled) return;
-        created = URL.createObjectURL(blob);
-        setObjectUrl((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return created;
-        });
+        handedOffObjectUrl = true;
+        setObjectUrl(sourceUrl);
       } catch (e) {
-        if (!cancelled) {
+        const wasAborted = e instanceof DOMException && e.name === "AbortError";
+        if (!cancelled && !wasAborted) {
           setObjectUrl(null);
           setError(e instanceof Error ? e.message : "Failed to load image.");
         }
@@ -169,9 +334,17 @@ const useObjectUrl = (
     run().catch(() => undefined);
     return () => {
       cancelled = true;
-      if (created?.startsWith("blob:")) URL.revokeObjectURL(created);
+      abortController.abort();
+      if (!handedOffObjectUrl && created?.startsWith("blob:")) URL.revokeObjectURL(created);
     };
   }, [publication, href, mediaType, shouldLoad, reloadKey]);
+
+  useEffect(
+    () => () => {
+      if (objectUrl?.startsWith("blob:")) URL.revokeObjectURL(objectUrl);
+    },
+    [objectUrl]
+  );
 
   return { objectUrl, error, isLoading };
 };
@@ -186,6 +359,33 @@ const comicImageRetryButtonStyle: CSSProperties = {
   fontWeight: 600,
   cursor: "pointer",
 };
+
+const comicImagePlaceholderInnerStyle: CSSProperties = {
+  width: "100%",
+  height: "100%",
+  minHeight: "inherit",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
+const ComicImagePlaceholder = ({
+  style,
+  showSpinner,
+  isBusy,
+}: {
+  style: CSSProperties;
+  showSpinner: boolean;
+  isBusy: boolean;
+}) => (
+  <div style={style} aria-busy={isBusy}>
+    {showSpinner ? (
+      <div style={comicImagePlaceholderInnerStyle}>
+        <span className={readerStyles.comicImageSpinner} aria-hidden />
+      </div>
+    ) : null}
+  </div>
+);
 
 const ComicImageLoadError = ({
   message,
@@ -279,7 +479,7 @@ const getImageAreaStyle = (layoutMode: ComicPageLayoutMode): CSSProperties =>
         justifyContent: "center",
       };
 
-const ComicImage = ({
+const ComicImage = memo(function ComicImage({
   pageIndex,
   publication,
   link,
@@ -290,6 +490,7 @@ const ComicImage = ({
   layoutMode,
   isDoublePageCell,
   shouldLoad,
+  loadPriority = 0,
   onPageLoadStateChange,
 }: {
   pageIndex: number;
@@ -302,15 +503,26 @@ const ComicImage = ({
   layoutMode: ComicPageLayoutMode;
   isDoublePageCell: boolean;
   shouldLoad: boolean;
+  loadPriority?: number;
   onPageLoadStateChange?: (pageIndex: number, state: ComicPageLoadState) => void;
-}) => {
+}) {
   const { t } = useI18n();
   const [reloadKey, setReloadKey] = useState(0);
-  const { objectUrl, error, isLoading } = useObjectUrl(publication, link, shouldLoad, reloadKey);
+  const { objectUrl, error, isLoading } = useObjectUrl(
+    publication,
+    link,
+    shouldLoad,
+    reloadKey,
+    loadPriority
+  );
   const frameRef = useRef<HTMLDivElement | null>(null);
   const shouldStretchRef = useRef(false);
   const [isImageReady, setIsImageReady] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [isPlaceholderVisible, setIsPlaceholderVisible] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState<number | undefined>(() =>
+    getComicImageAspectRatio(publication, link)
+  );
   const failedMessage = t("reader.comic.imageLoad.failed");
 
   const stretchOk = stretchSmallPages && stretchAllowedForScale(scaleType);
@@ -320,7 +532,32 @@ const ComicImage = ({
     shouldStretchRef.current = false;
     setIsImageReady(false);
     setImageError(null);
-  }, [objectUrl]);
+  }, [link.href, reloadKey]);
+
+  useEffect(() => {
+    setAspectRatio(getComicImageAspectRatio(publication, link));
+  }, [link, publication]);
+
+  useEffect(() => {
+    const element = frameRef.current;
+    if (!element || !shouldLoad || isImageReady) {
+      setIsPlaceholderVisible(false);
+      return;
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      setIsPlaceholderVisible(entry?.isIntersecting ?? false);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [isImageReady, shouldLoad]);
+
+  useEffect(() => {
+    if (!objectUrl || isImageReady || error || imageError || !shouldLoad) return;
+    const timeoutId = setTimeout(() => {
+      setImageError(failedMessage);
+    }, COMIC_IMAGE_LOAD_TIMEOUT_MS);
+    return () => clearTimeout(timeoutId);
+  }, [error, failedMessage, imageError, isImageReady, objectUrl, shouldLoad]);
 
   const onImgLoad = useCallback(
     (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -331,10 +568,15 @@ const ComicImage = ({
         const fw = frameRef.current?.clientWidth ?? 0;
         stretch = nw > 0 && fw > 0 && nw < fw;
       }
+      if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+        const nextAspectRatio = img.naturalWidth / img.naturalHeight;
+        rememberComicImageAspectRatio(publication, link, nextAspectRatio);
+        setAspectRatio(nextAspectRatio);
+      }
       shouldStretchRef.current = stretch;
       setIsImageReady(true);
     },
-    [scaleType, stretchOk]
+    [link, publication, scaleType, stretchOk]
   );
 
   const onImgError = useCallback(() => {
@@ -350,7 +592,10 @@ const ComicImage = ({
   }, [link.href, publication]);
 
   const imgStyle = useMemo(
-    () => getReaderImageStyling(scaleType, shouldStretch, layoutMode),
+    () => ({
+      ...getReaderImageStyling(scaleType, shouldStretch, layoutMode),
+      userSelect: "none" as const,
+    }),
     [scaleType, shouldStretch, layoutMode]
   );
 
@@ -378,14 +623,22 @@ const ComicImage = ({
     [onPageLoadStateChange, pageIndex]
   );
 
-  const frameStyle = getPageFrameStyle(
-    widthLimitEnabled,
-    widthLimitPercent,
-    scaleType,
-    layoutMode,
-    isDoublePageCell
-  );
-  const areaStyle = getImageAreaStyle(layoutMode);
+  const frameStyle: CSSProperties = {
+    ...getPageFrameStyle(
+      widthLimitEnabled,
+      widthLimitPercent,
+      scaleType,
+      layoutMode,
+      isDoublePageCell
+    ),
+    ...(layoutMode === "verticalStack" && isWidthDrivenScaleMode(scaleType) && aspectRatio
+      ? { aspectRatio }
+      : {}),
+  };
+  const areaStyle: CSSProperties = {
+    ...getImageAreaStyle(layoutMode),
+    position: "relative",
+  };
 
   if (error || imageError) {
     return (
@@ -397,31 +650,40 @@ const ComicImage = ({
       />
     );
   }
-  if (!objectUrl) {
-    return (
-      <div style={frameStyle}>
-        <div ref={frameRef} style={areaStyle}>
-          <div style={placeholderStyle} aria-busy={loadState === "loading"} />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div style={frameStyle}>
       <div ref={frameRef} style={areaStyle}>
-        <img
-          key={reloadKey}
-          src={objectUrl}
-          alt={link.title || "Comic page"}
-          onLoad={onImgLoad}
-          onError={onImgError}
-          style={imgStyle}
-        />
+        {!isImageReady ? (
+          <ComicImagePlaceholder
+            style={placeholderStyle}
+            showSpinner={loadState === "loading" && isPlaceholderVisible}
+            isBusy={loadState === "loading"}
+          />
+        ) : null}
+        {objectUrl ? (
+          <img
+            key={reloadKey}
+            src={objectUrl}
+            alt={link.title || "Comic page"}
+            className={readerStyles.comicImage}
+            data-ready={isImageReady}
+            draggable={false}
+            decoding="async"
+            fetchPriority={loadPriority >= 100 ? "high" : "auto"}
+            onLoad={onImgLoad}
+            onError={onImgError}
+            style={
+              isImageReady
+                ? imgStyle
+                : { ...imgStyle, position: "absolute", inset: 0, width: "100%", height: "100%" }
+            }
+          />
+        ) : null}
       </div>
     </div>
   );
-};
+});
 
 /** Full width of the scroll area so every row shares the same percentage basis (avoid shrink-to-fit per image). */
 const pageCellStyleVertical: CSSProperties = {
@@ -610,6 +872,7 @@ export const ComicReaderViewport = ({
   const boundaryRefs = useRef<Map<ComicBoundaryPageKind, HTMLDivElement>>(new Map());
   const activePointersRef = useRef<Set<number>>(new Set());
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [loadDirection, setLoadDirection] = useState<1 | -1>(1);
   /** When true, `cursorIndex` was updated from scroll measurement — skip `scrollIntoView`. */
   const syncFromScrollRef = useRef(false);
   const programmaticScrollRafRef = useRef<number | null>(null);
@@ -622,10 +885,20 @@ export const ComicReaderViewport = ({
 
   const isVerticalScrollMode =
     mode === ComicReadingMode.continuousVertical || mode === ComicReadingMode.webtoon;
+  const isContinuousScrollMode =
+    isVerticalScrollMode || mode === ComicReadingMode.continuousHorizontal;
 
   const setScrollRef = useCallback((el: HTMLDivElement | null) => {
     scrollRef.current = el;
   }, []);
+
+  const shouldLoadPage = useDirectionalLoadSet(
+    isContinuousScrollMode,
+    pages,
+    cursorIndex,
+    imagePreloadAmount,
+    loadDirection
+  );
 
   const setPageRef = useCallback((pageIndex: number, element: HTMLDivElement | null) => {
     if (element) itemRefs.current.set(pageIndex, element);
@@ -705,12 +978,13 @@ export const ComicReaderViewport = ({
     } else {
       return;
     }
+    if (idx !== cursorIndex) setLoadDirection(idx > cursorIndex ? 1 : -1);
     setCursorIndex((prev) => {
       if (prev === idx) return prev;
       syncFromScrollRef.current = true;
       return idx;
     });
-  }, [emitBoundaryPageChange, getActiveBoundaryPage, isVerticalScrollMode, mode, setCursorIndex]);
+  }, [cursorIndex, emitBoundaryPageChange, getActiveBoundaryPage, isVerticalScrollMode, mode, setCursorIndex]);
 
   const scheduleActivePageUpdate = useCallback(() => {
     if (scrollMeasurementRafRef.current !== null) return;
@@ -922,7 +1196,8 @@ export const ComicReaderViewport = ({
                 widthLimitPercent={widthLimitPercent}
                 layoutMode="verticalStack"
                 isDoublePageCell={false}
-                shouldLoad={Math.abs(page.index - cursorIndex) <= imagePreloadAmount}
+                shouldLoad={shouldLoadPage(page.index)}
+                loadPriority={page.index === cursorIndex ? 100 : 10 - Math.abs(page.index - cursorIndex)}
                 onPageLoadStateChange={onPageLoadStateChange}
               />
             </div>
@@ -970,7 +1245,8 @@ export const ComicReaderViewport = ({
                 widthLimitPercent={widthLimitPercent}
                 layoutMode="viewportBound"
                 isDoublePageCell={false}
-                shouldLoad={Math.abs(page.index - cursorIndex) <= imagePreloadAmount}
+                shouldLoad={shouldLoadPage(page.index)}
+                loadPriority={page.index === cursorIndex ? 100 : 10 - Math.abs(page.index - cursorIndex)}
                 onPageLoadStateChange={onPageLoadStateChange}
               />
             </div>
