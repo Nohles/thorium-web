@@ -93,7 +93,8 @@ export enum ThSpacingSettingsKeys {
 export enum ThSettingsContainerKeys {
   initial = "initial",
   text = "text",
-  spacing = "spacing"
+  spacing = "spacing",
+  customTheme = "customTheme"
 }
 
 export enum ThSettingsRangeVariant {

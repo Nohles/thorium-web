@@ -22,6 +22,7 @@ import {
   contrast1Theme,
   contrast2Theme,
   contrast3Theme,
+  customTheme,
   defaultSettingsAction,
   defaultFullscreenAction,
   defaultTocAction,
@@ -218,12 +219,19 @@ export const defaultPreferences: ThPreferences<DefaultKeys> = createPreferences<
         ThThemeKeys.dark, 
         ThThemeKeys.contrast1, 
         ThThemeKeys.contrast2, 
-        ThThemeKeys.contrast3
+        ThThemeKeys.contrast3,
+        ThThemeKeys.custom
       ],
       fxlOrder: [
         "auto",
         ThThemeKeys.light,
-        ThThemeKeys.dark
+        ThThemeKeys.paper,
+        ThThemeKeys.sepia,
+        ThThemeKeys.dark,
+        ThThemeKeys.contrast1,
+        ThThemeKeys.contrast2,
+        ThThemeKeys.contrast3,
+        ThThemeKeys.custom
       ],
       systemThemes: {
         light: ThThemeKeys.light,
@@ -236,7 +244,8 @@ export const defaultPreferences: ThPreferences<DefaultKeys> = createPreferences<
         [ThThemeKeys.sepia]: sepiaTheme,
         [ThThemeKeys.contrast1]: contrast1Theme,
         [ThThemeKeys.contrast2]: contrast2Theme,
-        [ThThemeKeys.contrast3]: contrast3Theme
+        [ThThemeKeys.contrast3]: contrast3Theme,
+        [ThThemeKeys.custom]: customTheme
       }
     },
   },

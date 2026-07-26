@@ -369,6 +369,14 @@ const comicImagePlaceholderInnerStyle: CSSProperties = {
   justifyContent: "center",
 };
 
+type ComicPageHorizontalAlignment = "start" | "center" | "end";
+
+const comicPageJustifyContent: Record<ComicPageHorizontalAlignment, CSSProperties["justifyContent"]> = {
+  start: "flex-start",
+  center: "center",
+  end: "flex-end",
+};
+
 const ComicImagePlaceholder = ({
   style,
   showSpinner,
@@ -426,15 +434,16 @@ const getPageFrameStyle = (
   widthLimitPercent: number,
   scaleType: ComicScaleType,
   layoutMode: ComicPageLayoutMode,
-  isDoublePageCell: boolean
+  isDoublePageCell: boolean,
+  horizontalAlignment: ComicPageHorizontalAlignment
 ): CSSProperties => {
   const fraction = getPageWidthFraction(widthLimitEnabled, widthLimitPercent, scaleType, isDoublePageCell);
   const wPct = fraction * 100;
   const base: CSSProperties = {
     width: `${wPct}%`,
     maxWidth: "100%",
-    marginLeft: "auto",
-    marginRight: "auto",
+    marginLeft: horizontalAlignment === "start" ? 0 : "auto",
+    marginRight: horizontalAlignment === "end" ? 0 : "auto",
     boxSizing: "border-box",
     display: "flex",
     alignItems: "center",
@@ -459,7 +468,10 @@ const getPageFrameStyle = (
   };
 };
 
-const getImageAreaStyle = (layoutMode: ComicPageLayoutMode): CSSProperties =>
+const getImageAreaStyle = (
+  layoutMode: ComicPageLayoutMode,
+  horizontalAlignment: ComicPageHorizontalAlignment
+): CSSProperties =>
   layoutMode === "verticalStack"
     ? {
         width: "100%",
@@ -467,7 +479,7 @@ const getImageAreaStyle = (layoutMode: ComicPageLayoutMode): CSSProperties =>
         minWidth: 0,
         display: "flex",
         alignItems: "center",
-        justifyContent: "center",
+        justifyContent: comicPageJustifyContent[horizontalAlignment],
       }
     : {
         width: "100%",
@@ -476,7 +488,7 @@ const getImageAreaStyle = (layoutMode: ComicPageLayoutMode): CSSProperties =>
         minWidth: 0,
         display: "flex",
         alignItems: "center",
-        justifyContent: "center",
+        justifyContent: comicPageJustifyContent[horizontalAlignment],
       };
 
 const ComicImage = memo(function ComicImage({
@@ -492,6 +504,7 @@ const ComicImage = memo(function ComicImage({
   shouldLoad,
   loadPriority = 0,
   onPageLoadStateChange,
+  horizontalAlignment = "center",
 }: {
   pageIndex: number;
   publication: Publication;
@@ -505,6 +518,7 @@ const ComicImage = memo(function ComicImage({
   shouldLoad: boolean;
   loadPriority?: number;
   onPageLoadStateChange?: (pageIndex: number, state: ComicPageLoadState) => void;
+  horizontalAlignment?: ComicPageHorizontalAlignment;
 }) {
   const { t } = useI18n();
   const [reloadKey, setReloadKey] = useState(0);
@@ -629,14 +643,15 @@ const ComicImage = memo(function ComicImage({
       widthLimitPercent,
       scaleType,
       layoutMode,
-      isDoublePageCell
+      isDoublePageCell,
+      horizontalAlignment
     ),
     ...(layoutMode === "verticalStack" && isWidthDrivenScaleMode(scaleType) && aspectRatio
       ? { aspectRatio }
       : {}),
   };
   const areaStyle: CSSProperties = {
-    ...getImageAreaStyle(layoutMode),
+    ...getImageAreaStyle(layoutMode, horizontalAlignment),
     position: "relative",
   };
 
@@ -1319,7 +1334,7 @@ export const ComicReaderViewport = ({
               minHeight: 0,
             }}
           >
-            {doublePages.map((page) => (
+            {doublePages.map((page, pagePosition) => (
               <div key={page.href} style={{ display: "flex", flexDirection: "column", minHeight: 0, minWidth: 0, height: "100%" }}>
                 <ComicImage
                   pageIndex={page.index}
@@ -1330,7 +1345,8 @@ export const ComicReaderViewport = ({
                   widthLimitEnabled={widthLimitEnabled}
                   widthLimitPercent={widthLimitPercent}
                   layoutMode="viewportBound"
-                  isDoublePageCell
+                  isDoublePageCell={false}
+                  horizontalAlignment={pagePosition === 0 ? "end" : "start"}
                   shouldLoad
                   onPageLoadStateChange={onPageLoadStateChange}
                 />

@@ -7,7 +7,8 @@ export enum ThThemeKeys {
   paper = "paper",
   contrast1 = "contrast1",
   contrast2 = "contrast2",
-  contrast3 = "contrast3"
+  contrast3 = "contrast3",
+  custom = "custom"
 }
 
 export const lightTheme = {
@@ -120,4 +121,20 @@ export const contrast3Theme = {
   focus: "#004099",
   elevate: "0px 0px 2px #8c8c8c",
   immerse: "0.45"
+}
+
+export const customTheme = {
+  background: "#f3efe7",
+  text: "#24211d",
+  link: "#9a4f2f",
+  visited: "#6f3b28",
+  subdue: "#6f675d",
+  disable: "#9b9389",
+  hover: "#e3dbcf",
+  onHover: "#24211d",
+  select: "#d6b9a5",
+  onSelect: "inherit",
+  focus: "#9a4f2f",
+  elevate: "0px 0px 2px #6f675d",
+  immerse: "0.5"
 }

@@ -23,6 +23,7 @@ export interface ThemeReducerState {
   monochrome: boolean;
   colorScheme: ThColorScheme;
   theme: ThemeStateObject;
+  customThemes?: Record<string, ThemeTokens>;
   coverTheme?: ThemeTokens;
   prefersReducedMotion: boolean;
   prefersReducedTransparency: boolean;
@@ -40,6 +41,7 @@ const initialState: ThemeReducerState = {
     fxl: "auto",
     audio: "auto"
   },
+  customThemes: {},
   coverTheme: undefined,
   prefersReducedMotion: false,
   prefersReducedTransparency: false, 
@@ -61,6 +63,15 @@ export const themeSlice = createSlice({
     },
     setTheme: (state, action: ThemeStateChangePayload) => {
       state.theme[action.payload.key] = action.payload.value || "auto"
+    },
+    setCustomTheme: (
+      state,
+      action: { payload: { key: string; tokens: ThemeTokens } }
+    ) => {
+      state.customThemes = {
+        ...state.customThemes,
+        [action.payload.key]: action.payload.tokens
+      }
     },
     setCoverTheme: (state, action) => {
       state.coverTheme = action.payload
@@ -91,6 +102,7 @@ export const {
   setMonochrome, 
   setColorScheme, 
   setTheme, 
+  setCustomTheme,
   setCoverTheme,
   setReducedMotion, 
   setReducedTransparency, 

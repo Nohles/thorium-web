@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect } from "react";
+import { lazy, Suspense, useState, useEffect, useMemo } from "react";
 
 import { Publication, Locator } from "@readium/shared";
 import { getScriptMode } from "@readium/navigator";
@@ -208,7 +208,15 @@ interface ReaderContentProps {
 const StatefulReaderContent = ({ profile, publication, plugins, coverUrl, ...props }: ReaderContentProps) => {
   const { preferences, resolveFontLanguage } = usePreferences();
   const themeObject = useAppSelector(state => state.theming.theme);
+  const customThemes = useAppSelector(state => state.theming.customThemes);
   const isFXL = useAppSelector(state => state.publication.isFXL);
+  const themeKeys = useMemo(
+    () => ({
+      ...preferences.theming.themes.keys,
+      ...customThemes
+    }),
+    [customThemes, preferences.theming.themes.keys]
+  );
   const theme = profile === "epub"
     ? (isFXL ? themeObject.fxl : themeObject.reflow)
     : profile === "comic"
@@ -227,7 +235,7 @@ const StatefulReaderContent = ({ profile, publication, plugins, coverUrl, ...pro
 
   const { setContainerRef } = useTheming<ThemeKeyType>({
     theme,
-    themeKeys: preferences.theming.themes.keys,
+    themeKeys,
     systemKeys: preferences.theming.themes.systemThemes,
     breakpointsMap: preferences.theming.breakpoints,
     coverUrl,

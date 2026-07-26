@@ -1,15 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { ThemeKeyType } from "@/preferences";
+import { ThemeKeyType, ThemeTokens, ThThemeKeys } from "@/preferences";
 import { useSharedPreferences } from "@/preferences/hooks/useSharedPreferences";
 
 import settingsStyles from "../Settings/assets/styles/thorium-web.reader.settings.module.css";
 
 import CheckIcon from "./assets/icons/check.svg";
 
-import { ThActionsKeys, ThLayoutDirection } from "@/preferences/models";
+import { ThActionsKeys, ThLayoutDirection, ThSettingsContainerKeys } from "@/preferences/models";
 
 import { StatefulRadioGroup } from "./StatefulRadioGroup";
 import { Radio } from "react-aria-components";
@@ -20,7 +20,8 @@ import { useGridNavigation } from "@/components/Settings/hooks/useGridNavigation
 
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { setActionOpen } from "@/lib";
-import { setTheme } from "@/lib/themeReducer";
+import { setSettingsContainer } from "@/lib/readerReducer";
+import { setCustomTheme, setTheme } from "@/lib/themeReducer";
 
 import classNames from "classnames";
 import { buildThemeObject } from "@/preferences/helpers/buildThemeObject";
@@ -28,7 +29,7 @@ import { buildThemeObject } from "@/preferences/helpers/buildThemeObject";
 export const StatefulTheme = () => {
   const profile = useAppSelector(state => state.reader.profile);
   const { theming } = useSharedPreferences();
-  const { systemThemes, keys: themeKeys, audioOrder: audioThemeOrder, reflowOrder: reflowThemeOrder, fxlOrder: fxlThemeOrder } = theming.themes;
+  const { systemThemes, keys: preferenceThemeKeys, audioOrder: audioThemeOrder, reflowOrder: reflowThemeOrder, fxlOrder: fxlThemeOrder } = theming.themes;
   const { t } = useI18n();
 
   const radioGroupRef = useRef<HTMLDivElement | null>(null);
@@ -50,6 +51,11 @@ export const StatefulTheme = () => {
   const theme = profile === "audio" ? (themeObject.audio ?? "auto") : (isFXL ? (themeObject.fxl ?? "auto") : (themeObject.reflow ?? "auto"));
   const colorScheme = useAppSelector(state => state.theming.colorScheme);
   const coverTheme = useAppSelector(state => state.theming.coverTheme);
+  const storedCustomThemes = useAppSelector(state => state.theming.customThemes);
+  const themeKeys = useMemo(() => ({
+    ...preferenceThemeKeys,
+    ...storedCustomThemes
+  }), [preferenceThemeKeys, storedCustomThemes]);
 
   const themeItems = useRef<(ThemeKeyType | "auto")[]>(
     themeArray.filter((theme: ThemeKeyType | "auto") => {
@@ -62,6 +68,9 @@ export const StatefulTheme = () => {
   );
 
   const dispatch = useAppDispatch();
+  const openCustomTheme = useCallback(() => {
+    dispatch(setSettingsContainer(ThSettingsContainerKeys.customTheme));
+  }, [dispatch]);
 
   // Handling grid navigation through StatefulRadioGroup
   // would add a ton of complexity due to the extensive
@@ -71,7 +80,10 @@ export const StatefulTheme = () => {
     containerRef: radioGroupWrapperRef,
     items: themeItems,
     currentValue: theme,
-    onChange: async (val) => await updatePreference(val as ThemeKeyType),
+    onChange: async (val) => {
+      await updatePreference(val as ThemeKeyType);
+      if (val === ThThemeKeys.custom) openCustomTheme();
+    },
     isRTL,
     onEscape: () => {
       if (profile) {
@@ -155,7 +167,10 @@ export const StatefulTheme = () => {
       standalone={ true }
       label={ t("reader.preferences.themes.title") }
       value={ theme }
-      onChange={ async (val) => await updatePreference(val as ThemeKeyType) }
+      onChange={ async (val) => {
+        await updatePreference(val as ThemeKeyType);
+        if (val === ThThemeKeys.custom) openCustomTheme();
+      } }
       useGraphicalNavigation={ false }
     >
       <div
@@ -173,9 +188,16 @@ export const StatefulTheme = () => {
             key={ themeItem }
             style={ doStyles(themeItem) }
             onKeyDown={ onKeyDown }
+            onPress={
+              themeItem === ThThemeKeys.custom && theme === ThThemeKeys.custom
+                ? openCustomTheme
+                : undefined
+            }
           >
           <span>
-            { t(`reader.preferences.themes.${ themeItem }`, { defaultValue: themeItem }) }
+            { t(`reader.preferences.themes.${ themeItem }`, {
+              defaultValue: themeItem === ThThemeKeys.custom ? "Custom" : themeItem
+            }) }
             { themeItem === theme && <CheckIcon aria-hidden="true" focusable="false" /> }
           </span>
         </Radio>
@@ -185,3 +207,280 @@ export const StatefulTheme = () => {
     </>
   )
 }
+
+type EditableThemeToken = keyof Pick<
+  ThemeTokens,
+  "background" | "text" | "subdue" | "link" | "visited"
+>;
+
+interface SavedCustomTheme {
+  id: string;
+  tokens: ThemeTokens;
+  updatedAt: number;
+}
+
+const savedCustomThemesStorageKey = "thorium-web.saved-custom-themes.v1";
+const maxSavedCustomThemes = 12;
+const savedThemeTokenKeys: Array<keyof ThemeTokens> = [
+  "background",
+  "text",
+  "link",
+  "visited",
+  "subdue",
+  "disable",
+  "hover",
+  "onHover",
+  "select",
+  "onSelect",
+  "focus",
+  "elevate",
+  "immerse"
+];
+
+const isSavedCustomTheme = (value: unknown): value is SavedCustomTheme => {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Record<string, unknown>;
+  if (typeof candidate.id !== "string" || typeof candidate.updatedAt !== "number") return false;
+  if (!candidate.tokens || typeof candidate.tokens !== "object") return false;
+
+  const tokens = candidate.tokens as Record<string, unknown>;
+  return savedThemeTokenKeys.every(key => typeof tokens[key] === "string");
+};
+
+const readSavedCustomThemes = (): SavedCustomTheme[] => {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const serialized = window.localStorage.getItem(savedCustomThemesStorageKey);
+    if (!serialized) return [];
+    const parsed: unknown = JSON.parse(serialized);
+    return Array.isArray(parsed)
+      ? parsed.filter(isSavedCustomTheme).slice(0, maxSavedCustomThemes)
+      : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeSavedCustomThemes = (themes: SavedCustomTheme[]) => {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(savedCustomThemesStorageKey, JSON.stringify(themes));
+  } catch {
+    // The active theme still works if storage is unavailable.
+  }
+};
+
+const customThemeFingerprint = (theme: ThemeTokens) => [
+  theme.background,
+  theme.text,
+  theme.subdue,
+  theme.link,
+  theme.visited
+].join("|");
+
+const createSavedCustomThemeId = () =>
+  `${ Date.now().toString(36) }-${ Math.random().toString(36).slice(2, 9) }`;
+
+const customThemeFields: Array<{
+  key: EditableThemeToken;
+  label: string;
+}> = [
+  { key: "background", label: "Background" },
+  { key: "text", label: "Text" },
+  { key: "subdue", label: "Alternate text" },
+  { key: "link", label: "Links" },
+  { key: "visited", label: "Visited links" }
+];
+
+export const StatefulCustomTheme = () => {
+  const { theming } = useSharedPreferences();
+  const { systemThemes, keys: preferenceThemeKeys } = theming.themes;
+  const storedCustomThemes = useAppSelector(state => state.theming.customThemes);
+  const colorScheme = useAppSelector(state => state.theming.colorScheme);
+  const themeKeys = useMemo(() => ({
+    ...preferenceThemeKeys,
+    ...storedCustomThemes
+  }), [preferenceThemeKeys, storedCustomThemes]);
+  const theme = themeKeys[ThThemeKeys.custom];
+  const dispatch = useAppDispatch();
+  const { submitPreferences } = useEpubNavigator();
+  const [savedThemes, setSavedThemes] = useState<SavedCustomTheme[]>(readSavedCustomThemes);
+  const savedThemesRef = useRef(savedThemes);
+  const editingSavedThemeId = useRef<string | null>(null);
+
+  const commitSavedThemes = useCallback((nextThemes: SavedCustomTheme[]) => {
+    savedThemesRef.current = nextThemes;
+    setSavedThemes(nextThemes);
+    writeSavedCustomThemes(nextThemes);
+  }, []);
+
+  const saveThemeToHistory = useCallback((tokens: ThemeTokens) => {
+    const id = editingSavedThemeId.current ?? createSavedCustomThemeId();
+    editingSavedThemeId.current = id;
+    const fingerprint = customThemeFingerprint(tokens);
+    const nextThemes = [
+      { id, tokens, updatedAt: Date.now() },
+      ...savedThemesRef.current.filter(savedTheme =>
+        savedTheme.id !== id &&
+        customThemeFingerprint(savedTheme.tokens) !== fingerprint
+      )
+    ].slice(0, maxSavedCustomThemes);
+
+    commitSavedThemes(nextThemes);
+  }, [commitSavedThemes]);
+
+  const applyCustomTheme = useCallback(async (next: ThemeTokens) => {
+    dispatch(setCustomTheme({ key: ThThemeKeys.custom, tokens: next }));
+    await submitPreferences(buildThemeObject({
+      theme: ThThemeKeys.custom,
+      themeKeys: {
+        ...themeKeys,
+        [ThThemeKeys.custom]: next
+      },
+      systemThemes,
+      colorScheme
+    }));
+  }, [colorScheme, dispatch, submitPreferences, systemThemes, themeKeys]);
+
+  const updateCustomTheme = useCallback(async (
+    key: EditableThemeToken,
+    value: string
+  ) => {
+    if (!theme) return;
+
+    const next = {
+      ...theme,
+      [key]: value
+    };
+    saveThemeToHistory(next);
+    await applyCustomTheme(next);
+  }, [applyCustomTheme, saveThemeToHistory, theme]);
+
+  const selectSavedTheme = useCallback(async (savedTheme: SavedCustomTheme) => {
+    editingSavedThemeId.current = null;
+    await applyCustomTheme(savedTheme.tokens);
+  }, [applyCustomTheme]);
+
+  return theme
+    ? <CustomThemeEditor
+        theme={ theme }
+        savedThemes={ savedThemes }
+        onChange={ updateCustomTheme }
+        onSelectSavedTheme={ selectSavedTheme }
+      />
+    : null;
+};
+
+const CustomThemeEditor = ({
+  theme,
+  savedThemes,
+  onChange,
+  onSelectSavedTheme
+}: {
+  theme: ThemeTokens;
+  savedThemes: SavedCustomTheme[];
+  onChange: (key: EditableThemeToken, value: string) => void;
+  onSelectSavedTheme: (theme: SavedCustomTheme) => void;
+}) => {
+  const currentFingerprint = customThemeFingerprint(theme);
+
+  return (
+  <section className={ settingsStyles.customThemeEditor } aria-label="Custom palette">
+    <div
+      className={ settingsStyles.customThemePreview }
+      style={ {
+        background: theme.background,
+        color: theme.text,
+        borderColor: theme.subdue
+      } }
+    >
+      <strong>The quick brown fox</strong>
+      <span style={ { color: theme.subdue } }>Secondary text and reading details</span>
+      <span className={ settingsStyles.customThemePreviewLink } style={ { color: theme.link } }>
+        A link inside the publication
+      </span>
+    </div>
+    <div className={ settingsStyles.customThemeFields }>
+      { customThemeFields.map(({ key, label }) =>
+        <fieldset className={ settingsStyles.customThemeField } key={ key }>
+          <legend>{ label }</legend>
+          <span>
+            <input
+              type="color"
+              value={ theme[key] }
+              aria-label={ `${ label } color picker` }
+              onChange={ event => onChange(key, event.target.value) }
+            />
+            <input
+              key={ `${ key }-${ theme[key] }` }
+              type="text"
+              defaultValue={ theme[key] }
+              maxLength={ 7 }
+              pattern="^#[0-9a-fA-F]{6}$"
+              spellCheck={ false }
+              aria-label={ `${ label } hex color` }
+              onBlur={ event => {
+                if (/^#[0-9a-f]{6}$/i.test(event.target.value)) {
+                  onChange(key, event.target.value.toLowerCase());
+                } else {
+                  event.target.value = theme[key];
+                }
+              } }
+            />
+          </span>
+        </fieldset>
+      ) }
+    </div>
+    { savedThemes.length > 0 &&
+      <section className={ settingsStyles.savedCustomThemes } aria-labelledby="saved-custom-themes-heading">
+        <h3 id="saved-custom-themes-heading">Saved themes</h3>
+        <div className={ settingsStyles.savedCustomThemeGrid }>
+          { savedThemes.map((savedTheme, index) => {
+            const isSelected = customThemeFingerprint(savedTheme.tokens) === currentFingerprint;
+            return (
+              <button
+                type="button"
+                className={ settingsStyles.savedCustomTheme }
+                key={ savedTheme.id }
+                data-selected={ isSelected }
+                aria-pressed={ isSelected }
+                aria-label={ `Apply saved theme ${ index + 1 }` }
+                onClick={ () => onSelectSavedTheme(savedTheme) }
+              >
+                <span
+                  className={ settingsStyles.savedCustomThemeSample }
+                  style={ {
+                    background: savedTheme.tokens.background,
+                    color: savedTheme.tokens.text,
+                    borderColor: savedTheme.tokens.subdue
+                  } }
+                >
+                  <strong>Aa</strong>
+                  <span style={ { color: savedTheme.tokens.link } }>●</span>
+                </span>
+                <span className={ settingsStyles.savedCustomThemeSwatches } aria-hidden="true">
+                  { [
+                    { key: "background", color: savedTheme.tokens.background },
+                    { key: "text", color: savedTheme.tokens.text },
+                    { key: "subdue", color: savedTheme.tokens.subdue },
+                    { key: "link", color: savedTheme.tokens.link },
+                    { key: "visited", color: savedTheme.tokens.visited }
+                  ].map(swatch =>
+                    <span key={ swatch.key } style={ { background: swatch.color } } />
+                  ) }
+                </span>
+                <span className={ settingsStyles.savedCustomThemeLabel }>
+                  Saved theme { index + 1 }
+                  { isSelected && <CheckIcon aria-hidden="true" focusable="false" /> }
+                </span>
+              </button>
+            );
+          }) }
+        </div>
+      </section>
+    }
+  </section>
+  );
+};
