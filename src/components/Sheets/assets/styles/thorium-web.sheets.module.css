@@ -1,13 +1,14 @@
 /* React Aria modal provides a visual viewport for mobile + keyboard: --visual-viewport-height 
    which should explain why it’s being used here while not mentioned anywhere else in the codebase */
 
+/* Above comic overlay chrome (z-index 12–14) and immersive hit targets (1000). */
 .fullscreen {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 10;
+  z-index: 100000;
   overflow-y: auto;
   scroll-padding-top: calc(var(--th-sheet-sticky-header, 80px) + var(--th-layout-spacing));
   scroll-padding-bottom: var(--th-layout-spacing);
@@ -23,7 +24,7 @@
 .modal {
   position: fixed;
   inset: 0;
-  z-index: 10;
+  z-index: 100000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -49,6 +50,7 @@
 }
 
 .popover {
+  z-index: 100000;
   overflow-y: auto;
   scroll-padding-top: calc(var(--th-sheet-sticky-header, 80px) + var(--th-layout-spacing));
   scroll-padding-bottom: var(--th-layout-spacing);
@@ -66,6 +68,7 @@
 }
 
 .compactPopover {
+  z-index: 100000;
   overflow-y: auto;
   scroll-padding-top: var(--th-layout-spacing);
   scroll-padding-bottom: var(--th-layout-spacing);
@@ -84,6 +87,7 @@
 
 /* React Modal Sheet handles scroll + sticky header so no need for scroll-padding here */
 .draggable {
+  z-index: 100000 !important;
   box-sizing: border-box;
   max-width: var(--th-layout-constraints-bottomSheet, 600px);
   left: max(calc((100% - var(--th-layout-constraints-bottomSheet, 600px)) / 2), 0px) !important;

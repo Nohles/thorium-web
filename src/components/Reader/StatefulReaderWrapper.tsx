@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect, useMemo } from "react";
+import { lazy, Suspense, useState, useEffect, useMemo, type ReactNode } from "react";
 
 import { Publication, Locator } from "@readium/shared";
 import { getScriptMode } from "@readium/navigator";
@@ -33,7 +33,11 @@ import { ThAudioPreferences } from "@/preferences/audioPreferences";
 import { ThPreferencesAdapter } from "@/preferences/adapters/ThPreferencesAdapter";
 import { ThAudioPreferencesAdapter } from "@/preferences/adapters/ThAudioPreferencesAdapter";
 import { InitOptions } from "i18next";
-import { ReaderNavigationProvider, type ReaderNavigation } from "./ReaderNavigationContext";
+import {
+  ReaderNavigationProvider,
+  type ReaderNavigation,
+  type ReaderSourceSelection,
+} from "./ReaderNavigationContext";
 
 const StatefulEpubReader = lazy(() => import("@/components/Epub").then(mod => ({ default: mod.StatefulReader })));
 const StatefulWebPubReader = lazy(() => import("@/components/WebPub").then(mod => ({ default: mod.ExperimentalWebPubStatefulReader })));
@@ -77,6 +81,10 @@ export interface ReaderComponentProps<
   plugins?: ReaderPlugins;
   i18n?: Partial<InitOptions>;
   navigation?: ReaderNavigation;
+  /** Multi-source selector rendered in the reader header. */
+  sources?: ReaderSourceSelection;
+  /** Application-owned controls rendered in the reader header. */
+  headerActions?: ReactNode;
   preferences?: P extends "audio"
     ? { initialPreferences?: ThAudioPreferences<K>; adapter?: ThAudioPreferencesAdapter<K> }
     : P extends "epub" | "webPub" | "comic"
@@ -86,8 +94,16 @@ export interface ReaderComponentProps<
 
 // ─── Outer wrapper — selects provider based on profile ────────────────────────
 
-export const StatefulReaderWrapper = ({ profile, plugins, isLoading, preferences, navigation, i18n: i18nOptions, coverUrl: readerCoverUrl, ...props }: ReaderComponentProps<any, any>) => {
+export const StatefulReaderWrapper = ({ profile, plugins, isLoading, preferences, navigation, sources, headerActions, i18n: i18nOptions, coverUrl: readerCoverUrl, ...props }: ReaderComponentProps<any, any>) => {
   const [resolvedPlugins, setResolvedPlugins] = useState<ThPlugin[] | undefined>(undefined);
+  const navigationContext = useMemo(
+    () => ({
+      ...navigation,
+      sources: sources ?? navigation?.sources,
+      headerActions: headerActions ?? navigation?.headerActions,
+    }),
+    [headerActions, navigation, sources],
+  );
 
   const pendingFactory = profile === "epub" ? plugins?.epub
     : profile === "webPub" ? plugins?.webPub
@@ -112,7 +128,7 @@ export const StatefulReaderWrapper = ({ profile, plugins, isLoading, preferences
 
   if (profile === "audio") {
     return (
-      <ReaderNavigationProvider value={ navigation ?? {} }>
+      <ReaderNavigationProvider value={ navigationContext }>
         <ThAudioPreferencesProvider
           devMode={ process.env.NODE_ENV !== "production" }
           initialPreferences={ preferences?.initialPreferences as ThAudioPreferences<any> | undefined }
@@ -127,7 +143,7 @@ export const StatefulReaderWrapper = ({ profile, plugins, isLoading, preferences
   }
 
   return (
-    <ReaderNavigationProvider value={ navigation ?? {} }>
+    <ReaderNavigationProvider value={ navigationContext }>
       <ThPreferencesProvider
         devMode={ process.env.NODE_ENV !== "production" }
         initialPreferences={ preferences?.initialPreferences as ThPreferences<any> | undefined }

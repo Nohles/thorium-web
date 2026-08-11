@@ -723,7 +723,17 @@ const pageCellStyleHorizontal: CSSProperties = {
 export type ComicBoundaryPageData = {
   currentTitle?: string;
   adjacentTitle?: string;
-  onNavigate: () => void;
+  /** Navigate to the adjacent chapter. Omit on the last-chapter exit page. */
+  onNavigate?: () => void;
+  /** Media item page href shown when there is no next chapter. */
+  mediaHref?: string;
+  /** App home href shown when there is no next chapter. */
+  homeHref?: string;
+  /** Optional continue action when another source has later chapters. */
+  continueElsewhere?: {
+    label: string;
+    onContinue: () => void;
+  };
 };
 
 export type ComicBoundaryPageKind = "prev" | "next";
@@ -733,17 +743,37 @@ export type ComicBoundaryScrollControls = {
   scrollToBoundary: (kind: ComicBoundaryPageKind) => boolean;
 };
 
+const boundaryActionStyle: CSSProperties = {
+  display: "block",
+  width: "100%",
+  boxSizing: "border-box",
+  padding: "12px 18px",
+  borderRadius: 8,
+  border: "1px solid rgba(255,255,255,0.2)",
+  background: "rgba(30,30,30,0.92)",
+  color: "var(--th-theme-text, #fff)",
+  fontSize: 16,
+  fontWeight: 600,
+  cursor: "pointer",
+  textAlign: "center",
+  textDecoration: "none",
+};
+
 const ComicChapterBoundaryPage = ({
   kind,
   currentTitle,
   adjacentTitle,
   onNavigate,
+  mediaHref,
+  homeHref,
+  continueElsewhere,
   isHorizontal,
 }: ComicBoundaryPageData & {
   kind: ComicBoundaryPageKind;
   isHorizontal: boolean;
 }) => {
   const { t } = useI18n();
+  const isExitPage = !onNavigate && (!!mediaHref || !!homeHref || !!continueElsewhere);
   const actionLabel =
     kind === "next"
       ? t("reader.comic.chapterBoundaries.nextChapter")
@@ -769,24 +799,64 @@ const ComicChapterBoundaryPage = ({
           {currentTitle ? <span style={{ fontSize: 22, fontWeight: 700 }}>{currentTitle}</span> : null}
         </section>
         <section style={{ display: "grid", gap: 12 }}>
-          {adjacentTitle ? <span style={{ fontSize: 22, fontWeight: 700 }}>{adjacentTitle}</span> : null}
-          <button
-            type="button"
-            onPointerUp={(event) => event.stopPropagation()}
-            onClick={onNavigate}
-            style={{
-              padding: "12px 18px",
-              borderRadius: 8,
-              border: "1px solid rgba(255,255,255,0.2)",
-              background: "rgba(30,30,30,0.92)",
-              color: "var(--th-theme-text, #fff)",
-              fontSize: 16,
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            {actionLabel}
-          </button>
+          {isExitPage ? (
+            <>
+              {continueElsewhere ? (
+                <button
+                  type="button"
+                  onPointerUp={(event) => event.stopPropagation()}
+                  onClick={continueElsewhere.onContinue}
+                  style={boundaryActionStyle}
+                >
+                  {continueElsewhere.label}
+                </button>
+              ) : null}
+              {mediaHref ? (
+                <a
+                  href={mediaHref}
+                  onPointerUp={(event) => event.stopPropagation()}
+                  style={
+                    continueElsewhere
+                      ? {
+                          ...boundaryActionStyle,
+                          background: "transparent",
+                          borderColor: "rgba(255,255,255,0.35)",
+                        }
+                      : boundaryActionStyle
+                  }
+                >
+                  {t("reader.comic.chapterBoundaries.returnToMediaPage")}
+                </a>
+              ) : null}
+              {homeHref ? (
+                <a
+                  href={homeHref}
+                  onPointerUp={(event) => event.stopPropagation()}
+                  style={{
+                    ...boundaryActionStyle,
+                    background: "transparent",
+                    borderColor: "rgba(255,255,255,0.35)",
+                  }}
+                >
+                  {t("reader.comic.chapterBoundaries.returnHome")}
+                </a>
+              ) : null}
+            </>
+          ) : (
+            <>
+              {adjacentTitle ? <span style={{ fontSize: 22, fontWeight: 700 }}>{adjacentTitle}</span> : null}
+              {onNavigate ? (
+                <button
+                  type="button"
+                  onPointerUp={(event) => event.stopPropagation()}
+                  onClick={onNavigate}
+                  style={boundaryActionStyle}
+                >
+                  {actionLabel}
+                </button>
+              ) : null}
+            </>
+          )}
         </section>
       </div>
     </div>

@@ -67,6 +67,7 @@ export const useEpubReaderInit = ({
   onCleanup,
 }: UseEpubReaderInitProps) => {
   const [navigatorReady, setNavigatorReady] = useState(false);
+  const [navigatorError, setNavigatorError] = useState<unknown>(null);
 
   const { epubPreferences, epubDefaults } = useEpubPreferencesConfig({
     isFXL,
@@ -123,15 +124,14 @@ export const useEpubReaderInit = ({
     };
 
     isNavigatorLoadedEpub.current = true;
-    
-    // Call onNavigatorReady outside of navigator load
-    onNavigatorReady?.();
-    
-    // Pass onNavigatorLoaded as the callback to EpubNavigatorLoad
+
     EpubNavigatorLoad(config, () => {
-      // Set navigatorReady to true only after navigator actually loads
       setNavigatorReady(true);
+      onNavigatorReady?.();
       onNavigatorLoaded?.();
+    }, (error: unknown) => {
+      console.error("Failed to initialize EPUB navigator:", error);
+      setNavigatorError(error);
     });
 
     return () => {
@@ -157,6 +157,7 @@ export const useEpubReaderInit = ({
 
   return {
     navigatorReady,
+    navigatorError,
     isFXL,
   };
 };

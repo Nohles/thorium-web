@@ -43,10 +43,51 @@
 }
 
 .actionsWrapper {
-  grid-area: header-end;
   min-width: 0;
+  flex: 0 1 auto;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 2px;
+}
+
+.headerActionsArea {
+  grid-area: header-end;
+  justify-self: end;
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.headerActions {
+  min-width: 0;
+  max-width: clamp(7rem, 24vw, 14rem);
+  flex: 0 1 auto;
+  overflow: hidden;
+}
+
+.headerActions > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (min-width: 100rem) {
+  .actionsWrapper {
+    /* Keep the three primary reader actions visible on large displays. */
+    min-width: calc(var(--th-icon-size, 24px) * 4.5 + 4px);
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 40rem) {
+  .header {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .headerActions {
+    max-width: min(34vw, 9.5rem);
+  }
 }

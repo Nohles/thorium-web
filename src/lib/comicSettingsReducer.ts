@@ -76,7 +76,7 @@ export interface ComicSettings {
 
 export const defaultComicSettings: ComicSettings = {
   readingMode: ComicReadingMode.default,
-  pageGapPx: 5,
+  pageGapPx: 0,
   direction: ComicReadingDirection.ltr,
   tapZones: ComicTapZones.default,
   scaleType: ComicScaleType.originalSize,

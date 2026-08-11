@@ -18,6 +18,8 @@ import { StatefulCollapsibleActionsBar } from "./Actions/StatefulCollapsibleActi
 
 import { useReaderHeaderBase } from "./hooks/useReaderHeaderBase";
 import { usePreferences } from "@/preferences/hooks";
+import { useReaderNavigation } from "./Reader/ReaderNavigationContext";
+import { StatefulReaderSourceSelector } from "./StatefulReaderSourceSelector";
 
 import classNames from "classnames";
 
@@ -38,6 +40,7 @@ export const StatefulReaderHeader = ({
   } = useReaderHeaderBase(actionKeys);
 
   const { preferences } = usePreferences();
+  const { headerActions, sources } = useReaderNavigation();
 
   return (
     <>
@@ -60,18 +63,26 @@ export const StatefulReaderHeader = ({
 
         <StatefulReaderRunningHead formatPref={ runningHeadFormatPref } />
 
-        <StatefulCollapsibleActionsBar
-          id="reader-header-overflowMenu"
-          items={ listActionItems() }
-          prefs={{ ...preferences.actions, displayOrder: actionsOrder }}
-          className={ readerHeaderStyles.actionsWrapper }
-          aria-label={ t("reader.app.header.actions") }
-          overflowMenuClassName={
-            (!isScroll || preferences.affordances.scroll.hintInImmersive)
-              ? overflowMenuStyles.hint
-              : undefined
-          }
-        />
+        <div className={ readerHeaderStyles.headerActionsArea }>
+          { sources ? <StatefulReaderSourceSelector { ...sources } /> : null }
+          { headerActions ? (
+            <div className={ readerHeaderStyles.headerActions }>
+              { headerActions }
+            </div>
+          ) : null }
+          <StatefulCollapsibleActionsBar
+            id="reader-header-overflowMenu"
+            items={ listActionItems() }
+            prefs={{ ...preferences.actions, displayOrder: actionsOrder }}
+            className={ readerHeaderStyles.actionsWrapper }
+            aria-label={ t("reader.app.header.actions") }
+            overflowMenuClassName={
+              (!isScroll || preferences.affordances.scroll.hintInImmersive)
+                ? overflowMenuStyles.hint
+                : undefined
+            }
+          />
+        </div>
       </ThHeader>
     </>
   );

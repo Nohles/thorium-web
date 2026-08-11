@@ -17,7 +17,7 @@ The reader stores settings per `activeKey`, using `localDataKey` when available 
 | Setting | Default |
 | --- | --- |
 | `readingMode` | `default` |
-| `pageGapPx` | `5` |
+| `pageGapPx` | `0` |
 | `direction` | `ltr` |
 | `tapZones` | `default` |
 | `scaleType` | `originalSize` |
@@ -227,7 +227,7 @@ When enabled, an image can stretch to the page frame width if its natural width 
 
 ## Page Gap
 
-`pageGapPx` controls the CSS gap between pages or spread cells. The default settings control exposes a slider from 0 to 80 px, step 1. The viewport also applies 8 px padding around the page area.
+`pageGapPx` controls the CSS gap between pages or spread cells. Outside single-page mode, the default settings control exposes a slider from 0 to 80 px, step 1. The viewport also applies 8 px padding around the page area.
 
 ## Reading Direction
 
@@ -311,7 +311,7 @@ On image load failure, the reader renders an alert with a retry button.
 | --- | --- | --- | --- | --- |
 | Theme | Shared reader theme preference | Shared preference default | Yes | Applies reader theme CSS variables used by comic viewport and chrome |
 | `readingMode` | `default`, `singlePage`, `doublePage`, `continuousVertical`, `continuousHorizontal`, `webtoon` | `default` | Yes | Controls layout and navigation step |
-| `pageGapPx` | 0-80 in UI | `5` | Yes | Controls CSS gap between rendered page cells |
+| `pageGapPx` | 0-80 in UI | `0` | Yes | Controls CSS gap between rendered page cells; hidden in single-page mode |
 | `direction` | `ltr`, `rtl` | `ltr` | Yes | Swaps next/previous side behavior and double-page ordering |
 | `tapZones` | `default`, `edge`, `kindle`, `lShape`, `rightAndLeft`, `disabled` | `default` | Yes | Controls tap navigation/toggle regions |
 | `scaleType` | `fitWidth`, `fitHeight`, `fitScreen`, `originalSize` | `originalSize` | Yes | Controls image sizing styles |

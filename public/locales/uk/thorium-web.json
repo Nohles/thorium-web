@@ -1,1 +1,16 @@
-{}
+{
+  "reader": {
+    "comic": {
+      "chapterBoundaries": {
+        "label": "Навігація за розділами маніфесту (зміст)",
+        "nextChapter": "Наступний розділ",
+        "previousChapter": "Попередній розділ",
+        "finished": "Завершено:",
+        "next": "Наступний:",
+        "previous": "Попередній:",
+        "returnToMediaPage": "Return to media page",
+        "returnHome": "Return home"
+      }
+    }
+  }
+}

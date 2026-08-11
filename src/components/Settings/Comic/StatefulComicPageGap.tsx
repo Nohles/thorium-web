@@ -3,7 +3,10 @@
 import { useMemo } from "react";
 import { useI18n } from "@/i18n/useI18n";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
-import { updateComicSettings } from "@/lib/comicSettingsReducer";
+import {
+  ComicReadingMode,
+  updateComicSettings,
+} from "@/lib/comicSettingsReducer";
 import { StatefulSlider } from "../StatefulSlider";
 
 export const StatefulComicPageGap = () => {
@@ -14,16 +17,24 @@ export const StatefulComicPageGap = () => {
     activeKey ? s.comicSettings.byKey[activeKey] : undefined
   );
 
-  const value = settings?.pageGapPx ?? 5;
+  const value = settings?.pageGapPx ?? 0;
 
   const range = useMemo<[number, number]>(() => [0, 80], []);
+
+  if (
+    !settings ||
+    settings.readingMode === ComicReadingMode.default ||
+    settings.readingMode === ComicReadingMode.singlePage
+  ) {
+    return null;
+  }
 
   return (
     <StatefulSlider
       standalone={true}
       label={`${t("reader.comic.pageGap.label")} (px)`}
       value={value}
-      defaultValue={5}
+      defaultValue={0}
       range={range}
       step={1}
       onChange={(v) => {
@@ -33,4 +44,3 @@ export const StatefulComicPageGap = () => {
     />
   );
 };
-

@@ -501,7 +501,7 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
   const initialPosition = useMemo(() => getLocalData(), [getLocalData]);
 
   // Initialize reader using the new composite hook
-  const { navigatorReady } = useEpubReaderInit({
+  const { navigatorReady, navigatorError } = useEpubReaderInit({
     container,
     publication,
     positionsList,
@@ -528,6 +528,10 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
       dispatch(setLoading(false));
     }
   });
+
+  useEffect(() => {
+    if (navigatorError) dispatch(setLoading(false));
+  }, [dispatch, navigatorError]);
 
   const applyConstraint = useCallback(async (value: number) => {
     await submitPreferences({

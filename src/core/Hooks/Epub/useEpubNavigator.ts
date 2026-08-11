@@ -27,6 +27,30 @@ type cbb = (ok: boolean) => void;
 let navigatorInstance: EpubNavigator | null = null;
 let navigatorDestroyPromise: Promise<void> = Promise.resolve();
 let navigatorGeneration = 0;
+const NAVIGATOR_DESTROY_TIMEOUT_MS = 1_000;
+
+const destroyNavigator = async (instance: EpubNavigator): Promise<void> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<void>((resolve) => {
+    timeoutId = setTimeout(() => {
+      console.warn(
+        `Epub navigator teardown exceeded ${ NAVIGATOR_DESTROY_TIMEOUT_MS }ms; continuing with the next publication.`,
+      );
+      resolve();
+    }, NAVIGATOR_DESTROY_TIMEOUT_MS);
+  });
+
+  try {
+    await Promise.race([
+      instance.destroy().catch((error: unknown) => {
+        console.error("Failed to destroy EPUB navigator:", error);
+      }),
+      timeout,
+    ]);
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+  }
+};
 
 export interface EpubNavigatorLoadProps {
   container: HTMLDivElement | null;
@@ -45,6 +69,7 @@ export const useEpubNavigator = () => {
   const container = useRef<HTMLDivElement | null>(null);
   const containerParent = useRef<HTMLElement | null>(null);
   const publication = useRef<Publication | null>(null);
+  const ownedInstance = useRef<EpubNavigator | null>(null);
 
   const submitPreferences = useCallback(async (preferences: IEpubPreferences) => {
     await navigatorInstance?.submitPreferences(new EpubPreferences(preferences));
@@ -54,7 +79,11 @@ export const useEpubNavigator = () => {
     return navigatorInstance?.settings[settingKey] as EpubSettings[K];
   }, []);
 
-  const EpubNavigatorLoad = useCallback((config: EpubNavigatorLoadProps, cb: () => void) => {
+  const EpubNavigatorLoad = useCallback((
+    config: EpubNavigatorLoadProps,
+    onLoaded: () => void,
+    onError?: (error: unknown) => void,
+  ) => {
     const generation = ++navigatorGeneration;
 
     void navigatorDestroyPromise.then(async () => {
@@ -79,23 +108,32 @@ export const useEpubNavigator = () => {
           keyboardPeripherals: config.keyboardPeripherals || [],
         }
       );
+      ownedInstance.current = instance;
       navigatorInstance = instance;
 
-      await instance.load();
-      if (navigatorInstance === instance && generation === navigatorGeneration) {
-        cb();
+      try {
+        await instance.load();
+        if (navigatorInstance === instance && generation === navigatorGeneration) {
+          onLoaded();
+        }
+      } catch (error: unknown) {
+        if (navigatorInstance === instance) navigatorInstance = null;
+        if (ownedInstance.current === instance) ownedInstance.current = null;
+        navigatorDestroyPromise = destroyNavigator(instance);
+        onError?.(error);
       }
     });
   }, []);
 
   const EpubNavigatorDestroy = useCallback((cb: () => void) => {
     navigatorGeneration += 1;
-    const instance = navigatorInstance;
-    navigatorInstance = null;
+    const instance = ownedInstance.current;
+    ownedInstance.current = null;
+    if (navigatorInstance === instance) navigatorInstance = null;
     cb();
 
     if (instance) {
-      navigatorDestroyPromise = instance.destroy();
+      navigatorDestroyPromise = destroyNavigator(instance);
     }
   }, []);
 

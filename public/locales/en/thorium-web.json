@@ -27,7 +27,12 @@
         },
         "label": "Top bar",
         "runningHead": "Running head",
-        "actions": "Actions"
+        "actions": "Actions",
+        "sources": {
+          "label": "Comic source",
+          "available": "Available sources",
+          "loading": "Opening source"
+        }
       },
       "footer": {
         "label": "Bottom bar"
@@ -120,7 +125,9 @@
         "previousChapter": "Previous chapter",
         "finished": "Finished:",
         "next": "Next:",
-        "previous": "Previous:"
+        "previous": "Previous:",
+        "returnToMediaPage": "Return to media page",
+        "returnHome": "Return home"
       },
       "imageLoad": {
         "failed": "Failed to load image.",

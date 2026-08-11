@@ -13,6 +13,7 @@ import { StatefulDockingWrapper } from "../Docking/StatefulDockingWrapper";
 import { StatefulReaderHeader } from "../StatefulReaderHeader";
 import { StatefulReaderFooter } from "../StatefulReaderFooter";
 import { getReaderClassNames } from "../Helpers/getReaderClassNames";
+import { ThDockingKeys, ThLayoutUI, ThProgressionFormat } from "@/preferences/models";
 
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import {
@@ -63,10 +64,10 @@ import {
 } from "./lib/comicArchiveSeries";
 
 import { usePreferences } from "@/preferences/hooks/usePreferences";
-import { ThLayoutUI, ThProgressionFormat } from "@/preferences/models";
 import { useI18n } from "@/i18n/useI18n";
 import { usePositionStorage } from "@/hooks/usePositionStorage";
 import { buildTocTree } from "@/helpers/buildTocTree";
+import { useReaderNavigation } from "../Reader/ReaderNavigationContext";
 
 const getReadingOrderImages = (publication: Publication): ComicPage[] => {
   const items = publication.readingOrder?.items ?? [];
@@ -223,6 +224,7 @@ const findArchivePageInPages = (
 const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }: StatefulReaderProps) => {
   const { preferences } = usePreferences();
   const { t } = useI18n();
+  const { publicationHref, homeHref, continueElsewhere } = useReaderNavigation();
   const dispatch = useAppDispatch();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const boundaryScrollControlsRef = useRef<ComicBoundaryScrollControls | null>(null);
@@ -241,7 +243,32 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   const isImmersive = useAppSelector((s) => s.reader.isImmersive);
   const isHovering = useAppSelector((s) => s.reader.isHovering);
   const breakpoint = useAppSelector((s) => s.theming.breakpoint);
+  const profile = useAppSelector((s) => s.reader.profile);
+  const actionsMap = useAppSelector((s) => (profile ? s.actions.keys[profile] : undefined));
   const merged = useMemo(() => normalizeComicSettings(settings as LegacyComicSettings), [settings]);
+
+  /** Transient sheets (TOC popover/modal/etc.) sit over the viewport; docked panels do not. */
+  const hasTransientActionOpen = useMemo(
+    () =>
+      Object.values(actionsMap ?? {}).some((value) => {
+        if (!value?.isOpen) return false;
+        return value.docking === ThDockingKeys.transient || value.docking == null;
+      }),
+    [actionsMap]
+  );
+  const hadTransientActionOpenRef = useRef(false);
+  const suppressTapsUntilRef = useRef(0);
+  useEffect(() => {
+    if (hasTransientActionOpen) {
+      hadTransientActionOpenRef.current = true;
+      return;
+    }
+    if (hadTransientActionOpenRef.current) {
+      hadTransientActionOpenRef.current = false;
+      // Absorb ghost clicks that land on the page after a sheet unmounts mid-gesture.
+      suppressTapsUntilRef.current = performance.now() + 400;
+    }
+  }, [hasTransientActionOpen]);
 
   const layoutUI = preferences.theming.layout.ui?.fxl ?? ThLayoutUI.layered;
 
@@ -409,6 +436,9 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     () => (isArchiveSeries ? buildSeriesSegments(archiveChapters, allPages) : buildComicChapterSegments(publication, allPages)),
     [archiveChapters, allPages, isArchiveSeries, publication]
   );
+  const chapterTocActive =
+    merged.comicChapterBoundaries &&
+    (isArchiveSeries ? archiveChapters.length > 0 : hasMultiChapterStructure(chapterSegments));
   const chapterModeActive =
     merged.comicChapterBoundaries &&
     (isArchiveSeries ? archiveChapters.length >= 2 : hasMultiChapterStructure(chapterSegments));
@@ -578,44 +608,67 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   const currentChapterTitle = activeSegment?.title;
 
   const scrollBoundaryPages = useMemo(
-    () => ({
-      previous:
-        isScrollMode &&
-        chapterModeActive &&
-        activeSegment &&
-        hasPrevChapter &&
-        isAtFirstNavigablePositionInSegment(cursorIndex, activeSegment, step)
-          ? {
-              currentTitle: currentChapterTitle,
-              adjacentTitle: prevChapterTitle,
-              onNavigate: goPrevChapter,
-            }
-          : undefined,
-      next:
+    () => {
+      const atLastInSegment =
+        !!activeSegment && isAtLastNavigablePositionInSegment(cursorIndex, activeSegment, step);
+      const showNextChapter =
         isScrollMode &&
         chapterModeActive &&
         activeSegment &&
         hasNextChapter &&
-        isAtLastNavigablePositionInSegment(cursorIndex, activeSegment, step)
+        atLastInSegment;
+      const showEndOfReadable =
+        isScrollMode &&
+        chapterModeActive &&
+        activeSegment &&
+        !hasNextChapter &&
+        atLastInSegment &&
+        (!!publicationHref || !!homeHref || !!continueElsewhere);
+
+      return {
+        previous:
+          isScrollMode &&
+          chapterModeActive &&
+          activeSegment &&
+          hasPrevChapter &&
+          isAtFirstNavigablePositionInSegment(cursorIndex, activeSegment, step)
+            ? {
+                currentTitle: currentChapterTitle,
+                adjacentTitle: prevChapterTitle,
+                onNavigate: goPrevChapter,
+              }
+            : undefined,
+        next: showNextChapter
           ? {
               currentTitle: currentChapterTitle,
               adjacentTitle: nextChapterTitle,
               onNavigate: goNextChapter,
             }
-          : undefined,
-    }),
+          : showEndOfReadable
+            ? {
+                currentTitle: currentChapterTitle,
+                mediaHref: publicationHref,
+                homeHref,
+                continueElsewhere,
+              }
+            : undefined,
+      };
+    },
     [
       activeSegment,
       chapterModeActive,
+      continueElsewhere,
       currentChapterTitle,
       cursorIndex,
       hasNextChapter,
       hasPrevChapter,
+      homeHref,
       isScrollMode,
       goNextChapter,
       goPrevChapter,
       nextChapterTitle,
       prevChapterTitle,
+      publicationHref,
       step,
     ]
   );
@@ -660,8 +713,8 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     if (!hasMultiChapterStructure(chapterSegments)) return [];
     return buildComicChapterTocTree(chapterSegments, allPages);
   }, [archiveChapters, chapterSegments, allPages, isArchiveSeries]);
-  const tocTree = chapterModeActive ? chapterTocTree : pageTocTree;
-  const tocHighlightIndex = chapterModeActive
+  const tocTree = chapterTocActive ? chapterTocTree : pageTocTree;
+  const tocHighlightIndex = chapterTocActive
     ? isArchiveSeries
       ? allPages[cursorIndex]?.archive?.chapterIndex
       : getSegmentIndex(chapterSegments, cursorIndex)
@@ -748,7 +801,9 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
       return;
     }
     if (activeBoundaryPage === "next") {
-      goNextFromBoundary();
+      if (scrollBoundaryPages.next?.onNavigate) {
+        goNextFromBoundary();
+      }
       return;
     }
     if (scrollBoundaryPages.next) {
@@ -851,6 +906,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
 
   const onTap = useCallback(
     (event: React.PointerEvent) => {
+      if (hasTransientActionOpen || performance.now() < suppressTapsUntilRef.current) return;
       const rect = containerRef.current?.getBoundingClientRect();
       if (!rect) return;
       const x = (event.clientX - rect.left) / rect.width;
@@ -866,13 +922,16 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
       direction,
       handleNext,
       handlePrev,
+      hasTransientActionOpen,
       merged.overlayMode,
       merged.tapZones,
       toggleMenu,
     ]
   );
 
-  const showOverlay = merged.overlayMode === "pinned" || !isImmersive;
+  // Hide edge nav while a sheet overlays the page so it can't steal TOC clicks.
+  const showOverlay =
+    (merged.overlayMode === "pinned" || !isImmersive) && !hasTransientActionOpen;
   const progressItems = useMemo(
     () =>
       buildComicProgressItems({
