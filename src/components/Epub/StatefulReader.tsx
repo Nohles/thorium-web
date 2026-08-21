@@ -93,6 +93,12 @@ import { NavPeripheralType, fromActionPeripheralType, fromDockingPeripheralType 
 import { getPlatformModifier } from "@/core/Helpers/keyboardUtilities";
 import { getReaderClassNames } from "../Helpers/getReaderClassNames";
 import { resolveContentProtectionConfig } from "@/preferences/models/protection";
+import {
+  activateDictionaryDecoration,
+  applyDictionaryDecorations,
+  selectionFromReadium,
+  type DictionaryReaderCallbacks,
+} from "../Reader/DictionaryReaderAdapter";
 
 // We need to register plugins before hooks run
 // otherwise we can’t access the values of spacing presets
@@ -103,7 +109,8 @@ export const StatefulReader = ({
   localDataKey,
   plugins,
   positionStorage,
-  containerRefSetter
+  containerRefSetter,
+  dictionary,
 }: StatefulReaderProps) => {
   const [pluginsRegistered, setPluginsRegistered] = useState(false);
 
@@ -125,13 +132,16 @@ export const StatefulReader = ({
   return (
     <>
       <ThPluginProvider>
-        <StatefulReaderInner publication={ publication } localDataKey={ localDataKey } positionStorage={ positionStorage } containerRefSetter={ containerRefSetter } />
+        <StatefulReaderInner publication={ publication } localDataKey={ localDataKey } positionStorage={ positionStorage } containerRefSetter={ containerRefSetter } dictionary={ dictionary } />
       </ThPluginProvider>
     </>
   );
 };
 
-const StatefulReaderInner = ({ publication, localDataKey, positionStorage, containerRefSetter }: { publication: Publication; localDataKey: string | null; positionStorage?: PositionStorage; containerRefSetter?: (el: Element | null) => void }) => {
+const StatefulReaderInner = ({ publication, localDataKey, positionStorage, containerRefSetter, dictionary }: { publication: Publication; localDataKey: string | null; positionStorage?: PositionStorage; containerRefSetter?: (el: Element | null) => void; dictionary?: DictionaryReaderCallbacks }) => {
+  const dictionaryRef = useRef(dictionary);
+  dictionaryRef.current = dictionary;
+
   const { fxlActionKeys, fxlThemeKeys, reflowActionKeys, reflowThemeKeys } = useFilteredPreferenceKeys();
   const { preferences, getFontMetadata, getFontInjectables } = usePreferences();
   const { direction: uiDirection } = useLocale();
@@ -172,8 +182,10 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
   const isScroll = useIsScroll();
   const textNormalization = useAppSelector(state => state.settings.textNormalization);
   const wordSpacing = getEffectiveSpacingValue(ThSpacingSettingsKeys.wordSpacing);
-  const themeObject = useAppSelector(state => state.theming.theme);
-  const theme = isFXL ? themeObject.fxl : themeObject.reflow;
+  const themeObject = useAppSelector(state => state.theming?.theme ?? {});
+  const theme = isFXL
+    ? (themeObject.fxl ?? "auto")
+    : (themeObject.reflow ?? "auto");
   const previousTheme = usePrevious(theme);
   const colorScheme = useAppSelector(state => state.theming.colorScheme);
   const reducedMotion = useAppSelector(state => state.theming.prefersReducedMotion);
@@ -248,6 +260,7 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     isScrollStart,
     isScrollEnd,
     getCframes,
+    currentLocator,
     submitPreferences
   } = epubNavigator;
 
@@ -347,6 +360,27 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
       }
   }, [cache, preferences.affordances.scroll, toggleIsImmersive]);
 
+  const applyDictionaryDecorationsToFrames = useCallback(() => {
+    applyDictionaryDecorations(getCframes(), dictionary?.decorations ?? []);
+  }, [dictionary?.decorations, getCframes]);
+
+  const handleDictionaryClick = useCallback((event: FrameClickEvent) => {
+    const currentDictionary = dictionaryRef.current;
+    const activation = activateDictionaryDecoration(
+      event,
+      getCframes(),
+      currentDictionary?.decorations ?? [],
+    );
+    if (!activation) return false;
+    currentDictionary?.onDecorationActivated?.(activation);
+    return true;
+  }, [getCframes]);
+
+  const handleDictionarySelection = useCallback((selection: BasicTextSelection) => {
+    const resolved = selectionFromReadium(selection, currentLocator());
+    if (resolved) dictionaryRef.current?.onTextSelected?.(resolved);
+  }, [currentLocator]);
+
   // We could use canGoBackward() and canGoForward() directly on arrows
   // but maybe we will need to sync the state for other features in the future
   const updatePublicationNavigationState = useCallback(() => {
@@ -395,12 +429,16 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
   }, [dispatch, activateImmersiveOnAction, cache, goBackward, goForward]);
 
   const listeners: EpubNavigatorListeners = useMemo(() => ({
-    frameLoaded: async function (_wnd: Window): Promise<void> {},
+    frameLoaded: async function (_wnd: Window): Promise<void> {
+      window.requestAnimationFrame(applyDictionaryDecorationsToFrames);
+    },
+    timelineItemChanged: function (): void {},
     positionChanged: async function (locator: Locator): Promise<void> {
       const debouncedHandleProgression = debounce(
         async () => {
           setLocalData(locator);
           updatePublicationNavigationState();
+          applyDictionaryDecorationsToFrames();
         }, 250);
       debouncedHandleProgression();
     },
@@ -409,6 +447,7 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
       return true;
     },
     click: function (_e: FrameClickEvent): boolean {
+      if (handleDictionaryClick(_e)) return true;
       handleClick(_e);
       return true;
     },
@@ -457,7 +496,9 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
       }
       return false;
     },
-    textSelected: function (_selection: BasicTextSelection): void {},
+    textSelected: function (selection: BasicTextSelection): void {
+      handleDictionarySelection(selection);
+    },
     contentProtection: function (_type: string, _data: SuspiciousActivityEvent): void {},
     contextMenu: function (_data: ContextMenuEvent): void {},
     peripheral: function (data: KeyboardPeripheralEventData): void {
@@ -496,7 +537,8 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
         }
       }
     },
-  }), [navLayout, setLocalData, dispatch, handleTap, handleClick, cache, preferences.affordances.scroll, isScrollStart, isScrollEnd, updatePublicationNavigationState, moveTo, goProgression, zoomIn, zoomOut, profile, handleFullscreen, getFocusedDockableKey]);
+  }), [navLayout, setLocalData, dispatch, handleTap, handleClick, handleDictionaryClick, handleDictionarySelection, applyDictionaryDecorationsToFrames, cache, preferences.affordances.scroll, isScrollStart, isScrollEnd, updatePublicationNavigationState, moveTo, goProgression, zoomIn, zoomOut, profile, handleFullscreen, getFocusedDockableKey]);
+
   
   const initialPosition = useMemo(() => getLocalData(), [getLocalData]);
 
@@ -529,6 +571,11 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     }
   });
 
+  useLayoutEffect(() => {
+    if (!navigatorReady) return;
+    const frame = window.requestAnimationFrame(applyDictionaryDecorationsToFrames);
+    return () => window.cancelAnimationFrame(frame);
+  }, [applyDictionaryDecorationsToFrames, navigatorReady]);
   const applyConstraint = useCallback(async (value: number) => {
     await submitPreferences({
       constraint: value
