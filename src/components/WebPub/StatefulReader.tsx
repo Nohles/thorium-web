@@ -321,7 +321,7 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     tap: function (_e: FrameClickEvent): boolean {
       const { decorations: currentDecorations, onDecorationActivated: activate } = interactionRef.current;
       if (activate && currentDecorations) {
-        const activation = resolveDecorationActivation(_e, container.current, currentDecorations, getCframes());
+        const activation = resolveDecorationActivation(_e, container.current, currentDecorations, getCframes(), "tap");
         if (activation) {
           activate(activation);
           return true;
@@ -333,7 +333,7 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     click: function (_e: FrameClickEvent): boolean {
       const { decorations: currentDecorations, onDecorationActivated: activate } = interactionRef.current;
       if (activate && currentDecorations) {
-        const activation = resolveDecorationActivation(_e, container.current, currentDecorations, getCframes());
+        const activation = resolveDecorationActivation(_e, container.current, currentDecorations, getCframes(), "click");
         if (activation) {
           activate(activation);
           return true;

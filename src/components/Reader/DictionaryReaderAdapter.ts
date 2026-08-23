@@ -103,6 +103,7 @@ export const mergeReaderInteractions = (
       locator: decoration.locator,
       style: decoration.style,
       extras: decoration.extras,
+      activation: "click" as const,
     }),
   );
   const decorationsByInternalId = new Map(

@@ -18,6 +18,8 @@ export interface ReaderDecorationInput {
   locator: unknown;
   style?: ReaderDecorationStyle;
   extras?: Record<string, unknown>;
+  /** Pointer events that may activate this decoration. Defaults to both. */
+  activation?: "tap" | "click" | "both";
   /**
    * Visible text the decoration covers. Used to resolve click activation when
    * the environment renders highlights with the CSS Highlight API.
@@ -443,6 +445,7 @@ export function resolveDecorationActivation(
   container: HTMLElement | null | undefined,
   decorations: readonly ReaderDecorationInput[],
   navigatorFrames?: readonly unknown[],
+  trigger?: "tap" | "click",
 ): ReaderDecorationActivatedEvent | null {
   if (decorations.length === 0) return null;
   const wnd = frameWindowFor(container, event.targetFrameSrc, navigatorFrames);
@@ -456,7 +459,13 @@ export function resolveDecorationActivation(
   // Frame sources can be session-scoped blob: URLs that never match stored
   // locator hrefs, so candidate selection relies on the block-scoped quote
   // matching below rather than href filtering.
-  const candidates = decorations;
+  const candidates = trigger
+    ? decorations.filter((decoration) =>
+        !decoration.activation ||
+        decoration.activation === "both" ||
+        decoration.activation === trigger,
+      )
+    : decorations;
   if (candidates.length === 0) return null;
 
   let caret: Range | null = caretRangeAt(wnd, frameX, frameY);
