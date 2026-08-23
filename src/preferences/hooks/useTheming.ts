@@ -15,6 +15,7 @@ import { useMonochrome } from "@/core/Hooks/useMonochrome";
 import { propsToCSSVars } from "@/core/Helpers/propsToCSSVars";
 import { prefixString } from "@/core/Helpers/prefixString";
 import { extractThemeFromImage } from "../helpers/themeGeneration";
+import { DECORATION_TOKEN_DEFAULTS } from "../models";
 import { proxyUrl } from "@/helpers/proxyUrl";
 import { useContainerBreakpoints } from "@/core/Hooks/useContainerBreakpoints";
 
@@ -32,7 +33,21 @@ export interface ThemeTokens {
   focus: CSSColor;
   elevate: string;
   immerse: string;
+  /** Tint used for dual-read spoken-word highlight decorations. */
+  highlight?: CSSColor;
+  /** Tint used for Dictionary mention decorations. */
+  dictionary?: CSSColor;
 }
+
+/**
+ * Fills in decoration tokens that predate them on stored themes so every
+ * resolved theme always carries usable tint colors.
+ */
+export const withDecorationTokenDefaults = (tokens: ThemeTokens): ThemeTokens => ({
+  ...tokens,
+  highlight: tokens.highlight ?? DECORATION_TOKEN_DEFAULTS.highlight,
+  dictionary: tokens.dictionary ?? DECORATION_TOKEN_DEFAULTS.dictionary
+});
 
 export interface useThemingProps<T extends string> {
   theme?: string;

@@ -27,7 +27,7 @@ import {
   FrameClickEvent,
   SuspiciousActivityEvent,
 } from "@readium/navigator-html-injectables";
-import { WebPubNavigatorListeners } from "@readium/navigator";
+import { WebPubNavigatorListeners, IContentProtectionConfig } from "@readium/navigator";
 import {
   Locator,
   Publication
@@ -73,13 +73,24 @@ import { createDefaultPlugin } from "../Plugins/helpers/createDefaultPlugin";
 import { getReaderClassNames } from "../Helpers/getReaderClassNames";
 import { resolveContentProtectionConfig } from "@/preferences/models/protection";
 import { NavPeripheralType, fromActionPeripheralType, fromDockingPeripheralType } from "@/helpers/peripherals";
+import {
+  contextMenuToEvent,
+  resolveDecorationActivation,
+  textSelectionToEvent,
+  type ReaderInteractionProps,
+} from "../Reader/ReaderInteractions";
+import { useReaderDecorations } from "../Reader/useReaderDecorations";
 
 export const ExperimentalWebPubStatefulReader = ({
   publication,
   localDataKey,
   plugins,
   positionStorage,
-  containerRefSetter
+  containerRefSetter,
+  decorations,
+  onTextSelected,
+  onContextMenu,
+  onDecorationActivated
 }: StatefulReaderProps) => {
   const [pluginsRegistered, setPluginsRegistered] = useState(false);
 
@@ -101,13 +112,15 @@ export const ExperimentalWebPubStatefulReader = ({
   return (
     <>
       <ThPluginProvider>
-        <StatefulReaderInner publication={ publication } localDataKey={ localDataKey } positionStorage={ positionStorage } containerRefSetter={ containerRefSetter } />
+        <StatefulReaderInner publication={ publication } localDataKey={ localDataKey } positionStorage={ positionStorage } containerRefSetter={ containerRefSetter }
+          interactions={ { decorations, onTextSelected, onContextMenu, onDecorationActivated } }
+        />
       </ThPluginProvider>
     </>
   );
 };
 
-const StatefulReaderInner = ({ publication, localDataKey, positionStorage, containerRefSetter }: { publication: Publication; localDataKey: string | null; positionStorage?: PositionStorage; containerRefSetter?: (el: Element | null) => void }) => {
+const StatefulReaderInner = ({ publication, localDataKey, positionStorage, containerRefSetter, interactions }: { publication: Publication; localDataKey: string | null; positionStorage?: PositionStorage; containerRefSetter?: (el: Element | null) => void; interactions: ReaderInteractionProps }) => {
   const { preferences, getFontMetadata, getFontInjectables } = usePreferences();
   const { t } = useI18n();
   const { getEffectiveSpacingValue } = useSpacingPresets();
@@ -175,8 +188,11 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
   const webPubNavigator = useWebPubNavigator();
   const { 
     currentPositions,
+    currentLocator,
     canGoBackward,
     canGoForward,
+    getCframes,
+    getNavigatorInstance
   } = webPubNavigator;
 
   const { setLocalData, getLocalData, localData } = usePositionStorage(localDataKey, positionStorage);
@@ -234,6 +250,31 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
 
   const { zoomIn, zoomOut } = useZoomCallbacks(webPubNavigator);
 
+  const interactionRef = useRef(interactions);
+  interactionRef.current = interactions;
+
+  const { decorations } = interactions;
+
+  const mergeContentProtection = (
+    config: IContentProtectionConfig | undefined,
+    withContextMenu: boolean
+  ): IContentProtectionConfig | undefined => {
+    if (!withContextMenu) return config;
+    return { ...config, disableContextMenu: true };
+  };
+
+  // Frames load resources from session-scoped blob: URLs, so events carry the
+  // navigator's real resource href alongside the frame URL.
+  const resolveResourceHref = useCallback(() => {
+    const locator = currentLocator();
+    return typeof locator?.href === "string" ? locator.href : undefined;
+  }, [currentLocator]);
+
+  const resolveActiveHrefs = useCallback(() => {
+    const locator = currentLocator();
+    return typeof locator?.href === "string" ? [locator.href] : [];
+  }, [currentLocator]);
+
   const listeners: WebPubNavigatorListeners = useMemo(() => ({
     frameLoaded: async function (_wnd: Window): Promise<void> {},
     positionChanged: async function (locator: Locator): Promise<void> {
@@ -252,6 +293,14 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
       }
     },
     tap: function (_e: FrameClickEvent): boolean {
+      const { decorations: currentDecorations, onDecorationActivated: activate } = interactionRef.current;
+      if (activate && currentDecorations) {
+        const activation = resolveDecorationActivation(_e, container.current, currentDecorations);
+        if (activation) {
+          activate(activation);
+          return true;
+        }
+      }
       toggleIsImmersive();
       return true;
     },
@@ -276,9 +325,19 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
       }
       return false;
     },
-    textSelected: function (_selection: BasicTextSelection): void {},
+    textSelected: function (selection: BasicTextSelection): void {
+      const { onTextSelected: handle } = interactionRef.current;
+      if (!handle) return;
+      const event = textSelectionToEvent(container.current, selection, resolveResourceHref());
+      if (event) handle(event);
+    },
     contentProtection: function (_type: string, _data: SuspiciousActivityEvent): void {},
-    contextMenu: function (_data: ContextMenuEvent): void {},
+    contextMenu: function (data: ContextMenuEvent): void {
+      const { onContextMenu: handle } = interactionRef.current;
+      if (!handle) return;
+      const event = contextMenuToEvent(container.current, data, resolveResourceHref());
+      if (event) handle(event);
+    },
     peripheral: function (data): void {
       switch (data.type) {
         case NavPeripheralType.zoomIn:  zoomIn();  break;
@@ -307,7 +366,7 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
         }
       }
     },
-  }), [setLocalData, canGoBackward, canGoForward, dispatch, toggleIsImmersive, zoomIn, zoomOut, profile, handleFullscreen, getFocusedDockableKey]);
+  }), [setLocalData, canGoBackward, canGoForward, dispatch, toggleIsImmersive, zoomIn, zoomOut, profile, handleFullscreen, getFocusedDockableKey, resolveResourceHref]);
 
   const initialPosition = useMemo(() => getLocalData(), [getLocalData]);
 
@@ -326,16 +385,24 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     injectFontResources,
     removeFontResources,
     getFontInjectables,
-    contentProtectionConfig: resolveContentProtectionConfig(preferences.contentProtection, t),
+    contentProtectionConfig: mergeContentProtection(
+      resolveContentProtectionConfig(preferences.contentProtection, t),
+      Boolean(interactions.onContextMenu),
+    ),
     keyboardPeripherals,
     onNavigatorReady: () => {
       dispatch(setLoading(false));
     },
   });
 
+  useReaderDecorations({
+    getNavigator: getNavigatorInstance,
+    decorations,
+  });
+
   return (
     <>
-    <NavigatorProvider visualNavigator={ webPubNavigator }>
+    <NavigatorProvider visualNavigator={ webPubNavigator } publication={ publication }>
       <main className={ readerStyles.main }>
         <StatefulDockingWrapper>
           <div

@@ -24,7 +24,9 @@ export const lightTheme = {
   onSelect: "inherit",            // color of selected text
   focus: "#0067f4",               // color of :focus-visible
   elevate: "0px 0px 2px #808080", // drop shadow of containers
-  immerse: "0.6"                  // opacity of immersive mode
+  immerse: "0.6",                 // opacity of immersive mode
+  highlight: "#fff176",           // color of dual-read spoken-word highlights
+  dictionary: "#2c9d7c"           // color of Dictionary mention highlights
 }
 
 export const darkTheme = {
@@ -40,7 +42,9 @@ export const darkTheme = {
   onSelect: "inherit",
   focus: "#0067f4",
   elevate: "0px 0px 2px #808080",
-  immerse: "0.4"
+  immerse: "0.4",
+  highlight: "#b28704",
+  dictionary: "#3aa981"
 }
 
 export const paperTheme = {
@@ -56,7 +60,9 @@ export const paperTheme = {
   onSelect: "inherit",
   focus: "#0067f4",
   elevate: "0px 0px 2px #8c8c8c",
-  immerse: "0.5"
+  immerse: "0.5",
+  highlight: "#ffe08a",
+  dictionary: "#1f7a5c"
 }
 
 export const sepiaTheme = {
@@ -72,7 +78,9 @@ export const sepiaTheme = {
   onSelect: "inherit",
   focus: "#004099",
   elevate: "0px 0px 2px #8c8c8c",
-  immerse: "0.45"
+  immerse: "0.45",
+  highlight: "#ffd54f",
+  dictionary: "#1f7a5c"
 }
 
 export const contrast1Theme = {
@@ -88,7 +96,9 @@ export const contrast1Theme = {
   onSelect: "inherit",
   focus: "#0067f4",
   elevate: "0px 0px 2px #808000",
-  immerse: "0.4"
+  immerse: "0.4",
+  highlight: "#005f5f",
+  dictionary: "#0f766e"
 }
 
 export const contrast2Theme = {
@@ -104,7 +114,9 @@ export const contrast2Theme = {
   onSelect: "inherit",
   focus: "#6BA9FF",
   elevate: "0px 0px 2px #808080",
-  immerse: "0.4"
+  immerse: "0.4",
+  highlight: "#3d3da4",
+  dictionary: "#57c793"
 }
 
 export const contrast3Theme = {
@@ -120,7 +132,9 @@ export const contrast3Theme = {
   onSelect: "inherit",
   focus: "#004099",
   elevate: "0px 0px 2px #8c8c8c",
-  immerse: "0.45"
+  immerse: "0.45",
+  highlight: "#ffd54f",
+  dictionary: "#1f7a5c"
 }
 
 export const customTheme = {
@@ -136,5 +150,16 @@ export const customTheme = {
   onSelect: "inherit",
   focus: "#9a4f2f",
   elevate: "0px 0px 2px #6f675d",
-  immerse: "0.5"
+  immerse: "0.5",
+  highlight: "#f5c66b",
+  dictionary: "#2c9d7c"
+}
+
+/**
+ * Decoration tokens backfilled onto themes saved before they existed.
+ * Kept in sync with the native reader defaults.
+ */
+export const DECORATION_TOKEN_DEFAULTS = {
+  highlight: customTheme.highlight,
+  dictionary: customTheme.dictionary
 }

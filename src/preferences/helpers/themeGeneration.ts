@@ -98,6 +98,10 @@ export const generateThemeFromColor = (color: string): ThemeTokens => {
     focus,
     elevate,
     immerse: isLight ? "0.6" : "0.4",
+    // Decoration tints derived from the dominant hue stay readable against
+    // the generated background in either scheme.
+    highlight: hslToHex(h, 0.75, isLight ? 0.78 : 0.45),
+    dictionary: hslToHex(160, 0.55, isLight ? 0.38 : 0.62),
   };
 };
 

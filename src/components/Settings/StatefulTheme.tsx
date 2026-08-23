@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import { ThemeKeyType, ThemeTokens, ThThemeKeys } from "@/preferences";
+import { DECORATION_TOKEN_DEFAULTS } from "@/preferences/models";
+import { withDecorationTokenDefaults } from "@/preferences/hooks/useTheming";
 import { useSharedPreferences } from "@/preferences/hooks/useSharedPreferences";
 
 import settingsStyles from "../Settings/assets/styles/thorium-web.reader.settings.module.css";
@@ -21,7 +23,12 @@ import { useGridNavigation } from "@/components/Settings/hooks/useGridNavigation
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { setActionOpen } from "@/lib";
 import { setSettingsContainer } from "@/lib/readerReducer";
-import { setCustomTheme, setTheme } from "@/lib/themeReducer";
+import {
+  type SavedCustomTheme,
+  setCustomTheme,
+  setSavedCustomThemes,
+  setTheme
+} from "@/lib/themeReducer";
 
 import classNames from "classnames";
 import { buildThemeObject } from "@/preferences/helpers/buildThemeObject";
@@ -210,74 +217,19 @@ export const StatefulTheme = () => {
 
 type EditableThemeToken = keyof Pick<
   ThemeTokens,
-  "background" | "text" | "subdue" | "link" | "visited"
+  "background" | "text" | "subdue" | "link" | "visited" | "highlight" | "dictionary"
 >;
 
-interface SavedCustomTheme {
-  id: string;
-  tokens: ThemeTokens;
-  updatedAt: number;
-}
-
-const savedCustomThemesStorageKey = "thorium-web.saved-custom-themes.v1";
 const maxSavedCustomThemes = 12;
-const savedThemeTokenKeys: Array<keyof ThemeTokens> = [
-  "background",
-  "text",
-  "link",
-  "visited",
-  "subdue",
-  "disable",
-  "hover",
-  "onHover",
-  "select",
-  "onSelect",
-  "focus",
-  "elevate",
-  "immerse"
-];
-
-const isSavedCustomTheme = (value: unknown): value is SavedCustomTheme => {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Record<string, unknown>;
-  if (typeof candidate.id !== "string" || typeof candidate.updatedAt !== "number") return false;
-  if (!candidate.tokens || typeof candidate.tokens !== "object") return false;
-
-  const tokens = candidate.tokens as Record<string, unknown>;
-  return savedThemeTokenKeys.every(key => typeof tokens[key] === "string");
-};
-
-const readSavedCustomThemes = (): SavedCustomTheme[] => {
-  if (typeof window === "undefined") return [];
-
-  try {
-    const serialized = window.localStorage.getItem(savedCustomThemesStorageKey);
-    if (!serialized) return [];
-    const parsed: unknown = JSON.parse(serialized);
-    return Array.isArray(parsed)
-      ? parsed.filter(isSavedCustomTheme).slice(0, maxSavedCustomThemes)
-      : [];
-  } catch {
-    return [];
-  }
-};
-
-const writeSavedCustomThemes = (themes: SavedCustomTheme[]) => {
-  if (typeof window === "undefined") return;
-
-  try {
-    window.localStorage.setItem(savedCustomThemesStorageKey, JSON.stringify(themes));
-  } catch {
-    // The active theme still works if storage is unavailable.
-  }
-};
 
 const customThemeFingerprint = (theme: ThemeTokens) => [
   theme.background,
   theme.text,
   theme.subdue,
   theme.link,
-  theme.visited
+  theme.visited,
+  theme.highlight ?? DECORATION_TOKEN_DEFAULTS.highlight,
+  theme.dictionary ?? DECORATION_TOKEN_DEFAULTS.dictionary
 ].join("|");
 
 const createSavedCustomThemeId = () =>
@@ -291,7 +243,9 @@ const customThemeFields: Array<{
   { key: "text", label: "Text" },
   { key: "subdue", label: "Alternate text" },
   { key: "link", label: "Links" },
-  { key: "visited", label: "Visited links" }
+  { key: "visited", label: "Visited links" },
+  { key: "highlight", label: "Highlights" },
+  { key: "dictionary", label: "Dictionary marks" }
 ];
 
 export const StatefulCustomTheme = () => {
@@ -303,18 +257,26 @@ export const StatefulCustomTheme = () => {
     ...preferenceThemeKeys,
     ...storedCustomThemes
   }), [preferenceThemeKeys, storedCustomThemes]);
-  const theme = themeKeys[ThThemeKeys.custom];
+  const theme = useMemo(
+    () => themeKeys[ThThemeKeys.custom]
+      ? withDecorationTokenDefaults(themeKeys[ThThemeKeys.custom])
+      : undefined,
+    [themeKeys]
+  );
   const dispatch = useAppDispatch();
   const { submitPreferences } = useEpubNavigator();
-  const [savedThemes, setSavedThemes] = useState<SavedCustomTheme[]>(readSavedCustomThemes);
+  const savedThemes = useAppSelector(state => state.theming.savedCustomThemes) ?? [];
   const savedThemesRef = useRef(savedThemes);
   const editingSavedThemeId = useRef<string | null>(null);
 
   const commitSavedThemes = useCallback((nextThemes: SavedCustomTheme[]) => {
     savedThemesRef.current = nextThemes;
-    setSavedThemes(nextThemes);
-    writeSavedCustomThemes(nextThemes);
-  }, []);
+    dispatch(setSavedCustomThemes(nextThemes));
+  }, [dispatch]);
+
+  useEffect(() => {
+    savedThemesRef.current = savedThemes;
+  }, [savedThemes]);
 
   const saveThemeToHistory = useCallback((tokens: ThemeTokens) => {
     const id = editingSavedThemeId.current ?? createSavedCustomThemeId();
@@ -401,6 +363,12 @@ const CustomThemeEditor = ({
       <span className={ settingsStyles.customThemePreviewLink } style={ { color: theme.link } }>
         A link inside the publication
       </span>
+      <span style={ {
+        color: theme.text,
+        backgroundColor: theme.highlight ?? DECORATION_TOKEN_DEFAULTS.highlight
+      } }>
+        Highlighted text as it appears while reading
+      </span>
     </div>
     <div className={ settingsStyles.customThemeFields }>
       { customThemeFields.map(({ key, label }) =>
@@ -425,7 +393,7 @@ const CustomThemeEditor = ({
                 if (/^#[0-9a-f]{6}$/i.test(event.target.value)) {
                   onChange(key, event.target.value.toLowerCase());
                 } else {
-                  event.target.value = theme[key];
+                  event.target.value = theme[key] ?? "";
                 }
               } }
             />
@@ -466,7 +434,9 @@ const CustomThemeEditor = ({
                     { key: "text", color: savedTheme.tokens.text },
                     { key: "subdue", color: savedTheme.tokens.subdue },
                     { key: "link", color: savedTheme.tokens.link },
-                    { key: "visited", color: savedTheme.tokens.visited }
+                    { key: "visited", color: savedTheme.tokens.visited },
+                    { key: "highlight", color: savedTheme.tokens.highlight ?? DECORATION_TOKEN_DEFAULTS.highlight },
+                    { key: "dictionary", color: savedTheme.tokens.dictionary ?? DECORATION_TOKEN_DEFAULTS.dictionary }
                   ].map(swatch =>
                     <span key={ swatch.key } style={ { background: swatch.color } } />
                   ) }

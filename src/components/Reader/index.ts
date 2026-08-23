@@ -17,4 +17,6 @@ export * from "../Comic/comic-core";
 // StatefulReaderWrapper
 export * from "./StatefulReaderWrapper";
 export * from "./ReaderNavigationContext";
+export * from "./ReaderInteractions";
+export * from "./useReaderDecorations";
 export * from "../StatefulReaderSourceSelector";

@@ -25,6 +25,7 @@ import {
   customTheme,
   defaultSettingsAction,
   defaultFullscreenAction,
+  defaultSearchAction,
   defaultTocAction,
   defaultJumpToPositionAction,
   defaultContentProtectionConfig,
@@ -294,24 +295,28 @@ export const defaultPreferences: ThPreferences<DefaultKeys> = createPreferences<
     reflowOrder: [
       ThActionsKeys.settings,
       ThActionsKeys.toc,
+      ThActionsKeys.search,
       ThActionsKeys.fullscreen,
       ThActionsKeys.jumpToPosition
     ],
     fxlOrder: [
       ThActionsKeys.settings,
       ThActionsKeys.toc,
+      ThActionsKeys.search,
       ThActionsKeys.fullscreen,
       ThActionsKeys.jumpToPosition
     ],
     webPubOrder: [
       ThActionsKeys.settings,
       ThActionsKeys.toc,
+      ThActionsKeys.search,
       ThActionsKeys.fullscreen
     ],
     collapse: true,
     keys: {
       [ThActionsKeys.settings]: defaultSettingsAction,
       [ThActionsKeys.fullscreen]: defaultFullscreenAction,
+      [ThActionsKeys.search]: defaultSearchAction,
       [ThActionsKeys.toc]: defaultTocAction,
       [ThActionsKeys.jumpToPosition]: defaultJumpToPositionAction,
     }

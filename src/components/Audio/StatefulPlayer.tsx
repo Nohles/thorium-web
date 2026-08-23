@@ -410,7 +410,7 @@ const StatefulPlayerInner = ({ publication, localDataKey, positionStorage, cover
 
   return (
     <>
-    <NavigatorProvider mediaNavigator={ audioNavigator }>
+    <NavigatorProvider mediaNavigator={ audioNavigator } publication={ publication }>
       <main className={ audioLayoutStyles.main }>
         <StatefulDockingWrapper>
           <div ref={ containerRefSetter } className={ audioLayoutStyles.shell }>

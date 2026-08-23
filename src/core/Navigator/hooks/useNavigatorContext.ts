@@ -156,6 +156,7 @@ export const useNavigator = () => {
   }, [context.media]);
 
   return useMemo(() => ({
+    publication: context.publication,
     get visual() {
       if (!visualMemo) throw new Error("Visual navigator not available");
       return visualMemo;
@@ -167,5 +168,5 @@ export const useNavigator = () => {
     get unified(): UnifiedNavigator {
       return unified;
     }
-  }), [visualMemo, mediaMemo, unified]);
+  }), [context.publication, visualMemo, mediaMemo, unified]);
 };

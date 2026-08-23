@@ -1,0 +1,211 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: min(34rem, 72vh);
+}
+
+.form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: calc(var(--th-layout-spacing) / 2);
+  padding-bottom: var(--th-layout-spacing);
+  border-bottom: 1px solid color-mix(in srgb, var(--th-theme-subdue) 45%, transparent);
+}
+
+.searchField {
+  position: relative;
+  display: grid;
+  grid-template-areas: "input button";
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.input {
+  grid-area: input;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.7rem 2.75rem 0.7rem 0.9rem;
+  border: 1px solid var(--th-theme-subdue);
+  border-radius: var(--th-layout-radius);
+  background: color-mix(in srgb, var(--th-theme-background) 92%, var(--th-theme-text));
+  color: var(--th-theme-text);
+  font: inherit;
+}
+
+.input[data-focus-visible] {
+  outline: 2px solid var(--th-theme-focus);
+  outline-offset: 2px;
+}
+
+.input::-webkit-search-cancel-button,
+.input::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+
+.searchIcon,
+.clearButton {
+  grid-area: button;
+  z-index: 1;
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  color: var(--th-theme-subdue);
+}
+
+.searchIcon svg,
+.clearButton svg {
+  width: var(--th-icon-size, 24px);
+  height: var(--th-icon-size, 24px);
+  fill: currentColor;
+}
+
+.searchIcon[hidden],
+.clearButton[data-disabled] {
+  display: none;
+}
+
+.submit,
+.retry,
+.loadMore {
+  border: 1px solid var(--th-theme-subdue);
+  border-radius: var(--th-layout-radius);
+  background: var(--th-theme-text);
+  color: var(--th-theme-background);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.submit {
+  min-height: 2.75rem;
+  padding-inline: 1rem;
+}
+
+.submit[data-disabled],
+.loadMore[data-disabled] {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.summary {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--th-layout-spacing);
+  padding-block: calc(var(--th-layout-spacing) * 0.75);
+  color: var(--th-theme-subdue);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.query {
+  overflow: hidden;
+  max-width: 50%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.results {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.4rem;
+  overflow: auto;
+  padding-bottom: var(--th-layout-spacing);
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid transparent;
+  border-radius: var(--th-layout-radius);
+  background: transparent;
+  color: var(--th-theme-text);
+  text-align: start;
+  cursor: pointer;
+}
+
+.result:hover,
+.result[data-hovered] {
+  background: var(--th-theme-hover);
+  color: var(--th-theme-onHover);
+}
+
+.result[data-focus-visible] {
+  border-color: var(--th-theme-focus);
+  outline: none;
+}
+
+.resultMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--th-layout-spacing);
+  color: var(--th-theme-subdue);
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.025em;
+}
+
+.snippet {
+  display: block;
+  overflow: hidden;
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+  font-size: 1rem;
+  line-height: 1.48;
+  text-wrap: pretty;
+}
+
+.snippet mark {
+  border-radius: 0.15em;
+  background: color-mix(in srgb, #f5c84c 58%, transparent);
+  color: inherit;
+  box-decoration-break: clone;
+  font-weight: 700;
+}
+
+.loadMore {
+  align-self: center;
+  min-height: 2.6rem;
+  margin-top: calc(var(--th-layout-spacing) / 2);
+  padding-inline: 1rem;
+}
+
+.empty,
+.error {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 12rem;
+  color: var(--th-theme-subdue);
+  text-align: center;
+  text-wrap: balance;
+}
+
+.empty strong {
+  color: var(--th-theme-text);
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+  font-size: 1.25rem;
+}
+
+.retry {
+  min-height: 2.4rem;
+  margin-top: 0.5rem;
+  padding-inline: 0.9rem;
+}
+
+@media (max-width: 600px) {
+  .wrapper {
+    min-height: 100%;
+  }
+
+  .form {
+    grid-template-columns: 1fr;
+  }
+}

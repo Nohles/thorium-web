@@ -962,7 +962,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   }, [direction, merged.tapZones, merged.tapZonePreview]);
 
   return (
-    <NavigatorProvider visualNavigator={comicNavigator}>
+    <NavigatorProvider visualNavigator={comicNavigator} publication={publication}>
         <main
           className={readerStyles.main}
           style={{

@@ -38,6 +38,7 @@ import {
   type ReaderNavigation,
   type ReaderSourceSelection,
 } from "./ReaderNavigationContext";
+import type { ReaderInteractionProps } from "./ReaderInteractions";
 
 const StatefulEpubReader = lazy(() => import("@/components/Epub").then(mod => ({ default: mod.StatefulReader })));
 const StatefulWebPubReader = lazy(() => import("@/components/WebPub").then(mod => ({ default: mod.ExperimentalWebPubStatefulReader })));
@@ -50,7 +51,7 @@ export interface PositionStorage {
   set: (locator: Locator) => void | Promise<void>;
 }
 
-export interface StatefulReaderProps {
+export interface StatefulReaderProps extends ReaderInteractionProps {
   publication: Publication;
   localDataKey: string | null;
   plugins?: ThPlugin[];
@@ -71,7 +72,7 @@ export interface ReaderPlugins {
 export interface ReaderComponentProps<
   P extends "epub" | "webPub" | "audio" | "comic" | undefined | null = undefined,
   K extends CustomizableKeys = {}
-> {
+> extends ReaderInteractionProps {
   profile: P;
   publication: Publication;
   localDataKey: string | null;

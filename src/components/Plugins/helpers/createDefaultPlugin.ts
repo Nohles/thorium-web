@@ -6,6 +6,8 @@ import { StatefulJumpToPositionTrigger } from "../../Actions/JumpToPosition/Stat
 import { StatefulJumpToPositionContainer } from "../../Actions/JumpToPosition/StatefulJumpToPositionContainer";
 import { StatefulSettingsTrigger } from "../../Actions/Settings/StatefulSettingsTrigger";
 import { StatefulVisualSettingsContainer } from "../../Actions/Settings/StatefulVisualSettingsContainer";
+import { StatefulSearchTrigger } from "../../Actions/Search/StatefulSearchTrigger";
+import { StatefulSearchContainer } from "../../Actions/Search/StatefulSearchContainer";
 import { StatefulTocTrigger } from "../../Actions/Toc/StatefulTocTrigger";
 import { StatefulTocContainer } from "../../Actions/Toc/StatefulTocContainer";
 
@@ -51,7 +53,7 @@ export const createDefaultPlugin = (): ThPlugin => {
     id: "core",
     name: "Core Components",
     description: "Default components for Thorium Web Epub StatefulReader",
-    version: "1.5.17",
+    version: "1.5.19",
     components: {
       actions: {
         [ThActionsKeys.fullscreen]: {
@@ -64,6 +66,10 @@ export const createDefaultPlugin = (): ThPlugin => {
         [ThActionsKeys.settings]: {
           Trigger: StatefulSettingsTrigger,
           Target: StatefulVisualSettingsContainer
+        },
+        [ThActionsKeys.search]: {
+          Trigger: StatefulSearchTrigger,
+          Target: StatefulSearchContainer
         },
         [ThActionsKeys.toc]: {
           Trigger: StatefulTocTrigger,

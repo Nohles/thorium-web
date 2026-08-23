@@ -42,6 +42,7 @@ export const useEpubPreferencesConfig = ({
 }: UseEpubPreferencesConfigProps) => {
   const { processedValues: lineHeightOptions } = useLineHeight();
   const scriptMode = useAppSelector(state => state.publication.scriptMode);
+  const customThemes = useAppSelector(state => state.theming.customThemes);
   const isVerticalScript = scriptMode === "cjk-vertical" || scriptMode === "mongolian-vertical";
 
   const { isComponentUsed: isFontFamilyUsed } = useSettingsComponentStatus({
@@ -127,7 +128,10 @@ export const useEpubPreferencesConfig = ({
     const theme = settings.theme && themeKeys.includes(settings.theme) ? settings.theme : "auto";
     const themeProps = buildThemeObject<string>({
       theme: theme,
-      themeKeys: preferences.theming.themes.keys,
+      themeKeys: {
+        ...preferences.theming.themes.keys,
+        ...customThemes
+      },
       systemThemes: preferences.theming.themes.systemThemes,
       colorScheme: colorScheme
     });
@@ -177,6 +181,7 @@ export const useEpubPreferencesConfig = ({
     fontLanguage,
     preferences.theming.themes.keys,
     preferences.theming.themes.systemThemes,
+    customThemes,
     getFontMetadata,
     fxlThemeKeys,
     reflowThemeKeys,

@@ -31,7 +31,7 @@ import {
   FrameClickEvent,
   SuspiciousActivityEvent
 } from "@readium/navigator-html-injectables";
-import { EpubNavigatorListeners, KeyboardPeripheralEventData } from "@readium/navigator";
+import { EpubNavigatorListeners, IContentProtectionConfig, KeyboardPeripheralEventData } from "@readium/navigator";
 import { 
   Locator, 
   Publication, 
@@ -93,6 +93,13 @@ import { NavPeripheralType, fromActionPeripheralType, fromDockingPeripheralType 
 import { getPlatformModifier } from "@/core/Helpers/keyboardUtilities";
 import { getReaderClassNames } from "../Helpers/getReaderClassNames";
 import { resolveContentProtectionConfig } from "@/preferences/models/protection";
+import {
+  contextMenuToEvent,
+  resolveDecorationActivation,
+  textSelectionToEvent,
+  type ReaderInteractionProps,
+} from "../Reader/ReaderInteractions";
+import { useReaderDecorations } from "../Reader/useReaderDecorations";
 
 // We need to register plugins before hooks run
 // otherwise we can’t access the values of spacing presets
@@ -103,7 +110,11 @@ export const StatefulReader = ({
   localDataKey,
   plugins,
   positionStorage,
-  containerRefSetter
+  containerRefSetter,
+  decorations,
+  onTextSelected,
+  onContextMenu,
+  onDecorationActivated
 }: StatefulReaderProps) => {
   const [pluginsRegistered, setPluginsRegistered] = useState(false);
 
@@ -125,13 +136,15 @@ export const StatefulReader = ({
   return (
     <>
       <ThPluginProvider>
-        <StatefulReaderInner publication={ publication } localDataKey={ localDataKey } positionStorage={ positionStorage } containerRefSetter={ containerRefSetter } />
+        <StatefulReaderInner publication={ publication } localDataKey={ localDataKey } positionStorage={ positionStorage } containerRefSetter={ containerRefSetter }
+          interactions={ { decorations, onTextSelected, onContextMenu, onDecorationActivated } }
+        />
       </ThPluginProvider>
     </>
   );
 };
 
-const StatefulReaderInner = ({ publication, localDataKey, positionStorage, containerRefSetter }: { publication: Publication; localDataKey: string | null; positionStorage?: PositionStorage; containerRefSetter?: (el: Element | null) => void }) => {
+const StatefulReaderInner = ({ publication, localDataKey, positionStorage, containerRefSetter, interactions }: { publication: Publication; localDataKey: string | null; positionStorage?: PositionStorage; containerRefSetter?: (el: Element | null) => void; interactions: ReaderInteractionProps }) => {
   const { fxlActionKeys, fxlThemeKeys, reflowActionKeys, reflowThemeKeys } = useFilteredPreferenceKeys();
   const { preferences, getFontMetadata, getFontInjectables } = usePreferences();
   const { direction: uiDirection } = useLocale();
@@ -173,6 +186,7 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
   const textNormalization = useAppSelector(state => state.settings.textNormalization);
   const wordSpacing = getEffectiveSpacingValue(ThSpacingSettingsKeys.wordSpacing);
   const themeObject = useAppSelector(state => state.theming.theme);
+  const customThemes = useAppSelector(state => state.theming.customThemes);
   const theme = isFXL ? themeObject.fxl : themeObject.reflow;
   const previousTheme = usePrevious(theme);
   const colorScheme = useAppSelector(state => state.theming.colorScheme);
@@ -243,11 +257,13 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     goForward,
     navLayout,
     currentPositions,
+    currentLocator,
     canGoBackward,
     canGoForward,
     isScrollStart,
     isScrollEnd,
     getCframes,
+    getNavigatorInstance,
     submitPreferences
   } = epubNavigator;
 
@@ -382,6 +398,31 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
 
   const { zoomIn, zoomOut } = useZoomCallbacks(epubNavigator);
 
+  const interactionRef = useRef(interactions);
+  interactionRef.current = interactions;
+
+  const { decorations } = interactions;
+
+  // Frames load resources from session-scoped blob: URLs, so events carry the
+  // navigator's real resource href alongside the frame URL.
+  const resolveResourceHref = useCallback(() => {
+    const locator = currentLocator();
+    return typeof locator?.href === "string" ? locator.href : undefined;
+  }, [currentLocator]);
+
+  const resolveActiveHrefs = useCallback(() => {
+    const locator = currentLocator();
+    return typeof locator?.href === "string" ? [locator.href] : [];
+  }, [currentLocator]);
+
+  const mergeContentProtection = (
+    config: IContentProtectionConfig | undefined,
+    withContextMenu: boolean
+  ): IContentProtectionConfig | undefined => {
+    if (!withContextMenu) return config;
+    return { ...config, disableContextMenu: true };
+  };
+
   const goProgression = useCallback((shiftKey?: boolean) => {
     if (!cache.current.settings?.scroll) {
       const cb = () => {
@@ -405,10 +446,26 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
       debouncedHandleProgression();
     },
     tap: function (_e: FrameClickEvent): boolean {
+      const { decorations: currentDecorations, onDecorationActivated: activate } = interactionRef.current;
+      if (activate && currentDecorations) {
+        const activation = resolveDecorationActivation(_e, container.current, currentDecorations);
+        if (activation) {
+          activate(activation);
+          return true;
+        }
+      }
       handleTap(_e);
       return true;
     },
     click: function (_e: FrameClickEvent): boolean {
+      const { decorations: currentDecorations, onDecorationActivated: activate } = interactionRef.current;
+      if (activate && currentDecorations) {
+        const activation = resolveDecorationActivation(_e, container.current, currentDecorations);
+        if (activation) {
+          activate(activation);
+          return true;
+        }
+      }
       handleClick(_e);
       return true;
     },
@@ -457,9 +514,19 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
       }
       return false;
     },
-    textSelected: function (_selection: BasicTextSelection): void {},
+    textSelected: function (selection: BasicTextSelection): void {
+      const { onTextSelected: handle } = interactionRef.current;
+      if (!handle) return;
+      const event = textSelectionToEvent(container.current, selection, resolveResourceHref());
+      if (event) handle(event);
+    },
     contentProtection: function (_type: string, _data: SuspiciousActivityEvent): void {},
-    contextMenu: function (_data: ContextMenuEvent): void {},
+    contextMenu: function (data: ContextMenuEvent): void {
+      const { onContextMenu: handle } = interactionRef.current;
+      if (!handle) return;
+      const event = contextMenuToEvent(container.current, data, resolveResourceHref());
+      if (event) handle(event);
+    },
     peripheral: function (data: KeyboardPeripheralEventData): void {
       switch (data.type) {
         case NavPeripheralType.progressForward:  goProgression(false); break;
@@ -496,7 +563,7 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
         }
       }
     },
-  }), [navLayout, setLocalData, dispatch, handleTap, handleClick, cache, preferences.affordances.scroll, isScrollStart, isScrollEnd, updatePublicationNavigationState, moveTo, goProgression, zoomIn, zoomOut, profile, handleFullscreen, getFocusedDockableKey]);
+  }), [navLayout, setLocalData, dispatch, handleTap, handleClick, cache, preferences.affordances.scroll, isScrollStart, isScrollEnd, updatePublicationNavigationState, moveTo, goProgression, zoomIn, zoomOut, profile, handleFullscreen, getFocusedDockableKey, resolveResourceHref]);
   
   const initialPosition = useMemo(() => getLocalData(), [getLocalData]);
 
@@ -522,11 +589,19 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     arrowsWidth,
     colorScheme,
     isFXL,
-    contentProtectionConfig: resolveContentProtectionConfig(preferences.contentProtection, t),
+    contentProtectionConfig: mergeContentProtection(
+      resolveContentProtectionConfig(preferences.contentProtection, t),
+      Boolean(interactions.onContextMenu),
+    ),
 
     onNavigatorReady: () => {
       dispatch(setLoading(false));
     }
+  });
+
+  useReaderDecorations({
+    getNavigator: getNavigatorInstance,
+    decorations,
   });
 
   useEffect(() => {
@@ -567,7 +642,10 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
       const themeKey = themeKeys.includes(theme as any) ? theme : "auto";
       const themeProps = buildThemeObject<ThemeKeyType>({
         theme: themeKey,
-        themeKeys: preferences.theming.themes.keys,
+        themeKeys: {
+          ...preferences.theming.themes.keys,
+          ...customThemes
+        },
         systemThemes: preferences.theming.themes.systemThemes,
         colorScheme
       });
@@ -580,7 +658,7 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
 
     applyCurrentTheme()
       .catch(console.error);
-  }, [cache, themeObject, previousTheme, preferences.theming.themes, fxlThemeKeys, reflowThemeKeys, colorScheme, isFXL, submitPreferences, dispatch, navigatorReady]);
+  }, [cache, themeObject, previousTheme, preferences.theming.themes, customThemes, fxlThemeKeys, reflowThemeKeys, colorScheme, isFXL, submitPreferences, dispatch, navigatorReady]);
 
   useLayoutEffect(() => {
     dispatch(setDirection(uiDirection as ThLayoutDirection));
@@ -589,7 +667,7 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
 
   return (
     <>
-    <NavigatorProvider visualNavigator={ epubNavigator }>
+    <NavigatorProvider visualNavigator={ epubNavigator } publication={ publication }>
       <main className={ readerStyles.main }>
         <StatefulDockingWrapper>
           <div

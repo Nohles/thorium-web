@@ -11,6 +11,12 @@ export interface ThemeStateObject {
   audio?: string;
 }
 
+export interface SavedCustomTheme {
+  id: string;
+  tokens: ThemeTokens;
+  updatedAt: number;
+}
+
 export interface ThemeStateChangePayload {
   type: string;
   payload: {
@@ -24,6 +30,7 @@ export interface ThemeReducerState {
   colorScheme: ThColorScheme;
   theme: ThemeStateObject;
   customThemes?: Record<string, ThemeTokens>;
+  savedCustomThemes?: SavedCustomTheme[];
   coverTheme?: ThemeTokens;
   prefersReducedMotion: boolean;
   prefersReducedTransparency: boolean;
@@ -42,6 +49,7 @@ const initialState: ThemeReducerState = {
     audio: "auto"
   },
   customThemes: {},
+  savedCustomThemes: [],
   coverTheme: undefined,
   prefersReducedMotion: false,
   prefersReducedTransparency: false, 
@@ -73,6 +81,12 @@ export const themeSlice = createSlice({
         [action.payload.key]: action.payload.tokens
       }
     },
+    setSavedCustomThemes: (
+      state,
+      action: { payload: SavedCustomTheme[] }
+    ) => {
+      state.savedCustomThemes = action.payload
+    },
     setCoverTheme: (state, action) => {
       state.coverTheme = action.payload
     },
@@ -103,6 +117,7 @@ export const {
   setColorScheme, 
   setTheme, 
   setCustomTheme,
+  setSavedCustomThemes,
   setCoverTheme,
   setReducedMotion, 
   setReducedTransparency, 

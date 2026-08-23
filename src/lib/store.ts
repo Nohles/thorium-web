@@ -1,10 +1,14 @@
-import { ThDockingKeys } from "@/preferences/models";
+import { ThDockingKeys, DECORATION_TOKEN_DEFAULTS } from "@/preferences/models";
 
 import { configureStore, Reducer } from "@reduxjs/toolkit";
 
 import readerReducer, { ReaderReducerState } from "@/lib/readerReducer";
 import settingsReducer, { SettingsReducerState } from "@/lib/settingsReducer";
-import themeReducer, { ThemeReducerState } from "@/lib/themeReducer";
+import themeReducer, {
+  type SavedCustomTheme,
+  setSavedCustomThemes,
+  ThemeReducerState
+} from "@/lib/themeReducer";
 import actionsReducer, { ActionsReducerState, ActionStateObject } from "@/lib/actionsReducer";
 import publicationReducer, { PublicationReducerState } from "./publicationReducer";
 import preferencesReducer, { PreferencesReducerState } from "./preferencesReducer";
@@ -41,6 +45,80 @@ export type RootState = {
 };
 
 const DEFAULT_STORAGE_KEY = "thorium-web-state";
+const LEGACY_SAVED_CUSTOM_THEMES_KEY = "thorium-web.saved-custom-themes.v1";
+const MAX_SAVED_CUSTOM_THEMES = 12;
+const SAVED_THEME_TOKEN_KEYS = [
+  "background",
+  "text",
+  "link",
+  "visited",
+  "subdue",
+  "disable",
+  "hover",
+  "onHover",
+  "select",
+  "onSelect",
+  "focus",
+  "elevate",
+  "immerse"
+] as const;
+
+const isSavedCustomTheme = (value: unknown): value is SavedCustomTheme => {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Record<string, unknown>;
+  if (typeof candidate.id !== "string" || typeof candidate.updatedAt !== "number") return false;
+  if (!candidate.tokens || typeof candidate.tokens !== "object") return false;
+  const tokens = candidate.tokens as Record<string, unknown>;
+  return SAVED_THEME_TOKEN_KEYS.every(key => typeof tokens[key] === "string");
+};
+
+// Decoration tints arrived after saved themes shipped; backfill them so
+// every loaded theme always carries usable colors.
+const withDecorationTokenDefaults = (theme: SavedCustomTheme): SavedCustomTheme => ({
+  ...theme,
+  tokens: {
+    ...theme.tokens,
+    ...(typeof theme.tokens.highlight !== "string"
+      ? { highlight: DECORATION_TOKEN_DEFAULTS.highlight }
+      : {}),
+    ...(typeof theme.tokens.dictionary !== "string"
+      ? { dictionary: DECORATION_TOKEN_DEFAULTS.dictionary }
+      : {})
+  }
+});
+
+const readLegacySavedCustomThemes = (): SavedCustomTheme[] => {
+  try {
+    const serialized = localStorage.getItem(LEGACY_SAVED_CUSTOM_THEMES_KEY);
+    if (!serialized) return [];
+    const parsed: unknown = JSON.parse(serialized);
+    return Array.isArray(parsed)
+      ? parsed.filter(isSavedCustomTheme).slice(0, MAX_SAVED_CUSTOM_THEMES)
+      : [];
+  } catch {
+    return [];
+  }
+};
+
+const mergeSavedCustomThemes = (
+  current: SavedCustomTheme[],
+  legacy: SavedCustomTheme[]
+) => {
+  const fingerprints = new Set(
+    current.map(theme => SAVED_THEME_TOKEN_KEYS.map(key => theme.tokens[key]).join("|"))
+  );
+  const ids = new Set(current.map(theme => theme.id));
+  return [
+    ...current,
+    ...legacy.filter(theme => {
+      const fingerprint = SAVED_THEME_TOKEN_KEYS.map(key => theme.tokens[key]).join("|");
+      return !ids.has(theme.id) && !fingerprints.has(fingerprint);
+    })
+  ]
+    .map(withDecorationTokenDefaults)
+    .sort((left, right) => right.updatedAt - left.updatedAt)
+    .slice(0, MAX_SAVED_CUSTOM_THEMES);
+};
 
 // Migrate font family state
 const migrateFontFamily = (stateSlice: SettingsReducerState | WebPubSettingsReducerState) => {
@@ -222,6 +300,13 @@ const loadState = (storageKey: string = DEFAULT_STORAGE_KEY) => {
           ];
         }
       }
+
+      // Backfill decoration tints onto persisted saved themes
+      if (Array.isArray(state.theming?.savedCustomThemes)) {
+        state.theming.savedCustomThemes = state.theming.savedCustomThemes
+          .filter(isSavedCustomTheme)
+          .map(withDecorationTokenDefaults);
+      }
     }
     
     return state;
@@ -326,6 +411,18 @@ export const makeStore = (storageKey?: string, externalReducers: Record<string, 
   }, 250);
 
   store.subscribe(saveStateDebounced);
+
+  const legacySavedCustomThemes = readLegacySavedCustomThemes();
+  if (legacySavedCustomThemes.length > 0) {
+    const currentSavedCustomThemes = store.getState().theming.savedCustomThemes ?? [];
+    const mergedSavedCustomThemes = mergeSavedCustomThemes(
+      currentSavedCustomThemes,
+      legacySavedCustomThemes
+    );
+    if (mergedSavedCustomThemes.length !== currentSavedCustomThemes.length) {
+      store.dispatch(setSavedCustomThemes(mergedSavedCustomThemes));
+    }
+  }
 
   return store;
 }

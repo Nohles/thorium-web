@@ -223,6 +223,10 @@ export const useEpubNavigator = () => {
     return navigatorInstance?._cframes;
   }, []);
 
+  const getNavigatorInstance = useCallback(() => {
+    return navigatorInstance;
+  }, []);
+
   const currentScriptMode = useCallback((): ScriptMode | undefined => {
     const metadata = navigatorInstance?.publication?.metadata;
     if (!metadata) return undefined;
@@ -251,6 +255,7 @@ export const useEpubNavigator = () => {
     getSetting,
     submitPreferences,
     getCframes,
+    getNavigatorInstance,
     getScriptMode: currentScriptMode,
   }
 }
