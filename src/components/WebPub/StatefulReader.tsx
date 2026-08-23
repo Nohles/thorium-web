@@ -30,7 +30,8 @@ import {
 import { WebPubNavigatorListeners } from "@readium/navigator";
 import {
   Locator,
-  Publication
+  Publication,
+  TimelineItem
 } from "@readium/shared";
 
 import { StatefulDockingWrapper } from "../Docking/StatefulDockingWrapper";
@@ -46,7 +47,10 @@ import { useWebPubReaderInit } from "./Hooks/useReaderInit";
 import { useWebPubKeyboardPeripherals } from "./Hooks/useWebPubKeyboardPeripherals";
 import { useFullscreen } from "@/core/Hooks/useFullscreen";
 import { useI18n } from "@/i18n/useI18n";
-import { useTimeline } from "@/core/Hooks/useTimeline";
+import { usePublicationProgress } from "@/core/Hooks/usePublicationProgress";
+import { useTimelineAdjacency } from "@/core/Hooks/useTimelineAdjacency";
+import { useTocEntryTracking } from "@/components/Actions/Toc/useTocEntryTracking";
+import { useTocTreeBuilder } from "@/core/Hooks/useTocTreeBuilder";
 import { usePositionStorage } from "@/hooks/usePositionStorage";
 import { useDocumentTitle } from "@/core/Hooks/useDocumentTitle";
 import { useSpacingPresets } from "../Settings/Spacing/hooks/useSpacingPresets";
@@ -61,8 +65,8 @@ import {
   toggleImmersive, 
   setFullscreen,
 } from "@/lib/readerReducer";
-import { 
-  setTimeline,
+import {
+  setProgress,
   setPublicationStart,
   setPublicationEnd
 } from "@/lib/publicationReducer";
@@ -189,18 +193,27 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     canGoForward,
     currentLocator,
     getCframes,
+    timeline: getNavigatorTimeline
   } = webPubNavigator;
 
   const { setLocalData, getLocalData, localData } = usePositionStorage(localDataKey, positionStorage);
-  const [navigatorReady, setNavigatorReady] = useState(false);
 
-  const timeline = useTimeline({
+  const tocTree = useAppSelector(state => state.publication.toc?.tree);
+
+  const [currentTimelineItem, setCurrentTimelineItem] = useState<TimelineItem | undefined>(undefined);
+
+  const { updateAdjacentItems, clearAdjacentItems } = useTimelineAdjacency(getNavigatorTimeline);
+  const { updateCurrentTocEntry, clearCurrentTocEntry } = useTocEntryTracking(getNavigatorTimeline, tocTree);
+
+  const timeline = usePublicationProgress({
     publication: publication,
+    getNavigatorTimeline,
+    currentTimelineItem,
     currentLocation: localData,
     currentPositions: currentPositions() || [],
     positionsList: undefined,
-    onChange: (timeline) => {
-      dispatch(setTimeline(timeline));
+    onChange: (progress) => {
+      dispatch(setProgress(progress));
     }
   });
 
@@ -272,7 +285,18 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     frameLoaded: async function (_wnd: Window): Promise<void> {
       window.requestAnimationFrame(applyDictionaryDecorationsToFrames);
     },
-    timelineItemChanged: function (): void {},
+    timelineItemChanged: function (item: TimelineItem | undefined): void {
+      setCurrentTimelineItem(item);
+
+      if (!item) {
+        clearAdjacentItems();
+        clearCurrentTocEntry();
+        return;
+      }
+
+      updateAdjacentItems(item);
+      updateCurrentTocEntry(item);
+    },
     positionChanged: async function (locator: Locator): Promise<void> {
       setLocalData(locator);
       applyDictionaryDecorationsToFrames();
@@ -348,12 +372,18 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
         }
       }
     },
-  }), [setLocalData, canGoBackward, canGoForward, dispatch, toggleIsImmersive, zoomIn, zoomOut, profile, handleFullscreen, getFocusedDockableKey, applyDictionaryDecorationsToFrames, handleDictionaryClick, handleDictionarySelection]);
+  }), [setLocalData, canGoBackward, canGoForward, dispatch, toggleIsImmersive, zoomIn, zoomOut, profile, handleFullscreen, getFocusedDockableKey, applyDictionaryDecorationsToFrames, handleDictionaryClick, handleDictionarySelection, updateAdjacentItems, clearAdjacentItems, updateCurrentTocEntry, clearCurrentTocEntry]);
 
-  const initialPosition = useMemo(() => getLocalData(), [getLocalData]);
+  // getLocalData() returns a plain JSON.parse()'d object on cold load (not yet a real
+  // Locator instance) — the navigator calls Timeline.locate() on this at startup, which
+  // needs real prototype methods (.time(), etc.), so deserialize it here at the point of use.
+  const initialPosition = useMemo(() => {
+    const stored = getLocalData();
+    return stored ? (Locator.deserialize(stored) ?? null) : null;
+  }, [getLocalData]);
 
   // Initialize reader using the new composite hook
-  useWebPubReaderInit({
+  const { navigatorReady } = useWebPubReaderInit({
     container,
     publication,
     initialPosition,
@@ -370,7 +400,6 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     contentProtectionConfig: resolveContentProtectionConfig(preferences.contentProtection, t),
     keyboardPeripherals,
     onNavigatorReady: () => {
-      setNavigatorReady(true);
       dispatch(setLoading(false));
     },
   });
@@ -380,6 +409,8 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     const frame = window.requestAnimationFrame(applyDictionaryDecorationsToFrames);
     return () => window.cancelAnimationFrame(frame);
   }, [applyDictionaryDecorationsToFrames, navigatorReady]);
+
+  useTocTreeBuilder(publication, navigatorReady, getNavigatorTimeline);
 
   return (
     <>
@@ -412,8 +443,9 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
               <div id="thorium-web-container" className={ readerStyles.iframeContainer } ref={ container }></div>
             </article>
 
-          <StatefulReaderFooter 
-            layout={ layoutUI } 
+          <StatefulReaderFooter
+            layout={ layoutUI }
+            publication={ publication }
             progressionFormatPref={ preferences.theming.progression?.format?.webPub }
             progressionFormatFallback={ ThProgressionFormat.readingOrderIndex }
           />
