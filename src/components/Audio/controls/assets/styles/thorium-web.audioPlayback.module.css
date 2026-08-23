@@ -27,4 +27,17 @@
 .audioPlayPauseButton {
   --th-icon-size: calc(var(--audio-icon-base) * 2);
   padding: calc(var(--th-icon-size) * (1/8));
+  border-radius: 999px;
+  background: var(--th-theme-text);
+  color: var(--th-theme-background);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--th-theme-text) 18%, transparent);
+}
+
+.audioPlayPauseButton[data-hovered] {
+  background: color-mix(in srgb, var(--th-theme-text) 88%, var(--th-theme-background));
+  color: var(--th-theme-background);
+}
+
+.audioPlayPauseButton[data-pressed] {
+  transform: scale(0.97);
 }

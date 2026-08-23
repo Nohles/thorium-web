@@ -1,41 +1,45 @@
 .wrapper {
   width: 100%;
-  height: 100dvh;
   height: 100vh;
+  height: 100dvh;
 }
 
 .loader {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
+  gap: 0.75rem;
   width: 100%;
   height: 100%;
   color: var(--th-theme-text, CanvasText);
   background-color: var(--th-theme-background, Canvas);
-  font-weight: bold;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.006em;
 }
 
-.loader::after {
-  content: "...";
-  overflow: hidden;
-  display: inline-block;
-  vertical-align: bottom;
-  animation: ellipsis-dot 1s infinite 300ms;
-  animation-fill-mode: forwards;
-  width: 3ch;
+.loader::before {
+  content: "";
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  border: 3px solid color-mix(in srgb, var(--th-theme-text, CanvasText) 16%, transparent);
+  border-top-color: var(--th-theme-text, CanvasText);
+  border-radius: 999px;
+  animation: loader-spin 700ms linear infinite;
 }
 
-@keyframes ellipsis-dot {
-  25% {
-    content: "";
+@keyframes loader-spin {
+  to {
+    transform: rotate(360deg);
   }
-  50% {
-    content: ".";
-  }
-  75% {
-    content: "..";
-  }
-  100% {
-    content: "...";
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loader::before {
+    animation: none;
+    border-top-color: color-mix(in srgb, var(--th-theme-text, CanvasText) 58%, transparent);
   }
 }

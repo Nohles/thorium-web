@@ -6,12 +6,14 @@
   border-radius: var(--th-layout-radius);
   max-width: 100%;
   height: var(--th-icon-size, 24px);
+  color: var(--th-theme-text);
+  transition: background-color 160ms ease-out, color 160ms ease-out;
 }
 
 .link svg {
-  fill: var(--th-theme-text);
+  fill: currentColor;
   max-width: 100%;
-  height: 100%;
+  height: 80%;
 }
 
 .link img {
@@ -30,6 +32,7 @@
 
 .link[data-focus-visible] {
   outline: 2px solid var(--th-theme-focus);
+  outline-offset: 2px;
 }
 
 .link[data-disabled] {

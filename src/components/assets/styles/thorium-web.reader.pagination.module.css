@@ -4,7 +4,7 @@
   gap: calc(var(--th-layout-spacing) / 2);
   grid-template-areas: "pagination-start pagination-center pagination-end";
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  background-color: var(--th-theme-background);
+  background: transparent;
   color: var(--th-theme-text);
   align-items: center;
   width: 100%;
@@ -36,11 +36,16 @@
   box-sizing: border-box;
   padding: calc(var(--th-icon-size, 24px) * (1/4)) calc(var(--th-layout-spacing) / 2);
   gap: calc(var(--th-layout-spacing) / 2);
+  min-height: 36px;
   max-height: calc(var(--th-icon-size, 24px) * 2);
   max-width: 100%;
   border-radius: var(--th-layout-radius);
   display: flex;
   align-items: center;
+  color: var(--th-theme-text);
+  font-size: 0.875rem;
+  font-weight: 550;
+  transition: background-color 160ms ease-out, color 160ms ease-out;
 }
 
 .rightButton {
@@ -55,6 +60,7 @@
 
 .listItem button[data-focus-visible] {
   outline: 2px solid var(--th-theme-focus);
+  outline-offset: 2px;
 }
 
 .listItem button[data-disabled] {
@@ -72,7 +78,17 @@
 
 .listItem button svg {
   flex: none;
-  width: var(--th-icon-size, 24px);
-  height: var(--th-icon-size, 24px);
+  width: calc(var(--th-icon-size, 24px) * 0.8);
+  height: calc(var(--th-icon-size, 24px) * 0.8);
   fill: currentColor;
+}
+
+@media (max-width: 40rem) {
+  .wrapper {
+    padding-inline: 0.25rem;
+  }
+
+  .listItem button {
+    padding-inline: 0.5rem;
+  }
 }

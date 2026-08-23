@@ -11,12 +11,12 @@
 }
 
 .popover {
-  background-color: var(--th-theme-background);
+  background-color: color-mix(in srgb, var(--th-theme-background) 97%, var(--th-theme-text));
   color: var(--th-theme-text);
   padding: calc(var(--th-layout-spacing) / 2);
-  border-radius: var(--th-layout-radius);
-  border: 1px solid var(--th-theme-subdue);
-  filter: drop-shadow(var(--th-theme-elevate));
+  border-radius: calc(var(--th-layout-radius) * 1.5);
+  border: 1px solid color-mix(in srgb, var(--th-theme-text) 14%, transparent);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--th-theme-text) 18%, transparent);
   box-sizing: border-box;
   max-width: var(--th-layout-constraints-popover, 500px);
   width: max-content;
@@ -33,6 +33,8 @@
   padding: calc(var(--th-layout-spacing) / 2);
   border-radius: var(--th-layout-radius);
   outline: none;
+  min-height: 36px;
+  transition: background-color 150ms ease-out, color 150ms ease-out;
 }
 
 .menuItem[data-hovered] {
@@ -42,6 +44,7 @@
 
 .menuItem[data-focus-visible] {
   outline: 2px solid var(--th-theme-focus);
+  outline-offset: 1px;
 }
 
 .menuItem[data-disabled] {
@@ -55,15 +58,24 @@
 }
 
 .menuItemLabel {
-  font-size: 1rem;
+  font-size: 0.875rem;
+  font-weight: 550;
 }
 
 .menuItemShortcut {
   font-family: monospace;
   font-weight: bold;
   color: var(--th-theme-subdue);
-  padding: 5px;
+  padding: 0.2rem 0.35rem;
   margin-inline-start: auto;
   border-radius: var(--th-layout-radius);
-  border: 1px solid var(--th-theme-subdue);
+  border: 1px solid color-mix(in srgb, var(--th-theme-text) 18%, transparent);
+  font-size: 0.75rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :global(.thorium_web_layeredUI.thorium_web_isImmersive:not(.thorium_web_isHovering)) .hint,
+  .menuItem {
+    transition: none;
+  }
 }

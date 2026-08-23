@@ -2,7 +2,7 @@
 .wrapper {}
 
 .search {
-  margin-bottom: var(--th-layout-spacing);
+  margin-bottom: calc(var(--th-layout-spacing) * 1.25);
   display: grid;
   grid-template-areas: "label label"
                        "input button";
@@ -14,6 +14,9 @@
 .searchLabel {
   grid-area: label;
   margin-bottom: calc(var(--th-layout-spacing) / 2);
+  color: var(--th-theme-text);
+  font-size: 0.875rem;
+  font-weight: 650;
 }
 
 .searchInput {
@@ -22,9 +25,13 @@
   width: 100%;
   max-width: 100%;
   display: block;
+  min-height: 40px;
   border-radius: var(--th-layout-radius);
-  border: 2px solid var(--th-theme-subdue);
+  border: 1px solid color-mix(in srgb, var(--th-theme-text) 16%, transparent);
   padding: calc(var(--th-icon-size, 24px) * (1/4)) calc(var(--th-layout-spacing) / 2);
+  background: color-mix(in srgb, var(--th-theme-text) 4%, transparent);
+  color: var(--th-theme-text);
+  font: inherit;
 }
 
 .searchInput::-webkit-search-cancel-button,
@@ -34,6 +41,7 @@
 
 .searchInput[data-focus-visible] {
   outline: 2px solid var(--th-theme-focus);
+  outline-offset: 2px;
 }
 
 .searchIcon,
@@ -63,7 +71,7 @@
 }
 
 .tree {
-  background: var(--th-theme-background);
+  background: transparent;
   color: var(--th-theme-text);
   outline: none;
   width: 100%;
@@ -77,8 +85,10 @@
   padding: calc(var(--th-layout-spacing) / 2);
   padding-inline-start: calc(((var(--tree-item-level) - 1) * var(--th-layout-spacing)) + (var(--th-layout-spacing) / 2));
   border-radius: var(--th-layout-radius);
-  border: 2px solid transparent;
+  min-height: 40px;
+  border: 1px solid transparent;
   box-sizing: border-box;
+  transition: background-color 150ms ease-out, border-color 150ms ease-out;
 }
 
 .tree:has(.treeItemButton) .treeItem {
@@ -125,6 +135,7 @@
 
 .treeItem[data-focus-visible] {
   outline: 2px solid var(--th-theme-focus);
+  outline-offset: 1px;
 }
 
 .treeItem[data-disabled] {
@@ -132,7 +143,9 @@
 }
 
 .treeItem[data-selected] {
-  border: 2px solid var(--th-theme-subdue);
+  border: 1px solid color-mix(in srgb, var(--th-theme-text) 24%, transparent);
+  background: color-mix(in srgb, var(--th-theme-text) 7%, transparent);
+  font-weight: 700;
 }
 
 .treeItemButton svg {
@@ -149,7 +162,16 @@
 }
 
 .empty {
-  max-width: 25ch;
+  max-width: 32ch;
+  margin: 2rem auto;
+  color: color-mix(in srgb, var(--th-theme-text) 68%, var(--th-theme-background));
+  line-height: 1.5;
   text-align: start;
   text-wrap: balance;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .treeItemButton svg {
+    transition: none;
+  }
 }

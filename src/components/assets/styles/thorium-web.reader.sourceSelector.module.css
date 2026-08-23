@@ -25,14 +25,16 @@
   height: calc(var(--th-icon-size, 24px) * 1.5);
   padding-inline: calc(var(--th-layout-spacing) / 2) calc(var(--th-layout-spacing) / 4);
   padding-block: 0;
-  border: 1px solid var(--th-theme-subdue);
+  border: 1px solid color-mix(in srgb, var(--th-theme-text) 16%, transparent);
   border-radius: var(--th-layout-radius);
   background: transparent;
   color: var(--th-theme-text);
   font: inherit;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 550;
   line-height: 1.2;
   cursor: pointer;
+  transition: background-color 160ms ease-out, border-color 160ms ease-out;
 }
 
 .trigger[data-hovered] {
@@ -42,6 +44,7 @@
 
 .trigger[data-focus-visible] {
   outline: 2px solid var(--th-theme-focus);
+  outline-offset: 2px;
 }
 
 .trigger[data-disabled] {
@@ -82,12 +85,12 @@
 }
 
 .popover {
-  background-color: var(--th-theme-background);
+  background: color-mix(in srgb, var(--th-theme-background) 97%, var(--th-theme-text));
   color: var(--th-theme-text);
   padding: calc(var(--th-layout-spacing) / 2);
-  border-radius: var(--th-layout-radius);
-  border: 1px solid var(--th-theme-subdue);
-  filter: drop-shadow(var(--th-theme-elevate));
+  border-radius: calc(var(--th-layout-radius) * 1.5);
+  border: 1px solid color-mix(in srgb, var(--th-theme-text) 14%, transparent);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--th-theme-text) 18%, transparent);
   box-sizing: border-box;
   min-width: var(--trigger-width);
   width: max-content;
@@ -99,7 +102,7 @@
 .listHeading {
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--th-theme-subdue);
+  color: color-mix(in srgb, var(--th-theme-text) 68%, var(--th-theme-background));
   padding: calc(var(--th-layout-spacing) / 4);
   margin-bottom: calc(var(--th-layout-spacing) / 4);
 }
@@ -118,10 +121,13 @@
   border-radius: var(--th-layout-radius);
   outline: none;
   cursor: pointer;
+  transition: background-color 150ms ease-out, color 150ms ease-out;
 }
 
 .item[data-selected] {
-  color: var(--th-theme-subdue);
+  background: color-mix(in srgb, var(--th-theme-text) 8%, transparent);
+  color: var(--th-theme-text);
+  font-weight: 700;
 }
 
 .item[data-hovered],
@@ -132,6 +138,7 @@
 
 .item[data-focus-visible] {
   outline: 2px solid var(--th-theme-focus);
+  outline-offset: 1px;
 }
 
 .item[data-disabled] {

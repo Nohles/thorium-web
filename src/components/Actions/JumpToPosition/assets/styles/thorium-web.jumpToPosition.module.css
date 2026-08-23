@@ -12,33 +12,41 @@
 
 .input {
   display: block;
-  font-weight: bold;
+  min-height: 40px;
+  box-sizing: border-box;
+  font-weight: 600;
   padding: calc(var(--th-icon-size, 24px) * (1/4)) calc(var(--th-layout-spacing) / 2);
   border-radius: var(--th-layout-radius);
-  border: 2px solid var(--th-theme-subdue);
+  border: 1px solid color-mix(in srgb, var(--th-theme-text) 16%, transparent);
+  background: color-mix(in srgb, var(--th-theme-text) 4%, transparent);
+  color: var(--th-theme-text);
 }
 
 .button {
-  box-sizing: content-box;
-  border: 2px solid var(--th-theme-subdue);
+  box-sizing: border-box;
+  min-height: 40px;
+  border: 1px solid var(--th-theme-text);
   padding: calc(var(--th-icon-size, 24px) * (1/4)) calc(var(--th-icon-size, 24px) * (1/2));
   text-align: center;
   border-radius: var(--th-layout-radius);
   margin-inline-start: auto;
   align-self: flex-end;
+  background: var(--th-theme-text);
+  color: var(--th-theme-background);
+  font-weight: 600;
 }
 
 .button[data-hovered] {
-  background-color: var(--th-theme-hover);
-  color: var(--th-theme-onHover);
+  opacity: 0.84;
 }
 
 .input[data-focus-visible],
 .button[data-focus-visible] {
   outline: 2px solid var(--th-theme-focus);
+  outline-offset: 2px;
 }
 
 .numberField[data-disabled],
 .button[data-disabled] {
   color: var(--th-theme-disable);
-} 
+}
