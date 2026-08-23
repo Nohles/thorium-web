@@ -120,6 +120,37 @@ It is critical you wrap this component in a `<ThStoreProvider>` for it to work p
 
 See the [i18n documentation](../Core/i18n.md) for the full list of available options.
 
+### Reader interactions
+
+EPUB and WebPub readers expose one interaction contract for selection,
+context-menu, and decoration workflows:
+
+```tsx
+<StatefulReaderWrapper
+  profile={ profile }
+  publication={ publication }
+  localDataKey={ localDataKey }
+  decorations={ decorations }
+  onTextSelected={ ({ text, locator, rect }) => {
+    openSelectionMenu({ text, locator, rect });
+  } }
+  onContextMenu={ ({ point, selection }) => {
+    openContextMenu({ point, selection });
+  } }
+  onDecorationActivated={ ({ id, locator, extras, rect }) => {
+    openDecoration({ id, locator, extras, rect });
+  } }
+/>
+```
+
+Selection and activation events include host-document coordinates and, when
+available, a Readium `Locator`. Frame-relative coordinates are also exposed for
+integrations that render UI inside or relative to the navigator frame.
+
+The older `dictionary` prop remains supported through a compatibility adapter,
+but is deprecated. New integrations should use `ReaderInteractionProps` so all
+decorations share the acknowledged, retrying frame-delivery path.
+
 ### Plugins
 
 Plugins let you extend the reader UI with custom actions and settings components. Each profile has its own factory so only the relevant code is loaded.

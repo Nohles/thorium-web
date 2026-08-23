@@ -3,8 +3,10 @@ import type {
   ContextMenuEvent,
   FrameClickEvent,
 } from "@readium/navigator-html-injectables";
+import { Locator, LocatorText } from "@readium/shared";
 
 export interface ReaderDecorationStyle {
+  type?: string;
   tint?: string;
   layout?: string;
   width?: string;
@@ -12,9 +14,12 @@ export interface ReaderDecorationStyle {
 
 export interface ReaderDecorationInput {
   id: string;
-  /** Serialized Readium locator object (as produced by Locator#serialize/toJSON). */
+  /** Readium Locator instance or its serialized representation. */
   locator: unknown;
   style?: ReaderDecorationStyle;
+  extras?: Record<string, unknown>;
+  /** Pointer events that may activate this decoration. Defaults to both. */
+  activation?: "tap" | "click" | "both";
   /**
    * Visible text the decoration covers. Used to resolve click activation when
    * the environment renders highlights with the CSS Highlight API.
@@ -24,8 +29,12 @@ export interface ReaderDecorationInput {
 
 export interface ReaderTextSelectedEvent {
   text: string;
+  /** Readium locator enriched with the selected quote when one is available. */
+  locator?: Locator;
   /** Host-document viewport coordinates. */
   rect: { x: number; y: number; width: number; height: number };
+  /** Coordinates inside the Readium frame, retained for legacy integrations. */
+  frameRect?: { x: number; y: number; width: number; height: number };
   /** URL of the frame the selection lives in. May be a blob: URL. */
   frameSrc: string;
   /**
@@ -42,9 +51,15 @@ export interface ReaderContextMenuEvent {
 
 export interface ReaderDecorationActivatedEvent {
   id: string;
+  locator?: Locator;
+  extras?: Record<string, unknown>;
   point: { x: number; y: number };
+  /** Device-pixel coordinates reported by the Readium frame. */
+  framePoint?: { x: number; y: number };
   /** Host-document viewport rect of the activated decoration, when known. */
   rect?: { x: number; y: number; width: number; height: number };
+  /** CSS-pixel rect inside the Readium frame, when known. */
+  frameRect?: { top: number; left: number; width: number; height: number };
 }
 
 export interface ReaderInteractionProps {
@@ -121,15 +136,33 @@ const frameElements = (container?: HTMLElement | null): HTMLIFrameElement[] => {
 const frameWindowFor = (
   container: HTMLElement | null | undefined,
   frameSrc: string,
+  navigatorFrames?: readonly unknown[],
 ): Window | null => {
   for (const frame of frameElements(container)) {
+    if (frame.src === frameSrc) return frame.contentWindow;
     try {
       if (frame.contentWindow?.location.href === frameSrc) return frame.contentWindow;
     } catch {
       // cross-origin frame, skip
     }
   }
+  const liveFrames = (navigatorFrames ?? []).filter(isInteractionFrame);
+  const exactFrame = liveFrames.find((frame) => frame.source === frameSrc);
+  if (exactFrame) return exactFrame.window;
+  if (liveFrames.length === 1) return liveFrames[0].window;
   return null;
+};
+
+interface InteractionFrame {
+  source?: string;
+  window: Window;
+  isDestroyed?: boolean;
+}
+
+const isInteractionFrame = (value: unknown): value is InteractionFrame => {
+  if (!value || typeof value !== "object") return false;
+  const frame = value as { window?: unknown; isDestroyed?: boolean };
+  return frame.window instanceof Window && !frame.isDestroyed;
 };
 
 const toHostRect = (
@@ -157,28 +190,58 @@ const toHostRect = (
 export function textSelectionToEvent(
   container: HTMLElement | null | undefined,
   selection: BasicTextSelection,
-  resourceHref?: string,
+  currentLocatorOrResourceHref?: Locator | string,
 ): ReaderTextSelectedEvent | null {
-  const rect = toHostRect(container, selection.targetFrameSrc, {
+  const currentLocator = typeof currentLocatorOrResourceHref === "string"
+    ? undefined
+    : currentLocatorOrResourceHref;
+  const resourceHref = typeof currentLocatorOrResourceHref === "string"
+    ? currentLocatorOrResourceHref
+    : currentLocator?.href;
+  const frameRect = {
     x: selection.x,
     y: selection.y,
     width: selection.width,
     height: selection.height,
-  });
-  if (!rect) return null;
+  };
+  const rect = toHostRect(container, selection.targetFrameSrc, frameRect) ?? frameRect;
+  const sourceLocator =
+    (selection as BasicTextSelection & { locator?: Locator }).locator ??
+    currentLocator;
+  const locator = sourceLocator
+    ? new Locator({
+        href: sourceLocator.href,
+        type: sourceLocator.type,
+        title: sourceLocator.title,
+        locations: sourceLocator.locations,
+        text: new LocatorText({
+          before: sourceLocator.text?.before,
+          after: sourceLocator.text?.after,
+          highlight: selection.text.trim(),
+        }),
+      })
+    : undefined;
   return {
     text: selection.text,
+    locator,
     rect,
+    frameRect,
     frameSrc: selection.targetFrameSrc,
-    resourceHref,
+    resourceHref: locator?.href ?? resourceHref,
   };
 }
 
 export function contextMenuToEvent(
   container: HTMLElement | null | undefined,
   event: ContextMenuEvent,
-  resourceHref?: string,
+  currentLocatorOrResourceHref?: Locator | string,
 ): ReaderContextMenuEvent | null {
+  const currentLocator = typeof currentLocatorOrResourceHref === "string"
+    ? undefined
+    : currentLocatorOrResourceHref;
+  const resourceHref = typeof currentLocatorOrResourceHref === "string"
+    ? currentLocatorOrResourceHref
+    : currentLocator?.href;
   const frame = frameElements(container).find((candidate) => {
     try {
       return candidate.contentWindow?.location.href === event.targetFrameSrc;
@@ -190,16 +253,36 @@ export function contextMenuToEvent(
   if (!offset) return null;
   let selection: ReaderTextSelectedEvent | undefined;
   if (event.selectedText) {
+    const locator = currentLocator
+      ? new Locator({
+          href: currentLocator.href,
+          type: currentLocator.type,
+          title: currentLocator.title,
+          locations: currentLocator.locations,
+          text: new LocatorText({
+            before: currentLocator.text?.before,
+            after: currentLocator.text?.after,
+            highlight: event.selectedText.text.trim(),
+          }),
+        })
+      : undefined;
     selection = {
       text: event.selectedText.text,
+      locator,
       rect: {
         x: event.selectedText.x + offset.left,
         y: event.selectedText.y + offset.top,
         width: event.selectedText.width,
         height: event.selectedText.height,
       },
+      frameRect: {
+        x: event.selectedText.x,
+        y: event.selectedText.y,
+        width: event.selectedText.width,
+        height: event.selectedText.height,
+      },
       frameSrc: event.targetFrameSrc,
-      resourceHref,
+      resourceHref: locator?.href ?? resourceHref,
     };
   } else {
     const wnd = frame?.contentWindow;
@@ -207,16 +290,36 @@ export function contextMenuToEvent(
       ? wordAtPoint(wnd, event.clientX, event.clientY)
       : null;
     if (word) {
+      const locator = currentLocator
+        ? new Locator({
+            href: currentLocator.href,
+            type: currentLocator.type,
+            title: currentLocator.title,
+            locations: currentLocator.locations,
+            text: new LocatorText({
+              before: currentLocator.text?.before,
+              after: currentLocator.text?.after,
+              highlight: word.text,
+            }),
+          })
+        : undefined;
       selection = {
         text: word.text,
+        locator,
         rect: {
           x: word.rect.x + offset.left,
           y: word.rect.y + offset.top,
           width: word.rect.width,
           height: word.rect.height,
         },
+        frameRect: {
+          x: word.rect.x,
+          y: word.rect.y,
+          width: word.rect.width,
+          height: word.rect.height,
+        },
         frameSrc: event.targetFrameSrc,
-        resourceHref,
+        resourceHref: locator?.href ?? resourceHref,
       };
     }
   }
@@ -341,19 +444,28 @@ export function resolveDecorationActivation(
   event: FrameClickEvent,
   container: HTMLElement | null | undefined,
   decorations: readonly ReaderDecorationInput[],
+  navigatorFrames?: readonly unknown[],
+  trigger?: "tap" | "click",
 ): ReaderDecorationActivatedEvent | null {
   if (decorations.length === 0) return null;
-  const wnd = frameWindowFor(container, event.targetFrameSrc);
+  const wnd = frameWindowFor(container, event.targetFrameSrc, navigatorFrames);
   if (!wnd) return null;
   const dpr = wnd.devicePixelRatio || window.devicePixelRatio || 1;
   const frameX = event.x / dpr;
   const frameY = event.y / dpr;
+  const clickPoint = { x: event.x, y: event.y };
 
   const doc = wnd.document;
   // Frame sources can be session-scoped blob: URLs that never match stored
   // locator hrefs, so candidate selection relies on the block-scoped quote
   // matching below rather than href filtering.
-  const candidates = decorations;
+  const candidates = trigger
+    ? decorations.filter((decoration) =>
+        !decoration.activation ||
+        decoration.activation === "both" ||
+        decoration.activation === trigger,
+      )
+    : decorations;
   if (candidates.length === 0) return null;
 
   let caret: Range | null = caretRangeAt(wnd, frameX, frameY);
@@ -366,29 +478,63 @@ export function resolveDecorationActivation(
   if (caretOffset === null) return null;
 
   const toHostRect = frameToHostRect(container, wnd);
+  const frameOffset = frameOffsetForWindow(container, wnd);
+  const toActivation = (
+    decoration: ReaderDecorationInput,
+    point: HostRect,
+    rect?: HostRect,
+  ): ReaderDecorationActivatedEvent => ({
+    id: decoration.id,
+    locator: locatorFromUnknown(decoration.locator),
+    extras: decoration.extras,
+    point: { x: point.x, y: point.y },
+    framePoint: clickPoint,
+    rect,
+    frameRect: rect
+      ? {
+          top: rect.y - (frameOffset?.top ?? 0),
+          left: rect.x - (frameOffset?.left ?? 0),
+          width: rect.width,
+          height: rect.height,
+        }
+      : undefined,
+  });
 
-  let best: { id: string; start: number; end: number; distance: number } | null = null;
+  let best: { decoration: ReaderDecorationInput; start: number; end: number; distance: number } | null = null;
   for (const decoration of candidates) {
     const quote =
       decoration.text ??
       ((decoration.locator as { text?: { highlight?: string } } | null)?.text?.highlight ?? "");
+    const locatorText = (decoration.locator as {
+      text?: { before?: string; after?: string };
+    } | null)?.text;
     if (!quote) continue;
     let searchFrom = 0;
     while (true) {
       const start = blockText.indexOf(quote, searchFrom);
       if (start === -1) break;
       const end = start + quote.length;
+      const hasBefore =
+        !locatorText?.before ||
+        blockText.slice(Math.max(0, start - locatorText.before.length), start).endsWith(locatorText.before);
+      const hasAfter =
+        !locatorText?.after ||
+        blockText.slice(end, end + locatorText.after.length).startsWith(locatorText.after);
+      if (!hasBefore || !hasAfter) {
+        searchFrom = start + 1;
+        continue;
+      }
       const distance = caretOffset < start ? start - caretOffset : caretOffset > end ? caretOffset - end : 0;
       if (distance === 0) {
         const point = toHostRect(frameX, frameY);
-        return {
-          id: decoration.id,
+        return toActivation(
+          decoration,
           point,
-          rect: quoteHostRect(toHostRect, point, block, start, end, caret),
-        };
+          quoteHostRect(toHostRect, point, block, start, end, caret),
+        );
       }
       if (!best || distance < best.distance) {
-        best = { id: decoration.id, start, end, distance };
+        best = { decoration, start, end, distance };
       }
       searchFrom = start + 1;
     }
@@ -397,23 +543,24 @@ export function resolveDecorationActivation(
   const tolerance = Math.max(24, quoteTolerance(candidates));
   if (best && best.distance <= tolerance) {
     const point = toHostRect(frameX, frameY);
-    return {
-      id: best.id,
+    return toActivation(
+      best.decoration,
       point,
-      rect: quoteHostRect(toHostRect, point, block, best.start, best.end, caret),
-    };
+      quoteHostRect(toHostRect, point, block, best.start, best.end, caret),
+    );
   }
 
   const clickedElement = doc.elementFromPoint(frameX, frameY);
   const highlighted = clickedElement?.closest("[data-highlight-id]");
   const highlightedId = highlighted?.getAttribute("data-highlight-id");
-  if (highlightedId && candidates.some((decoration) => decoration.id === highlightedId)) {
+  const highlightedDecoration = candidates.find((decoration) => decoration.id === highlightedId);
+  if (highlightedDecoration) {
     const point = toHostRect(frameX, frameY);
-    return {
-      id: highlightedId,
+    return toActivation(
+      highlightedDecoration,
       point,
-      rect: elementHostRect(toHostRect, point, clickedElement),
-    };
+      elementHostRect(toHostRect, point, clickedElement),
+    );
   }
   return null;
 };
@@ -431,20 +578,7 @@ const frameToHostRect =
     container: HTMLElement | null | undefined,
     wnd: Window,
   ): ((x: number, y: number) => HostRect) => {
-    let offset: DOMRect | null = null;
-    try {
-      const frames = Array.from(
-        document.querySelectorAll<HTMLIFrameElement>("iframe.readium-navigator-iframe"),
-      );
-      offset =
-        frames.find((frame) => frame.contentWindow?.window === wnd)?.getBoundingClientRect() ??
-        null;
-    } catch {
-      offset = null;
-    }
-    if (!offset && container) {
-      offset = container.getBoundingClientRect();
-    }
+    const offset = frameOffsetForWindow(container, wnd);
     return (x, y) => ({
       x: x + (offset?.left ?? 0),
       y: y + (offset?.top ?? 0),
@@ -452,6 +586,27 @@ const frameToHostRect =
       height: 0,
     });
   };
+
+const frameOffsetForWindow = (
+  container: HTMLElement | null | undefined,
+  wnd: Window,
+): DOMRect | null => {
+  try {
+    const frame = Array.from(
+      document.querySelectorAll<HTMLIFrameElement>("iframe.readium-navigator-iframe"),
+    ).find((candidate) => candidate.contentWindow?.window === wnd);
+    if (frame) return frame.getBoundingClientRect();
+  } catch {
+    // fall through to the reader container
+  }
+  return container?.getBoundingClientRect() ?? null;
+};
+
+const locatorFromUnknown = (value: unknown): Locator | undefined => {
+  if (value instanceof Locator) return value;
+  if (!value || typeof value !== "object") return undefined;
+  return Locator.deserialize(value);
+};
 
 /**
  * Builds a host-coordinate rect for the matched quote inside `block`. The
@@ -580,10 +735,14 @@ export function pushDecorationsToFrames(
   const targets = decorationFrameTargetsFromNavigator(navigator);
   if (!targets || targets.length === 0) return Promise.resolve(false);
   const payload = decorations.map((decoration) => {
+    const resolvedLocator = locatorFromUnknown(decoration.locator);
+    const serializedLocator = resolvedLocator?.serialize();
     const sourceLocator =
-      typeof decoration.locator === "object" && decoration.locator !== null
-        ? (decoration.locator as Record<string, unknown>)
-        : {};
+      typeof serializedLocator === "object" && serializedLocator !== null
+        ? (serializedLocator as Record<string, unknown>)
+        : typeof decoration.locator === "object" && decoration.locator !== null
+          ? (decoration.locator as Record<string, unknown>)
+          : {};
     return {
       group: DECORATION_GROUP,
       action: "add" as const,
@@ -595,7 +754,9 @@ export function pushDecorationsToFrames(
           ...sourceLocator,
           type: sourceLocator.type ?? "application/xhtml+xml",
         },
+        extras: decoration.extras,
         style: {
+          type: decoration.style?.type,
           tint: decoration.style?.tint ?? "rgba(44, 157, 124, 0.32)",
           layout: decoration.style?.layout ?? "boxes",
           width: decoration.style?.width ?? "wrap",
@@ -650,4 +811,3 @@ export function pushDecorationsToFrames(
     check();
   });
 }
-
