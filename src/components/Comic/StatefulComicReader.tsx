@@ -29,7 +29,14 @@ import {
 } from "@/lib/comicSettingsReducer";
 import { updateComicPosition } from "@/lib/comicPositionReducer";
 import { setHovering, setLoading, toggleImmersive } from "@/lib/readerReducer";
-import { setPublicationEnd, setPublicationStart, setTimeline, setTocTree } from "@/lib/publicationReducer";
+import {
+  setAdjacentTimelineItems,
+  setProgress,
+  setPublicationEnd,
+  setPublicationStart,
+  setTocEntry,
+  setTocTree,
+} from "@/lib/publicationReducer";
 import { ThPluginRegistry } from "../Plugins/PluginRegistry";
 import { ThPluginProvider } from "../Plugins/PluginProvider";
 import { createDefaultPlugin } from "../Plugins/helpers/createDefaultPlugin";
@@ -38,7 +45,12 @@ import { ComicReaderViewport, type ComicBoundaryScrollControls } from "./compone
 import { useComicKeyboardShortcuts } from "./hooks/useComicKeyboardShortcuts";
 import { resolveTapAction } from "./hooks/useComicTapNavigation";
 import { ComicPage, useComicReaderController } from "./hooks/useComicReaderController";
-import { buildComicChapterTocTree, buildComicTimeline, buildComicTocTree } from "./buildComicTimeline";
+import {
+  buildComicChapterTocTree,
+  buildComicTimeline,
+  buildComicTocTree,
+  buildComicTocTreeFromLinks,
+} from "./buildComicTimeline";
 import { buildComicProgressItems, ComicPageLoadState } from "./lib/comicProgress";
 import {
   buildComicChapterSegments,
@@ -66,7 +78,6 @@ import {
 import { usePreferences } from "@/preferences/hooks/usePreferences";
 import { useI18n } from "@/i18n/useI18n";
 import { usePositionStorage } from "@/hooks/usePositionStorage";
-import { buildTocTree } from "@/helpers/buildTocTree";
 import { useReaderNavigation } from "../Reader/ReaderNavigationContext";
 
 const getReadingOrderImages = (publication: Publication): ComicPage[] => {
@@ -708,7 +719,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     if (isArchiveSeries) {
       let id = 0;
       const idGenerator = () => `toc-${++id}`;
-      return buildTocTree(archiveChapters.map(makeChapterTocLink), idGenerator, undefined, undefined);
+      return buildComicTocTreeFromLinks(archiveChapters.map(makeChapterTocLink), idGenerator);
     }
     if (!hasMultiChapterStructure(chapterSegments)) return [];
     return buildComicChapterTocTree(chapterSegments, allPages);
@@ -731,14 +742,9 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
         ? Math.max(0, timelinePages.findIndex((page) => page.index === cursorIndex))
         : cursorIndex;
     const timeline = buildComicTimeline(publication, timelinePages, timelineCursorIndex, tocTree, tocHighlightIndex);
-    dispatch(
-      setTimeline({
-        ...timeline,
-        toc: {
-          currentEntry: timeline.toc?.currentEntry,
-        },
-      })
-    );
+    dispatch(setProgress(timeline.progress));
+    dispatch(setTocEntry(timeline.currentEntry));
+    dispatch(setAdjacentTimelineItems(timeline.adjacentItems));
     if (chapterModeActive) {
       const seg = getSegmentForPageIndex(chapterSegments, cursorIndex);
       if (seg) {
@@ -1090,6 +1096,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
 
               <StatefulReaderFooter
                 layout={layoutUI}
+                publication={publication}
                 progressionFormatPref={preferences.theming.progression?.format?.fxl}
                 progressionFormatFallback={ThProgressionFormat.readingOrderIndex}
               />

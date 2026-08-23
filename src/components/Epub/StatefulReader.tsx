@@ -32,10 +32,11 @@ import {
   SuspiciousActivityEvent
 } from "@readium/navigator-html-injectables";
 import { EpubNavigatorListeners, IContentProtectionConfig, KeyboardPeripheralEventData } from "@readium/navigator";
-import { 
-  Locator, 
-  Publication, 
-  Layout
+import {
+  Locator,
+  Publication,
+  Layout,
+  TimelineItem
 } from "@readium/shared";
 import { PositionStorage, StatefulReaderProps } from "../Reader/StatefulReaderWrapper";
 
@@ -53,7 +54,10 @@ import { useEpubNavigator } from "@/core/Hooks/Epub/useEpubNavigator";
 import { useFullscreen } from "@/core/Hooks/useFullscreen";
 import { usePrevious } from "@/core/Hooks/usePrevious";
 import { useI18n } from "@/i18n/useI18n";
-import { useTimeline } from "@/core/Hooks/useTimeline";
+import { usePublicationProgress } from "@/core/Hooks/usePublicationProgress";
+import { useTimelineAdjacency } from "@/core/Hooks/useTimelineAdjacency";
+import { useTocEntryTracking } from "@/components/Actions/Toc/useTocEntryTracking";
+import { useTocTreeBuilder } from "@/core/Hooks/useTocTreeBuilder";
 import { useIsScroll, usePositionStorage } from "@/hooks";
 import { useDocumentTitle } from "@/core/Hooks/useDocumentTitle";
 import { useSpacingPresets } from "../Settings/Spacing/hooks/useSpacingPresets";
@@ -78,8 +82,8 @@ import {
   setScrollAffordance,
   setUserNavigated
 } from "@/lib/readerReducer";
-import { 
-  setTimeline,
+import {
+  setProgress,
   setPublicationStart,
   setPublicationEnd
 } from "@/lib/publicationReducer";
@@ -100,6 +104,12 @@ import {
   type ReaderInteractionProps,
 } from "../Reader/ReaderInteractions";
 import { useReaderDecorations } from "../Reader/useReaderDecorations";
+import {
+  activateDictionaryDecoration,
+  applyDictionaryDecorations,
+  selectionFromReadium,
+  type DictionaryReaderCallbacks,
+} from "../Reader/DictionaryReaderAdapter";
 
 // We need to register plugins before hooks run
 // otherwise we can’t access the values of spacing presets
@@ -114,10 +124,10 @@ export const StatefulReader = ({
   decorations,
   onTextSelected,
   onContextMenu,
-  onDecorationActivated
+  onDecorationActivated,
+  dictionary,
 }: StatefulReaderProps) => {
   const [pluginsRegistered, setPluginsRegistered] = useState(false);
-
   useLayoutEffect(() => {
     if (plugins && plugins.length > 0) {
       plugins.forEach(plugin => {
@@ -138,13 +148,16 @@ export const StatefulReader = ({
       <ThPluginProvider>
         <StatefulReaderInner publication={ publication } localDataKey={ localDataKey } positionStorage={ positionStorage } containerRefSetter={ containerRefSetter }
           interactions={ { decorations, onTextSelected, onContextMenu, onDecorationActivated } }
+          dictionary={ dictionary }
         />
       </ThPluginProvider>
     </>
   );
 };
 
-const StatefulReaderInner = ({ publication, localDataKey, positionStorage, containerRefSetter, interactions }: { publication: Publication; localDataKey: string | null; positionStorage?: PositionStorage; containerRefSetter?: (el: Element | null) => void; interactions: ReaderInteractionProps }) => {
+const StatefulReaderInner = ({ publication, localDataKey, positionStorage, containerRefSetter, interactions, dictionary }: { publication: Publication; localDataKey: string | null; positionStorage?: PositionStorage; containerRefSetter?: (el: Element | null) => void; interactions: ReaderInteractionProps; dictionary?: DictionaryReaderCallbacks }) => {
+  const dictionaryRef = useRef(dictionary);
+  dictionaryRef.current = dictionary;
   const { fxlActionKeys, fxlThemeKeys, reflowActionKeys, reflowThemeKeys } = useFilteredPreferenceKeys();
   const { preferences, getFontMetadata, getFontInjectables } = usePreferences();
   const { direction: uiDirection } = useLocale();
@@ -185,9 +198,11 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
   const isScroll = useIsScroll();
   const textNormalization = useAppSelector(state => state.settings.textNormalization);
   const wordSpacing = getEffectiveSpacingValue(ThSpacingSettingsKeys.wordSpacing);
-  const themeObject = useAppSelector(state => state.theming.theme);
+  const themeObject = useAppSelector(state => state.theming?.theme ?? {});
   const customThemes = useAppSelector(state => state.theming.customThemes);
-  const theme = isFXL ? themeObject.fxl : themeObject.reflow;
+  const theme = isFXL
+    ? (themeObject.fxl ?? "auto")
+    : (themeObject.reflow ?? "auto");
   const previousTheme = usePrevious(theme);
   const colorScheme = useAppSelector(state => state.theming.colorScheme);
   const reducedMotion = useAppSelector(state => state.theming.prefersReducedMotion);
@@ -264,18 +279,28 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     isScrollEnd,
     getCframes,
     getNavigatorInstance,
-    submitPreferences
+    submitPreferences,
+    timeline: getNavigatorTimeline
   } = epubNavigator;
 
   const { setLocalData, getLocalData, localData } = usePositionStorage(localDataKey, positionStorage);
 
-  const timeline = useTimeline({
+  const tocTree = useAppSelector(state => state.publication.toc?.tree);
+
+  const [currentTimelineItem, setCurrentTimelineItem] = useState<TimelineItem | undefined>(undefined);
+
+  const { updateAdjacentItems, clearAdjacentItems } = useTimelineAdjacency(getNavigatorTimeline);
+  const { updateCurrentTocEntry, clearCurrentTocEntry } = useTocEntryTracking(getNavigatorTimeline, tocTree);
+
+  const timeline = usePublicationProgress({
     publication: publication,
+    getNavigatorTimeline,
+    currentTimelineItem,
     currentLocation: localData,
     currentPositions: currentPositions() || [],
     positionsList: positionsList,
-    onChange: (timeline) => {
-      dispatch(setTimeline(timeline));
+    onChange: (progress) => {
+      dispatch(setProgress(progress));
     }
   });
 
@@ -363,6 +388,27 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
       }
   }, [cache, preferences.affordances.scroll, toggleIsImmersive]);
 
+  const applyDictionaryDecorationsToFrames = useCallback(() => {
+    applyDictionaryDecorations(getCframes(), dictionary?.decorations ?? []);
+  }, [dictionary?.decorations, getCframes]);
+
+  const handleDictionaryClick = useCallback((event: FrameClickEvent) => {
+    const currentDictionary = dictionaryRef.current;
+    const activation = activateDictionaryDecoration(
+      event,
+      getCframes(),
+      currentDictionary?.decorations ?? [],
+    );
+    if (!activation) return false;
+    currentDictionary?.onDecorationActivated?.(activation);
+    return true;
+  }, [getCframes]);
+
+  const handleDictionarySelection = useCallback((selection: BasicTextSelection) => {
+    const resolved = selectionFromReadium(selection, currentLocator());
+    if (resolved) dictionaryRef.current?.onTextSelected?.(resolved);
+  }, [currentLocator]);
+
   // We could use canGoBackward() and canGoForward() directly on arrows
   // but maybe we will need to sync the state for other features in the future
   const updatePublicationNavigationState = useCallback(() => {
@@ -410,11 +456,6 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     return typeof locator?.href === "string" ? locator.href : undefined;
   }, [currentLocator]);
 
-  const resolveActiveHrefs = useCallback(() => {
-    const locator = currentLocator();
-    return typeof locator?.href === "string" ? [locator.href] : [];
-  }, [currentLocator]);
-
   const mergeContentProtection = (
     config: IContentProtectionConfig | undefined,
     withContextMenu: boolean
@@ -436,12 +477,27 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
   }, [dispatch, activateImmersiveOnAction, cache, goBackward, goForward]);
 
   const listeners: EpubNavigatorListeners = useMemo(() => ({
-    frameLoaded: async function (_wnd: Window): Promise<void> {},
+    frameLoaded: async function (_wnd: Window): Promise<void> {
+      window.requestAnimationFrame(applyDictionaryDecorationsToFrames);
+    },
+    timelineItemChanged: function (item: TimelineItem | undefined): void {
+      setCurrentTimelineItem(item);
+
+      if (!item) {
+        clearAdjacentItems();
+        clearCurrentTocEntry();
+        return;
+      }
+
+      updateAdjacentItems(item);
+      updateCurrentTocEntry(item);
+    },
     positionChanged: async function (locator: Locator): Promise<void> {
       const debouncedHandleProgression = debounce(
         async () => {
           setLocalData(locator);
           updatePublicationNavigationState();
+          applyDictionaryDecorationsToFrames();
         }, 250);
       debouncedHandleProgression();
     },
@@ -466,6 +522,7 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
           return true;
         }
       }
+      if (handleDictionaryClick(_e)) return true;
       handleClick(_e);
       return true;
     },
@@ -516,9 +573,11 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     },
     textSelected: function (selection: BasicTextSelection): void {
       const { onTextSelected: handle } = interactionRef.current;
-      if (!handle) return;
-      const event = textSelectionToEvent(container.current, selection, resolveResourceHref());
-      if (event) handle(event);
+      if (handle) {
+        const event = textSelectionToEvent(container.current, selection, resolveResourceHref());
+        if (event) handle(event);
+      }
+      handleDictionarySelection(selection);
     },
     contentProtection: function (_type: string, _data: SuspiciousActivityEvent): void {},
     contextMenu: function (data: ContextMenuEvent): void {
@@ -563,9 +622,15 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
         }
       }
     },
-  }), [navLayout, setLocalData, dispatch, handleTap, handleClick, cache, preferences.affordances.scroll, isScrollStart, isScrollEnd, updatePublicationNavigationState, moveTo, goProgression, zoomIn, zoomOut, profile, handleFullscreen, getFocusedDockableKey, resolveResourceHref]);
+  }), [navLayout, setLocalData, dispatch, handleTap, handleClick, handleDictionaryClick, handleDictionarySelection, applyDictionaryDecorationsToFrames, cache, preferences.affordances.scroll, isScrollStart, isScrollEnd, updatePublicationNavigationState, moveTo, goProgression, zoomIn, zoomOut, profile, handleFullscreen, getFocusedDockableKey, resolveResourceHref, updateAdjacentItems, clearAdjacentItems, updateCurrentTocEntry, clearCurrentTocEntry]);
   
-  const initialPosition = useMemo(() => getLocalData(), [getLocalData]);
+  // getLocalData() returns a plain JSON.parse()'d object on cold load (not yet a real
+  // Locator instance) — EpubNavigator calls Timeline.locate() on this at startup, which
+  // needs real prototype methods (.time(), etc.), so deserialize it here at the point of use.
+  const initialPosition = useMemo(() => {
+    const stored = getLocalData();
+    return stored ? (Locator.deserialize(stored) ?? null) : null;
+  }, [getLocalData]);
 
   // Initialize reader using the new composite hook
   const { navigatorReady, navigatorError } = useEpubReaderInit({
@@ -607,6 +672,14 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
   useEffect(() => {
     if (navigatorError) dispatch(setLoading(false));
   }, [dispatch, navigatorError]);
+
+  useLayoutEffect(() => {
+    if (!navigatorReady) return;
+    const frame = window.requestAnimationFrame(applyDictionaryDecorationsToFrames);
+    return () => window.cancelAnimationFrame(frame);
+  }, [applyDictionaryDecorationsToFrames, navigatorReady]);
+
+  useTocTreeBuilder(publication, navigatorReady, getNavigatorTimeline);
 
   const applyConstraint = useCallback(async (value: number) => {
     await submitPreferences({
@@ -731,8 +804,9 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
               </nav> 
             : <></> }
 
-          <StatefulReaderFooter 
-            layout={ layoutUI } 
+          <StatefulReaderFooter
+            layout={ layoutUI }
+            publication={ publication }
             progressionFormatPref={
               isFXL 
                 ? preferences.theming.progression?.format?.fxl 

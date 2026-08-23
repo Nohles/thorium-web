@@ -20,9 +20,8 @@ import {
   setMonochrome,
   setReducedMotion,
   setReducedTransparency,
-  setCoverTheme
 } from "@/lib/themeReducer";
-import { setFontLanguage } from "@/lib/publicationReducer";
+import { setFontLanguage, setCoverTheme } from "@/lib/publicationReducer";
 import { propsToCSSVars } from "@/core/Helpers/propsToCSSVars";
 import { prefixString } from "@/core/Helpers/prefixString";
 import { useCoverBlobUrl } from "@/hooks/useCoverBlobUrl";
@@ -39,6 +38,14 @@ import {
   type ReaderSourceSelection,
 } from "./ReaderNavigationContext";
 import type { ReaderInteractionProps } from "./ReaderInteractions";
+import type { DictionaryReaderCallbacks } from "./DictionaryReaderAdapter";
+
+export type {
+  DictionaryReaderCallbacks,
+  ReaderDecoration,
+  ReaderDecorationActivation,
+  ReaderTextSelection,
+} from "./DictionaryReaderAdapter";
 
 const StatefulEpubReader = lazy(() => import("@/components/Epub").then(mod => ({ default: mod.StatefulReader })));
 const StatefulWebPubReader = lazy(() => import("@/components/WebPub").then(mod => ({ default: mod.ExperimentalWebPubStatefulReader })));
@@ -58,6 +65,7 @@ export interface StatefulReaderProps extends ReaderInteractionProps {
   positionStorage?: PositionStorage;
   coverUrl?: string;
   containerRefSetter?: (el: Element | null) => void;
+  dictionary?: DictionaryReaderCallbacks;
 }
 
 export type ThPluginFactory = () => ThPlugin[] | Promise<ThPlugin[]>;
@@ -91,6 +99,7 @@ export interface ReaderComponentProps<
     : P extends "epub" | "webPub" | "comic"
     ? { initialPreferences?: ThPreferences<K>; adapter?: ThPreferencesAdapter<K> }
     : never;
+  dictionary?: DictionaryReaderCallbacks;
 }
 
 // ─── Outer wrapper — selects provider based on profile ────────────────────────
@@ -172,7 +181,7 @@ interface AudioContentProps {
 
 const StatefulAudioContent = ({ publication, localDataKey, positionStorage, coverUrl, externalLoading }: AudioContentProps) => {
   const { preferences } = useAudioPreferences();
-  const themeObject = useAppSelector(state => state.theming.theme);
+  const themeObject = useAppSelector(state => state.theming?.theme ?? {});
   const dispatch = useAppDispatch();
 
   const { coverBlobUrl, coverReady } = useCoverBlobUrl(coverUrl);
@@ -213,18 +222,19 @@ const StatefulAudioContent = ({ publication, localDataKey, positionStorage, cove
 
 // ─── Reader inner content ─────────────────────────────────────────────────────
 
-interface ReaderContentProps {
+interface ReaderContentProps extends ReaderInteractionProps {
   profile: "epub" | "webPub" | "comic" | undefined | null;
   publication: Publication;
   localDataKey: string | null;
   positionStorage?: PositionStorage;
   plugins?: ThPlugin[];
   coverUrl?: string;
+  dictionary?: DictionaryReaderCallbacks;
 }
 
-const StatefulReaderContent = ({ profile, publication, plugins, coverUrl, ...props }: ReaderContentProps) => {
+const StatefulReaderContent = ({ profile, publication, plugins, coverUrl, dictionary, ...props }: ReaderContentProps) => {
   const { preferences, resolveFontLanguage } = usePreferences();
-  const themeObject = useAppSelector(state => state.theming.theme);
+  const themeObject = useAppSelector(state => state.theming?.theme ?? {});
   const customThemes = useAppSelector(state => state.theming.customThemes);
   const isFXL = useAppSelector(state => state.publication.isFXL);
   const themeKeys = useMemo(
@@ -235,9 +245,9 @@ const StatefulReaderContent = ({ profile, publication, plugins, coverUrl, ...pro
     [customThemes, preferences.theming.themes.keys]
   );
   const theme = profile === "epub"
-    ? (isFXL ? themeObject.fxl : themeObject.reflow)
+    ? ((isFXL ? themeObject.fxl : themeObject.reflow) ?? "auto")
     : profile === "comic"
-      ? themeObject.fxl
+      ? (themeObject.fxl ?? "auto")
       : ThThemeKeys.light;
   const dispatch = useAppDispatch();
 
@@ -278,12 +288,11 @@ const StatefulReaderContent = ({ profile, publication, plugins, coverUrl, ...pro
 
   switch (profile) {
     case "epub":
-      return <Suspense><StatefulEpubReader publication={ publication } { ...props } plugins={ plugins } containerRefSetter={ setContainerRef } /></Suspense>;
+      return <Suspense><StatefulEpubReader publication={ publication } { ...props } plugins={ plugins } containerRefSetter={ setContainerRef } dictionary={ dictionary } /></Suspense>;
     case "comic":
       return <Suspense><StatefulComicReader publication={ publication } { ...props } plugins={ plugins } /></Suspense>;
-
     case "webPub":
     default:
-      return <Suspense><StatefulWebPubReader publication={ publication } { ...props } plugins={ plugins } containerRefSetter={ setContainerRef } /></Suspense>;
+      return <Suspense><StatefulWebPubReader publication={ publication } { ...props } plugins={ plugins } containerRefSetter={ setContainerRef } dictionary={ dictionary } /></Suspense>;
   }
 };

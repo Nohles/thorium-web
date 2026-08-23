@@ -1,15 +1,17 @@
 # Branch allowed for `pnpm publish` / `pnpm publish:verdaccio` (pnpm git-checks)
 publishBranch: ComicReader
 
-# @readium/shared lists git-only @edrlab/thorium-locales; use the root direct dependency instead.
-overrides:
-  "@readium/shared>@edrlab/thorium-locales": "-"
+ignoreScripts: true
 
-allowBuilds:
-  esbuild: false
-  sharp: false
-  unrs-resolver: false
+manage-package-manager-versions: true
 
+minimumReleaseAge: 4320 # 3 days
 minimumReleaseAgeExclude:
-  - '@readium/navigator-html-injectables@2.4.4'
-  - '@readium/navigator@2.5.8'
+  - "@readium/*"
+blockExoticSubdeps: true
+trustPolicy: no-downgrade
+# undici's 5.x maintenance line was never wired into npm provenance attestation,
+# unlike its 6.x/7.x mainline releases from the same maintainer (matteo.collina) -
+# a publish-pipeline gap, not a trust downgrade.
+trustPolicyExclude:
+  - "undici"

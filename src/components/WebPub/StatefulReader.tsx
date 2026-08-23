@@ -30,7 +30,8 @@ import {
 import { WebPubNavigatorListeners, IContentProtectionConfig } from "@readium/navigator";
 import {
   Locator,
-  Publication
+  Publication,
+  TimelineItem
 } from "@readium/shared";
 
 import { StatefulDockingWrapper } from "../Docking/StatefulDockingWrapper";
@@ -46,7 +47,10 @@ import { useWebPubReaderInit } from "./Hooks/useReaderInit";
 import { useWebPubKeyboardPeripherals } from "./Hooks/useWebPubKeyboardPeripherals";
 import { useFullscreen } from "@/core/Hooks/useFullscreen";
 import { useI18n } from "@/i18n/useI18n";
-import { useTimeline } from "@/core/Hooks/useTimeline";
+import { usePublicationProgress } from "@/core/Hooks/usePublicationProgress";
+import { useTimelineAdjacency } from "@/core/Hooks/useTimelineAdjacency";
+import { useTocEntryTracking } from "@/components/Actions/Toc/useTocEntryTracking";
+import { useTocTreeBuilder } from "@/core/Hooks/useTocTreeBuilder";
 import { usePositionStorage } from "@/hooks/usePositionStorage";
 import { useDocumentTitle } from "@/core/Hooks/useDocumentTitle";
 import { useSpacingPresets } from "../Settings/Spacing/hooks/useSpacingPresets";
@@ -61,8 +65,8 @@ import {
   toggleImmersive, 
   setFullscreen,
 } from "@/lib/readerReducer";
-import { 
-  setTimeline,
+import {
+  setProgress,
   setPublicationStart,
   setPublicationEnd
 } from "@/lib/publicationReducer";
@@ -80,6 +84,12 @@ import {
   type ReaderInteractionProps,
 } from "../Reader/ReaderInteractions";
 import { useReaderDecorations } from "../Reader/useReaderDecorations";
+import {
+  activateDictionaryDecoration,
+  applyDictionaryDecorations,
+  selectionFromReadium,
+  type DictionaryReaderCallbacks,
+} from "../Reader/DictionaryReaderAdapter";
 
 export const ExperimentalWebPubStatefulReader = ({
   publication,
@@ -90,7 +100,8 @@ export const ExperimentalWebPubStatefulReader = ({
   decorations,
   onTextSelected,
   onContextMenu,
-  onDecorationActivated
+  onDecorationActivated,
+  dictionary,
 }: StatefulReaderProps) => {
   const [pluginsRegistered, setPluginsRegistered] = useState(false);
 
@@ -114,13 +125,16 @@ export const ExperimentalWebPubStatefulReader = ({
       <ThPluginProvider>
         <StatefulReaderInner publication={ publication } localDataKey={ localDataKey } positionStorage={ positionStorage } containerRefSetter={ containerRefSetter }
           interactions={ { decorations, onTextSelected, onContextMenu, onDecorationActivated } }
+          dictionary={ dictionary }
         />
       </ThPluginProvider>
     </>
   );
 };
 
-const StatefulReaderInner = ({ publication, localDataKey, positionStorage, containerRefSetter, interactions }: { publication: Publication; localDataKey: string | null; positionStorage?: PositionStorage; containerRefSetter?: (el: Element | null) => void; interactions: ReaderInteractionProps }) => {
+const StatefulReaderInner = ({ publication, localDataKey, positionStorage, containerRefSetter, interactions, dictionary }: { publication: Publication; localDataKey: string | null; positionStorage?: PositionStorage; containerRefSetter?: (el: Element | null) => void; interactions: ReaderInteractionProps; dictionary?: DictionaryReaderCallbacks }) => {
+  const dictionaryRef = useRef(dictionary);
+  dictionaryRef.current = dictionary;
   const { preferences, getFontMetadata, getFontInjectables } = usePreferences();
   const { t } = useI18n();
   const { getEffectiveSpacingValue } = useSpacingPresets();
@@ -186,24 +200,34 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
   const { handleFullscreen } = useFullscreen(onFsChange);
 
   const webPubNavigator = useWebPubNavigator();
-  const { 
+  const {
     currentPositions,
     currentLocator,
     canGoBackward,
     canGoForward,
     getCframes,
-    getNavigatorInstance
+    getNavigatorInstance,
+    timeline: getNavigatorTimeline
   } = webPubNavigator;
 
   const { setLocalData, getLocalData, localData } = usePositionStorage(localDataKey, positionStorage);
 
-  const timeline = useTimeline({
+  const tocTree = useAppSelector(state => state.publication.toc?.tree);
+
+  const [currentTimelineItem, setCurrentTimelineItem] = useState<TimelineItem | undefined>(undefined);
+
+  const { updateAdjacentItems, clearAdjacentItems } = useTimelineAdjacency(getNavigatorTimeline);
+  const { updateCurrentTocEntry, clearCurrentTocEntry } = useTocEntryTracking(getNavigatorTimeline, tocTree);
+
+  const timeline = usePublicationProgress({
     publication: publication,
+    getNavigatorTimeline,
+    currentTimelineItem,
     currentLocation: localData,
     currentPositions: currentPositions() || [],
     positionsList: undefined,
-    onChange: (timeline) => {
-      dispatch(setTimeline(timeline));
+    onChange: (progress) => {
+      dispatch(setProgress(progress));
     }
   });
 
@@ -270,15 +294,46 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     return typeof locator?.href === "string" ? locator.href : undefined;
   }, [currentLocator]);
 
-  const resolveActiveHrefs = useCallback(() => {
-    const locator = currentLocator();
-    return typeof locator?.href === "string" ? [locator.href] : [];
+  const applyDictionaryDecorationsToFrames = useCallback(() => {
+    applyDictionaryDecorations(getCframes(), dictionary?.decorations ?? []);
+  }, [dictionary?.decorations, getCframes]);
+
+  const handleDictionaryClick = useCallback((event: FrameClickEvent) => {
+    const currentDictionary = dictionaryRef.current;
+    const activation = activateDictionaryDecoration(
+      event,
+      getCframes(),
+      currentDictionary?.decorations ?? [],
+    );
+    if (!activation) return false;
+    currentDictionary?.onDecorationActivated?.(activation);
+    return true;
+  }, [getCframes]);
+
+  const handleDictionarySelection = useCallback((selection: BasicTextSelection) => {
+    const resolved = selectionFromReadium(selection, currentLocator());
+    if (resolved) dictionaryRef.current?.onTextSelected?.(resolved);
   }, [currentLocator]);
 
   const listeners: WebPubNavigatorListeners = useMemo(() => ({
-    frameLoaded: async function (_wnd: Window): Promise<void> {},
+    frameLoaded: async function (_wnd: Window): Promise<void> {
+      window.requestAnimationFrame(applyDictionaryDecorationsToFrames);
+    },
+    timelineItemChanged: function (item: TimelineItem | undefined): void {
+      setCurrentTimelineItem(item);
+
+      if (!item) {
+        clearAdjacentItems();
+        clearCurrentTocEntry();
+        return;
+      }
+
+      updateAdjacentItems(item);
+      updateCurrentTocEntry(item);
+    },
     positionChanged: async function (locator: Locator): Promise<void> {
       setLocalData(locator);
+      applyDictionaryDecorationsToFrames();
 
       if (canGoBackward()) {
         dispatch(setPublicationStart(false));
@@ -305,6 +360,15 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
       return true;
     },
     click: function (_e: FrameClickEvent): boolean {
+      const { decorations: currentDecorations, onDecorationActivated: activate } = interactionRef.current;
+      if (activate && currentDecorations) {
+        const activation = resolveDecorationActivation(_e, container.current, currentDecorations);
+        if (activation) {
+          activate(activation);
+          return true;
+        }
+      }
+      if (handleDictionaryClick(_e)) return true;
       return false;
     },
     zoom: function (_scale: number): void { },
@@ -327,9 +391,11 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     },
     textSelected: function (selection: BasicTextSelection): void {
       const { onTextSelected: handle } = interactionRef.current;
-      if (!handle) return;
-      const event = textSelectionToEvent(container.current, selection, resolveResourceHref());
-      if (event) handle(event);
+      if (handle) {
+        const event = textSelectionToEvent(container.current, selection, resolveResourceHref());
+        if (event) handle(event);
+      }
+      handleDictionarySelection(selection);
     },
     contentProtection: function (_type: string, _data: SuspiciousActivityEvent): void {},
     contextMenu: function (data: ContextMenuEvent): void {
@@ -366,12 +432,18 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
         }
       }
     },
-  }), [setLocalData, canGoBackward, canGoForward, dispatch, toggleIsImmersive, zoomIn, zoomOut, profile, handleFullscreen, getFocusedDockableKey, resolveResourceHref]);
+  }), [setLocalData, canGoBackward, canGoForward, dispatch, toggleIsImmersive, zoomIn, zoomOut, profile, handleFullscreen, getFocusedDockableKey, resolveResourceHref, applyDictionaryDecorationsToFrames, handleDictionaryClick, handleDictionarySelection, updateAdjacentItems, clearAdjacentItems, updateCurrentTocEntry, clearCurrentTocEntry]);
 
-  const initialPosition = useMemo(() => getLocalData(), [getLocalData]);
+  // getLocalData() returns a plain JSON.parse()'d object on cold load (not yet a real
+  // Locator instance) — the navigator calls Timeline.locate() on this at startup, which
+  // needs real prototype methods (.time(), etc.), so deserialize it here at the point of use.
+  const initialPosition = useMemo(() => {
+    const stored = getLocalData();
+    return stored ? (Locator.deserialize(stored) ?? null) : null;
+  }, [getLocalData]);
 
   // Initialize reader using the new composite hook
-  useWebPubReaderInit({
+  const { navigatorReady } = useWebPubReaderInit({
     container,
     publication,
     initialPosition,
@@ -399,6 +471,14 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     getNavigator: getNavigatorInstance,
     decorations,
   });
+
+  useLayoutEffect(() => {
+    if (!navigatorReady) return;
+    const frame = window.requestAnimationFrame(applyDictionaryDecorationsToFrames);
+    return () => window.cancelAnimationFrame(frame);
+  }, [applyDictionaryDecorationsToFrames, navigatorReady]);
+
+  useTocTreeBuilder(publication, navigatorReady, getNavigatorTimeline);
 
   return (
     <>
@@ -431,8 +511,9 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
               <div id="thorium-web-container" className={ readerStyles.iframeContainer } ref={ container }></div>
             </article>
 
-          <StatefulReaderFooter 
-            layout={ layoutUI } 
+          <StatefulReaderFooter
+            layout={ layoutUI }
+            publication={ publication }
             progressionFormatPref={ preferences.theming.progression?.format?.webPub }
             progressionFormatFallback={ ThProgressionFormat.readingOrderIndex }
           />

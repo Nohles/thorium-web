@@ -2,8 +2,8 @@ import { createSlice } from "@reduxjs/toolkit";
 
 import { ThColorScheme } from "@/core/Hooks/useColorScheme";
 import { ThContrast } from "@/core/Hooks/useContrast";
-import { ThBreakpoints } from "@/preferences/models";
 import { ThemeTokens } from "@/preferences/hooks/useTheming";
+import { ThBreakpoints } from "@/preferences/models";
 
 export interface ThemeStateObject {
   reflow?: string;
@@ -31,7 +31,6 @@ export interface ThemeReducerState {
   theme: ThemeStateObject;
   customThemes?: Record<string, ThemeTokens>;
   savedCustomThemes?: SavedCustomTheme[];
-  coverTheme?: ThemeTokens;
   prefersReducedMotion: boolean;
   prefersReducedTransparency: boolean;
   prefersContrast: ThContrast;
@@ -50,7 +49,6 @@ const initialState: ThemeReducerState = {
   },
   customThemes: {},
   savedCustomThemes: [],
-  coverTheme: undefined,
   prefersReducedMotion: false,
   prefersReducedTransparency: false, 
   prefersContrast: ThContrast.none,
@@ -87,9 +85,6 @@ export const themeSlice = createSlice({
     ) => {
       state.savedCustomThemes = action.payload
     },
-    setCoverTheme: (state, action) => {
-      state.coverTheme = action.payload
-    },
     setReducedMotion: (state, action) => {
       state.prefersReducedMotion = action.payload
     },
@@ -118,7 +113,6 @@ export const {
   setTheme, 
   setCustomTheme,
   setSavedCustomThemes,
-  setCoverTheme,
   setReducedMotion, 
   setReducedTransparency, 
   setContrast, 

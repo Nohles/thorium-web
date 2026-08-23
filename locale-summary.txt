@@ -1,136 +1,641 @@
 Locale Completion Status
 Reference language: en
-Generated: 2026-05-27T16:06:23.047Z
+Generated: 2026-08-23T19:02:42.144Z
 
 
 Locale Completion Summary:
 ----------------------------------------
-DA     [■■■■■■■■■■■■■■■■■■■■] 100%
 EN     [■■■■■■■■■■■■■■■■■■■■] 100%
-ES     [■■■■■■■■■■■■■■■■■■■■] 100%
-ET     [■■■■■■■■■■■■■■■■■■■■] 100%
-FI     [■■■■■■■■■■■■■■■■■■■■] 100%
-FR     [■■■■■■■■■■■■■■■■■■■■] 100%
-IT     [■■■■■■■■■■■■■■■■■■■■] 100%
-SV     [■■■■■■■■■■■■■■■■■■■■] 100%
-LT     [■■■■■■■■■■■■■■■■■■■□]  96%
-PL     [■■■■■■■■■■■■■■■■■■■□]  96%
-PT-PT  [■■■■■■■■■■■■■■■■■■□□]  90%
-AR     [■■■■■■■■■■■■■□□□□□□□]  68%
-PT-BR  [■■■■■■■■■■■■□□□□□□□□]  63%
-TA     [■■■■■■■■□□□□□□□□□□□□]  43%
-TR     [■■■■■□□□□□□□□□□□□□□□]  28%
-EL     [■■■□□□□□□□□□□□□□□□□□]  16%
-HE     [□□□□□□□□□□□□□□□□□□□□]   2%
-UK     [□□□□□□□□□□□□□□□□□□□□]   0%
+DA     [■■■■■■■■■■■■■■■■□□□□]  83%
+ES     [■■■■■■■■■■■■■■■■□□□□]  83%
+ET     [■■■■■■■■■■■■■■■■□□□□]  83%
+FI     [■■■■■■■■■■■■■■■■□□□□]  83%
+FR     [■■■■■■■■■■■■■■■■□□□□]  83%
+IT     [■■■■■■■■■■■■■■■■□□□□]  83%
+LT     [■■■■■■■■■■■■■■■■□□□□]  83%
+SV     [■■■■■■■■■■■■■■■■□□□□]  83%
+PL     [■■■■■■■■■■■■■■■■□□□□]  80%
+PT-PT  [■■■■■■■■■■■■■■■□□□□□]  76%
+AR     [■■■■■■■■■■■■□□□□□□□□]  61%
+PT-BR  [■■■■■■■■■■□□□□□□□□□□]  53%
+TA     [■■■■■■■□□□□□□□□□□□□□]  37%
+TR     [■■■■■■□□□□□□□□□□□□□□]  32%
+EL     [■■■■□□□□□□□□□□□□□□□□]  23%
+HE     [■□□□□□□□□□□□□□□□□□□□]   5%
+BG     [□□□□□□□□□□□□□□□□□□□□]   4%
+UK     [□□□□□□□□□□□□□□□□□□□□]   3%
+BRH    [□□□□□□□□□□□□□□□□□□□□]   0%
 
 
 Inferred Usage Summary:
 ----------------------------------------
-DA     [■■■■■■■■■■■■■■■■■■■■] 100%
 EN     [■■■■■■■■■■■■■■■■■■■■] 100%
-ES     [■■■■■■■■■■■■■■■■■■■■] 100%
-ET     [■■■■■■■■■■■■■■■■■■■■] 100%
-FI     [■■■■■■■■■■■■■■■■■■■■] 100%
-FR     [■■■■■■■■■■■■■■■■■■■■] 100%
-IT     [■■■■■■■■■■■■■■■■■■■■] 100%
-SV     [■■■■■■■■■■■■■■■■■■■■] 100%
-PL     [■■■■■■■■■■■■■■■■■■■■] 100%
-LT     [■■■■■■■■■■■■■■■■■■■□]  96%
-PT-PT  [■■■■■■■■■■■■■■■■□□□□]  84%
-PT-BR  [■■■■■■■■■■■■■□□□□□□□]  69%
-AR     [■■■■■■■■■■■■□□□□□□□□]  63%
-TA     [■■■■■■■■■■■■□□□□□□□□]  63%
-EL     [■■■■■□□□□□□□□□□□□□□□]  27%
-TR     [■■■□□□□□□□□□□□□□□□□□]  18%
-HE     [□□□□□□□□□□□□□□□□□□□□]   3%
-UK     [□□□□□□□□□□□□□□□□□□□□]   0%
+DA     [■■■■■■■■■■■■■■□□□□□□]  73%
+ES     [■■■■■■■■■■■■■■□□□□□□]  73%
+ET     [■■■■■■■■■■■■■■□□□□□□]  73%
+FI     [■■■■■■■■■■■■■■□□□□□□]  73%
+FR     [■■■■■■■■■■■■■■□□□□□□]  73%
+IT     [■■■■■■■■■■■■■■□□□□□□]  73%
+LT     [■■■■■■■■■■■■■■□□□□□□]  73%
+SV     [■■■■■■■■■■■■■■□□□□□□]  73%
+PL     [■■■■■■■■■■■■■■□□□□□□]  73%
+PT-PT  [■■■■■■■■■■■■□□□□□□□□]  62%
+PT-BR  [■■■■■■■■■■□□□□□□□□□□]  51%
+AR     [■■■■■■■■■□□□□□□□□□□□]  48%
+TA     [■■■■■■■■■□□□□□□□□□□□]  46%
+EL     [■■■■■■□□□□□□□□□□□□□□]  32%
+TR     [■■■■□□□□□□□□□□□□□□□□]  21%
+HE     [■□□□□□□□□□□□□□□□□□□□]   6%
+BG     [■□□□□□□□□□□□□□□□□□□□]   6%
+UK     [□□□□□□□□□□□□□□□□□□□□]   3%
+BRH    [□□□□□□□□□□□□□□□□□□□□]   0%
 
 Locale Breakdown:
 ----------------------------------------
 
-DA (100% complete, 100% of inferred usage)
-   thorium-shared.json   ■■■■■■■■■■ 100%  (188/188)
-   thorium-web.json      ■■■■■■■■■■ 100%  (62/62)
-   TOTAL                 ■■■■■■■■■■ 100%  (250/250)
-   USED                  ■■■■■■■■■■ 100%  (126/126)
-
 EN (100% complete, 100% of inferred usage)
-   thorium-shared.json   ■■■■■■■■■■ 100%  (188/188)
-   thorium-web.json      ■■■■■■■■■■ 100%  (62/62)
-   TOTAL                 ■■■■■■■■■■ 100%  (250/250)
-   USED                  ■■■■■■■■■■ 100%  (126/126)
+   thorium-shared.json   ■■■■■■■■■■ 100%  (189/189)
+   thorium-web.json      ■■■■■■■■■■ 100%  (122/122)
+   TOTAL                 ■■■■■■■■■■ 100%  (311/311)
+   USED                  ■■■■■■■■■■ 100%  (187/187)
 
-ES (100% complete, 100% of inferred usage)
-   thorium-shared.json   ■■■■■■■■■■ 100%  (188/188)
-   thorium-web.json      ■■■■■■■■■■ 100%  (62/62)
-   TOTAL                 ■■■■■■■■■■ 100%  (250/250)
-   USED                  ■■■■■■■■■■ 100%  (126/126)
-
-ET (100% complete, 100% of inferred usage)
-   thorium-shared.json   ■■■■■■■■■■ 100%  (188/188)
-   thorium-web.json      ■■■■■■■■■■ 100%  (62/62)
-   TOTAL                 ■■■■■■■■■■ 100%  (250/250)
-   USED                  ■■■■■■■■■■ 100%  (126/126)
-
-FI (100% complete, 100% of inferred usage)
-   thorium-shared.json   ■■■■■■■■■■ 100%  (188/188)
-   thorium-web.json      ■■■■■■■■■■ 100%  (62/62)
-   TOTAL                 ■■■■■■■■■■ 100%  (250/250)
-   USED                  ■■■■■■■■■■ 100%  (126/126)
-
-FR (100% complete, 100% of inferred usage)
-   thorium-shared.json   ■■■■■■■■■■ 100%  (188/188)
-   thorium-web.json      ■■■■■■■■■■ 100%  (62/62)
-   TOTAL                 ■■■■■■■■■■ 100%  (250/250)
-   USED                  ■■■■■■■■■■ 100%  (126/126)
-
-IT (100% complete, 100% of inferred usage)
-   thorium-shared.json   ■■■■■■■■■■ 100%  (188/188)
-   thorium-web.json      ■■■■■■■■■■ 100%  (62/62)
-   TOTAL                 ■■■■■■■■■■ 100%  (250/250)
-   USED                  ■■■■■■■■■■ 100%  (126/126)
-
-SV (100% complete, 100% of inferred usage)
-   thorium-shared.json   ■■■■■■■■■■ 100%  (188/188)
-   thorium-web.json      ■■■■■■■■■■ 100%  (62/62)
-   TOTAL                 ■■■■■■■■■■ 100%  (250/250)
-   USED                  ■■■■■■■■■■ 100%  (126/126)
-
-LT (96% complete, 96% of inferred usage)
-   thorium-shared.json   ■■■■■■■■■□  94%  (177/188)
-   thorium-web.json      ■■■■■■■■■■ 100%  (62/62)
-   TOTAL                 ■■■■■■■■■□  96%  (239/250)
-   USED                  ■■■■■■■■■□  96%  (121/126)
+DA (83% complete, 73% of inferred usage)
+   thorium-shared.json   ■■■■■■■■■■ 100%  (189/189)
+   thorium-web.json      ■■■■■□□□□□  57%  (70/122)
+   TOTAL                 ■■■■■■■■□□  83%  (259/311)
+   USED                  ■■■■■■■□□□  73%  (136/187)
 
    ----------------------------------------
    Missing Keys:
 
+   WEB (51 keys):
+   • reader.comic.imageLoad.retry
+   • reader.comic.imageLoad.failed
+   • reader.comic.overlayMode.auto
+   • reader.comic.overlayMode.pinned
+   • reader.comic.overlayMode.label
+   • reader.comic.showPageNumber.label
+   • reader.comic.staticNavigation.label
+   • reader.comic.progressBar.hidden
+   • reader.comic.progressBar.standard
+   • reader.comic.progressBar.type
+   • reader.comic.progressBar.position.auto
+   • reader.comic.progressBar.position.bottom
+   • reader.comic.progressBar.position.left
+   • reader.comic.progressBar.position.right
+   • reader.comic.progressBar.position.label
+   • reader.comic.stretchSmallPages.label
+   • reader.comic.widthLimit.enabled
+   • reader.comic.widthLimit.label
+   • reader.comic.scrollAmount.label
+   • reader.comic.autoScroll.enabled
+   • reader.comic.autoScroll.speed
+   • reader.comic.autoScroll.smooth
+   • reader.comic.readingModePreview.label
+   • reader.comic.tapZonePreview.label
+   • reader.comic.imagePreloadAmount.label
+   • reader.comic.pageGap.label
+   • reader.comic.readingDirection.ltr
+   • reader.comic.readingDirection.rtl
+   • reader.comic.readingDirection.label
+   • reader.comic.readingMode.default
+   • reader.comic.readingMode.singlePage
+   • reader.comic.readingMode.doublePage
+   • reader.comic.readingMode.continuousVertical
+   • reader.comic.readingMode.continuousHorizontal
+   • reader.comic.readingMode.webtoon
+   • reader.comic.readingMode.label
+   • reader.comic.scaleType.fitWidth
+   • reader.comic.scaleType.fitHeight
+   • reader.comic.scaleType.fitScreen
+   • reader.comic.scaleType.originalSize
+   • reader.comic.scaleType.label
+   • reader.comic.tapZones.default
+   • reader.comic.tapZones.edge
+   • reader.comic.tapZones.kindle
+   • reader.comic.tapZones.lShape
+   • reader.comic.tapZones.rightAndLeft
+   • reader.comic.tapZones.disabled
+   • reader.comic.tapZones.label
+   • reader.app.header.sources.label
+   • reader.app.header.sources.loading
+   • reader.app.header.sources.available
 
-   SHARED (5 keys):
-   • reader.playback.preferences.audio.skipBackwardInterval
-   • reader.playback.preferences.audio.skipForwardInterval
-   • reader.playback.preferences.audio.skipInterval
-   • reader.playback.actions.skipBackward.descriptive
-   • reader.playback.actions.skipForward.descriptive
 
-
-PL (96% complete, 100% of inferred usage)
-   thorium-shared.json   ■■■■■■■■■□  95%  (178/188)
-   thorium-web.json      ■■■■■■■■■■ 100%  (62/62)
-   TOTAL                 ■■■■■■■■■□  96%  (240/250)
-   USED                  ■■■■■■■■■■ 100%  (126/126)
-
-PT-PT (90% complete, 84% of inferred usage)
-   thorium-shared.json   ■■■■■■■■■□  94%  (176/188)
-   thorium-web.json      ■■■■■■■■□□  81%  (50/62)
-   TOTAL                 ■■■■■■■■■□  90%  (226/250)
-   USED                  ■■■■■■■■□□  84%  (106/126)
+ES (83% complete, 73% of inferred usage)
+   thorium-shared.json   ■■■■■■■■■■ 100%  (189/189)
+   thorium-web.json      ■■■■■□□□□□  57%  (70/122)
+   TOTAL                 ■■■■■■■■□□  83%  (259/311)
+   USED                  ■■■■■■■□□□  73%  (136/187)
 
    ----------------------------------------
    Missing Keys:
 
-   WEB (11 keys):
+   WEB (51 keys):
+   • reader.comic.imageLoad.retry
+   • reader.comic.imageLoad.failed
+   • reader.comic.overlayMode.auto
+   • reader.comic.overlayMode.pinned
+   • reader.comic.overlayMode.label
+   • reader.comic.showPageNumber.label
+   • reader.comic.staticNavigation.label
+   • reader.comic.progressBar.hidden
+   • reader.comic.progressBar.standard
+   • reader.comic.progressBar.type
+   • reader.comic.progressBar.position.auto
+   • reader.comic.progressBar.position.bottom
+   • reader.comic.progressBar.position.left
+   • reader.comic.progressBar.position.right
+   • reader.comic.progressBar.position.label
+   • reader.comic.stretchSmallPages.label
+   • reader.comic.widthLimit.enabled
+   • reader.comic.widthLimit.label
+   • reader.comic.scrollAmount.label
+   • reader.comic.autoScroll.enabled
+   • reader.comic.autoScroll.speed
+   • reader.comic.autoScroll.smooth
+   • reader.comic.readingModePreview.label
+   • reader.comic.tapZonePreview.label
+   • reader.comic.imagePreloadAmount.label
+   • reader.comic.pageGap.label
+   • reader.comic.readingDirection.ltr
+   • reader.comic.readingDirection.rtl
+   • reader.comic.readingDirection.label
+   • reader.comic.readingMode.default
+   • reader.comic.readingMode.singlePage
+   • reader.comic.readingMode.doublePage
+   • reader.comic.readingMode.continuousVertical
+   • reader.comic.readingMode.continuousHorizontal
+   • reader.comic.readingMode.webtoon
+   • reader.comic.readingMode.label
+   • reader.comic.scaleType.fitWidth
+   • reader.comic.scaleType.fitHeight
+   • reader.comic.scaleType.fitScreen
+   • reader.comic.scaleType.originalSize
+   • reader.comic.scaleType.label
+   • reader.comic.tapZones.default
+   • reader.comic.tapZones.edge
+   • reader.comic.tapZones.kindle
+   • reader.comic.tapZones.lShape
+   • reader.comic.tapZones.rightAndLeft
+   • reader.comic.tapZones.disabled
+   • reader.comic.tapZones.label
+   • reader.app.header.sources.label
+   • reader.app.header.sources.loading
+   • reader.app.header.sources.available
+
+
+ET (83% complete, 73% of inferred usage)
+   thorium-shared.json   ■■■■■■■■■■ 100%  (189/189)
+   thorium-web.json      ■■■■■□□□□□  57%  (70/122)
+   TOTAL                 ■■■■■■■■□□  83%  (259/311)
+   USED                  ■■■■■■■□□□  73%  (136/187)
+
+   ----------------------------------------
+   Missing Keys:
+
+   WEB (51 keys):
+   • reader.comic.imageLoad.retry
+   • reader.comic.imageLoad.failed
+   • reader.comic.overlayMode.auto
+   • reader.comic.overlayMode.pinned
+   • reader.comic.overlayMode.label
+   • reader.comic.showPageNumber.label
+   • reader.comic.staticNavigation.label
+   • reader.comic.progressBar.hidden
+   • reader.comic.progressBar.standard
+   • reader.comic.progressBar.type
+   • reader.comic.progressBar.position.auto
+   • reader.comic.progressBar.position.bottom
+   • reader.comic.progressBar.position.left
+   • reader.comic.progressBar.position.right
+   • reader.comic.progressBar.position.label
+   • reader.comic.stretchSmallPages.label
+   • reader.comic.widthLimit.enabled
+   • reader.comic.widthLimit.label
+   • reader.comic.scrollAmount.label
+   • reader.comic.autoScroll.enabled
+   • reader.comic.autoScroll.speed
+   • reader.comic.autoScroll.smooth
+   • reader.comic.readingModePreview.label
+   • reader.comic.tapZonePreview.label
+   • reader.comic.imagePreloadAmount.label
+   • reader.comic.pageGap.label
+   • reader.comic.readingDirection.ltr
+   • reader.comic.readingDirection.rtl
+   • reader.comic.readingDirection.label
+   • reader.comic.readingMode.default
+   • reader.comic.readingMode.singlePage
+   • reader.comic.readingMode.doublePage
+   • reader.comic.readingMode.continuousVertical
+   • reader.comic.readingMode.continuousHorizontal
+   • reader.comic.readingMode.webtoon
+   • reader.comic.readingMode.label
+   • reader.comic.scaleType.fitWidth
+   • reader.comic.scaleType.fitHeight
+   • reader.comic.scaleType.fitScreen
+   • reader.comic.scaleType.originalSize
+   • reader.comic.scaleType.label
+   • reader.comic.tapZones.default
+   • reader.comic.tapZones.edge
+   • reader.comic.tapZones.kindle
+   • reader.comic.tapZones.lShape
+   • reader.comic.tapZones.rightAndLeft
+   • reader.comic.tapZones.disabled
+   • reader.comic.tapZones.label
+   • reader.app.header.sources.label
+   • reader.app.header.sources.loading
+   • reader.app.header.sources.available
+
+
+FI (83% complete, 73% of inferred usage)
+   thorium-shared.json   ■■■■■■■■■■ 100%  (189/189)
+   thorium-web.json      ■■■■■□□□□□  57%  (70/122)
+   TOTAL                 ■■■■■■■■□□  83%  (259/311)
+   USED                  ■■■■■■■□□□  73%  (136/187)
+
+   ----------------------------------------
+   Missing Keys:
+
+   WEB (51 keys):
+   • reader.comic.imageLoad.retry
+   • reader.comic.imageLoad.failed
+   • reader.comic.overlayMode.auto
+   • reader.comic.overlayMode.pinned
+   • reader.comic.overlayMode.label
+   • reader.comic.showPageNumber.label
+   • reader.comic.staticNavigation.label
+   • reader.comic.progressBar.hidden
+   • reader.comic.progressBar.standard
+   • reader.comic.progressBar.type
+   • reader.comic.progressBar.position.auto
+   • reader.comic.progressBar.position.bottom
+   • reader.comic.progressBar.position.left
+   • reader.comic.progressBar.position.right
+   • reader.comic.progressBar.position.label
+   • reader.comic.stretchSmallPages.label
+   • reader.comic.widthLimit.enabled
+   • reader.comic.widthLimit.label
+   • reader.comic.scrollAmount.label
+   • reader.comic.autoScroll.enabled
+   • reader.comic.autoScroll.speed
+   • reader.comic.autoScroll.smooth
+   • reader.comic.readingModePreview.label
+   • reader.comic.tapZonePreview.label
+   • reader.comic.imagePreloadAmount.label
+   • reader.comic.pageGap.label
+   • reader.comic.readingDirection.ltr
+   • reader.comic.readingDirection.rtl
+   • reader.comic.readingDirection.label
+   • reader.comic.readingMode.default
+   • reader.comic.readingMode.singlePage
+   • reader.comic.readingMode.doublePage
+   • reader.comic.readingMode.continuousVertical
+   • reader.comic.readingMode.continuousHorizontal
+   • reader.comic.readingMode.webtoon
+   • reader.comic.readingMode.label
+   • reader.comic.scaleType.fitWidth
+   • reader.comic.scaleType.fitHeight
+   • reader.comic.scaleType.fitScreen
+   • reader.comic.scaleType.originalSize
+   • reader.comic.scaleType.label
+   • reader.comic.tapZones.default
+   • reader.comic.tapZones.edge
+   • reader.comic.tapZones.kindle
+   • reader.comic.tapZones.lShape
+   • reader.comic.tapZones.rightAndLeft
+   • reader.comic.tapZones.disabled
+   • reader.comic.tapZones.label
+   • reader.app.header.sources.label
+   • reader.app.header.sources.loading
+   • reader.app.header.sources.available
+
+
+FR (83% complete, 73% of inferred usage)
+   thorium-shared.json   ■■■■■■■■■■ 100%  (189/189)
+   thorium-web.json      ■■■■■□□□□□  57%  (70/122)
+   TOTAL                 ■■■■■■■■□□  83%  (259/311)
+   USED                  ■■■■■■■□□□  73%  (136/187)
+
+   ----------------------------------------
+   Missing Keys:
+
+   WEB (51 keys):
+   • reader.comic.imageLoad.retry
+   • reader.comic.imageLoad.failed
+   • reader.comic.overlayMode.auto
+   • reader.comic.overlayMode.pinned
+   • reader.comic.overlayMode.label
+   • reader.comic.showPageNumber.label
+   • reader.comic.staticNavigation.label
+   • reader.comic.progressBar.hidden
+   • reader.comic.progressBar.standard
+   • reader.comic.progressBar.type
+   • reader.comic.progressBar.position.auto
+   • reader.comic.progressBar.position.bottom
+   • reader.comic.progressBar.position.left
+   • reader.comic.progressBar.position.right
+   • reader.comic.progressBar.position.label
+   • reader.comic.stretchSmallPages.label
+   • reader.comic.widthLimit.enabled
+   • reader.comic.widthLimit.label
+   • reader.comic.scrollAmount.label
+   • reader.comic.autoScroll.enabled
+   • reader.comic.autoScroll.speed
+   • reader.comic.autoScroll.smooth
+   • reader.comic.readingModePreview.label
+   • reader.comic.tapZonePreview.label
+   • reader.comic.imagePreloadAmount.label
+   • reader.comic.pageGap.label
+   • reader.comic.readingDirection.ltr
+   • reader.comic.readingDirection.rtl
+   • reader.comic.readingDirection.label
+   • reader.comic.readingMode.default
+   • reader.comic.readingMode.singlePage
+   • reader.comic.readingMode.doublePage
+   • reader.comic.readingMode.continuousVertical
+   • reader.comic.readingMode.continuousHorizontal
+   • reader.comic.readingMode.webtoon
+   • reader.comic.readingMode.label
+   • reader.comic.scaleType.fitWidth
+   • reader.comic.scaleType.fitHeight
+   • reader.comic.scaleType.fitScreen
+   • reader.comic.scaleType.originalSize
+   • reader.comic.scaleType.label
+   • reader.comic.tapZones.default
+   • reader.comic.tapZones.edge
+   • reader.comic.tapZones.kindle
+   • reader.comic.tapZones.lShape
+   • reader.comic.tapZones.rightAndLeft
+   • reader.comic.tapZones.disabled
+   • reader.comic.tapZones.label
+   • reader.app.header.sources.label
+   • reader.app.header.sources.loading
+   • reader.app.header.sources.available
+
+
+IT (83% complete, 73% of inferred usage)
+   thorium-shared.json   ■■■■■■■■■■ 100%  (189/189)
+   thorium-web.json      ■■■■■□□□□□  57%  (70/122)
+   TOTAL                 ■■■■■■■■□□  83%  (259/311)
+   USED                  ■■■■■■■□□□  73%  (136/187)
+
+   ----------------------------------------
+   Missing Keys:
+
+   WEB (51 keys):
+   • reader.comic.imageLoad.retry
+   • reader.comic.imageLoad.failed
+   • reader.comic.overlayMode.auto
+   • reader.comic.overlayMode.pinned
+   • reader.comic.overlayMode.label
+   • reader.comic.showPageNumber.label
+   • reader.comic.staticNavigation.label
+   • reader.comic.progressBar.hidden
+   • reader.comic.progressBar.standard
+   • reader.comic.progressBar.type
+   • reader.comic.progressBar.position.auto
+   • reader.comic.progressBar.position.bottom
+   • reader.comic.progressBar.position.left
+   • reader.comic.progressBar.position.right
+   • reader.comic.progressBar.position.label
+   • reader.comic.stretchSmallPages.label
+   • reader.comic.widthLimit.enabled
+   • reader.comic.widthLimit.label
+   • reader.comic.scrollAmount.label
+   • reader.comic.autoScroll.enabled
+   • reader.comic.autoScroll.speed
+   • reader.comic.autoScroll.smooth
+   • reader.comic.readingModePreview.label
+   • reader.comic.tapZonePreview.label
+   • reader.comic.imagePreloadAmount.label
+   • reader.comic.pageGap.label
+   • reader.comic.readingDirection.ltr
+   • reader.comic.readingDirection.rtl
+   • reader.comic.readingDirection.label
+   • reader.comic.readingMode.default
+   • reader.comic.readingMode.singlePage
+   • reader.comic.readingMode.doublePage
+   • reader.comic.readingMode.continuousVertical
+   • reader.comic.readingMode.continuousHorizontal
+   • reader.comic.readingMode.webtoon
+   • reader.comic.readingMode.label
+   • reader.comic.scaleType.fitWidth
+   • reader.comic.scaleType.fitHeight
+   • reader.comic.scaleType.fitScreen
+   • reader.comic.scaleType.originalSize
+   • reader.comic.scaleType.label
+   • reader.comic.tapZones.default
+   • reader.comic.tapZones.edge
+   • reader.comic.tapZones.kindle
+   • reader.comic.tapZones.lShape
+   • reader.comic.tapZones.rightAndLeft
+   • reader.comic.tapZones.disabled
+   • reader.comic.tapZones.label
+   • reader.app.header.sources.label
+   • reader.app.header.sources.loading
+   • reader.app.header.sources.available
+
+
+LT (83% complete, 73% of inferred usage)
+   thorium-shared.json   ■■■■■■■■■■ 100%  (189/189)
+   thorium-web.json      ■■■■■□□□□□  57%  (70/122)
+   TOTAL                 ■■■■■■■■□□  83%  (259/311)
+   USED                  ■■■■■■■□□□  73%  (136/187)
+
+   ----------------------------------------
+   Missing Keys:
+
+   WEB (51 keys):
+   • reader.comic.imageLoad.retry
+   • reader.comic.imageLoad.failed
+   • reader.comic.overlayMode.auto
+   • reader.comic.overlayMode.pinned
+   • reader.comic.overlayMode.label
+   • reader.comic.showPageNumber.label
+   • reader.comic.staticNavigation.label
+   • reader.comic.progressBar.hidden
+   • reader.comic.progressBar.standard
+   • reader.comic.progressBar.type
+   • reader.comic.progressBar.position.auto
+   • reader.comic.progressBar.position.bottom
+   • reader.comic.progressBar.position.left
+   • reader.comic.progressBar.position.right
+   • reader.comic.progressBar.position.label
+   • reader.comic.stretchSmallPages.label
+   • reader.comic.widthLimit.enabled
+   • reader.comic.widthLimit.label
+   • reader.comic.scrollAmount.label
+   • reader.comic.autoScroll.enabled
+   • reader.comic.autoScroll.speed
+   • reader.comic.autoScroll.smooth
+   • reader.comic.readingModePreview.label
+   • reader.comic.tapZonePreview.label
+   • reader.comic.imagePreloadAmount.label
+   • reader.comic.pageGap.label
+   • reader.comic.readingDirection.ltr
+   • reader.comic.readingDirection.rtl
+   • reader.comic.readingDirection.label
+   • reader.comic.readingMode.default
+   • reader.comic.readingMode.singlePage
+   • reader.comic.readingMode.doublePage
+   • reader.comic.readingMode.continuousVertical
+   • reader.comic.readingMode.continuousHorizontal
+   • reader.comic.readingMode.webtoon
+   • reader.comic.readingMode.label
+   • reader.comic.scaleType.fitWidth
+   • reader.comic.scaleType.fitHeight
+   • reader.comic.scaleType.fitScreen
+   • reader.comic.scaleType.originalSize
+   • reader.comic.scaleType.label
+   • reader.comic.tapZones.default
+   • reader.comic.tapZones.edge
+   • reader.comic.tapZones.kindle
+   • reader.comic.tapZones.lShape
+   • reader.comic.tapZones.rightAndLeft
+   • reader.comic.tapZones.disabled
+   • reader.comic.tapZones.label
+   • reader.app.header.sources.label
+   • reader.app.header.sources.loading
+   • reader.app.header.sources.available
+
+
+SV (83% complete, 73% of inferred usage)
+   thorium-shared.json   ■■■■■■■■■□  99%  (188/189)
+   thorium-web.json      ■■■■■□□□□□  57%  (70/122)
+   TOTAL                 ■■■■■■■■□□  83%  (258/311)
+   USED                  ■■■■■■■□□□  73%  (136/187)
+
+   ----------------------------------------
+   Missing Keys:
+
+   WEB (51 keys):
+   • reader.comic.imageLoad.retry
+   • reader.comic.imageLoad.failed
+   • reader.comic.overlayMode.auto
+   • reader.comic.overlayMode.pinned
+   • reader.comic.overlayMode.label
+   • reader.comic.showPageNumber.label
+   • reader.comic.staticNavigation.label
+   • reader.comic.progressBar.hidden
+   • reader.comic.progressBar.standard
+   • reader.comic.progressBar.type
+   • reader.comic.progressBar.position.auto
+   • reader.comic.progressBar.position.bottom
+   • reader.comic.progressBar.position.left
+   • reader.comic.progressBar.position.right
+   • reader.comic.progressBar.position.label
+   • reader.comic.stretchSmallPages.label
+   • reader.comic.widthLimit.enabled
+   • reader.comic.widthLimit.label
+   • reader.comic.scrollAmount.label
+   • reader.comic.autoScroll.enabled
+   • reader.comic.autoScroll.speed
+   • reader.comic.autoScroll.smooth
+   • reader.comic.readingModePreview.label
+   • reader.comic.tapZonePreview.label
+   • reader.comic.imagePreloadAmount.label
+   • reader.comic.pageGap.label
+   • reader.comic.readingDirection.ltr
+   • reader.comic.readingDirection.rtl
+   • reader.comic.readingDirection.label
+   • reader.comic.readingMode.default
+   • reader.comic.readingMode.singlePage
+   • reader.comic.readingMode.doublePage
+   • reader.comic.readingMode.continuousVertical
+   • reader.comic.readingMode.continuousHorizontal
+   • reader.comic.readingMode.webtoon
+   • reader.comic.readingMode.label
+   • reader.comic.scaleType.fitWidth
+   • reader.comic.scaleType.fitHeight
+   • reader.comic.scaleType.fitScreen
+   • reader.comic.scaleType.originalSize
+   • reader.comic.scaleType.label
+   • reader.comic.tapZones.default
+   • reader.comic.tapZones.edge
+   • reader.comic.tapZones.kindle
+   • reader.comic.tapZones.lShape
+   • reader.comic.tapZones.rightAndLeft
+   • reader.comic.tapZones.disabled
+   • reader.comic.tapZones.label
+   • reader.app.header.sources.label
+   • reader.app.header.sources.loading
+   • reader.app.header.sources.available
+
+
+PL (80% complete, 73% of inferred usage)
+   thorium-shared.json   ■■■■■■■■■□  94%  (178/189)
+   thorium-web.json      ■■■■■□□□□□  57%  (70/122)
+   TOTAL                 ■■■■■■■■□□  80%  (248/311)
+   USED                  ■■■■■■■□□□  73%  (136/187)
+
+   ----------------------------------------
+   Missing Keys:
+
+   WEB (51 keys):
+   • reader.comic.imageLoad.retry
+   • reader.comic.imageLoad.failed
+   • reader.comic.overlayMode.auto
+   • reader.comic.overlayMode.pinned
+   • reader.comic.overlayMode.label
+   • reader.comic.showPageNumber.label
+   • reader.comic.staticNavigation.label
+   • reader.comic.progressBar.hidden
+   • reader.comic.progressBar.standard
+   • reader.comic.progressBar.type
+   • reader.comic.progressBar.position.auto
+   • reader.comic.progressBar.position.bottom
+   • reader.comic.progressBar.position.left
+   • reader.comic.progressBar.position.right
+   • reader.comic.progressBar.position.label
+   • reader.comic.stretchSmallPages.label
+   • reader.comic.widthLimit.enabled
+   • reader.comic.widthLimit.label
+   • reader.comic.scrollAmount.label
+   • reader.comic.autoScroll.enabled
+   • reader.comic.autoScroll.speed
+   • reader.comic.autoScroll.smooth
+   • reader.comic.readingModePreview.label
+   • reader.comic.tapZonePreview.label
+   • reader.comic.imagePreloadAmount.label
+   • reader.comic.pageGap.label
+   • reader.comic.readingDirection.ltr
+   • reader.comic.readingDirection.rtl
+   • reader.comic.readingDirection.label
+   • reader.comic.readingMode.default
+   • reader.comic.readingMode.singlePage
+   • reader.comic.readingMode.doublePage
+   • reader.comic.readingMode.continuousVertical
+   • reader.comic.readingMode.continuousHorizontal
+   • reader.comic.readingMode.webtoon
+   • reader.comic.readingMode.label
+   • reader.comic.scaleType.fitWidth
+   • reader.comic.scaleType.fitHeight
+   • reader.comic.scaleType.fitScreen
+   • reader.comic.scaleType.originalSize
+   • reader.comic.scaleType.label
+   • reader.comic.tapZones.default
+   • reader.comic.tapZones.edge
+   • reader.comic.tapZones.kindle
+   • reader.comic.tapZones.lShape
+   • reader.comic.tapZones.rightAndLeft
+   • reader.comic.tapZones.disabled
+   • reader.comic.tapZones.label
+   • reader.app.header.sources.label
+   • reader.app.header.sources.loading
+   • reader.app.header.sources.available
+
+
+PT-PT (76% complete, 62% of inferred usage)
+   thorium-shared.json   ■■■■■■■■■□  94%  (177/189)
+   thorium-web.json      ■■■■□□□□□□  48%  (58/122)
+   TOTAL                 ■■■■■■■□□□  76%  (235/311)
+   USED                  ■■■■■■□□□□  62%  (116/187)
+
+   ----------------------------------------
+   Missing Keys:
+
+   WEB (62 keys):
    • audio.player.coverAlt
    • audio.remotePlayback.connected
    • audio.remotePlayback.trigger
@@ -142,6 +647,57 @@ PT-PT (90% complete, 84% of inferred usage)
    • audio.settings.sleepTimer.start
    • audio.player.controls
    • audio.player.progress
+   • reader.comic.imageLoad.retry
+   • reader.comic.imageLoad.failed
+   • reader.comic.overlayMode.auto
+   • reader.comic.overlayMode.pinned
+   • reader.comic.overlayMode.label
+   • reader.comic.showPageNumber.label
+   • reader.comic.staticNavigation.label
+   • reader.comic.progressBar.hidden
+   • reader.comic.progressBar.standard
+   • reader.comic.progressBar.type
+   • reader.comic.progressBar.position.auto
+   • reader.comic.progressBar.position.bottom
+   • reader.comic.progressBar.position.left
+   • reader.comic.progressBar.position.right
+   • reader.comic.progressBar.position.label
+   • reader.comic.stretchSmallPages.label
+   • reader.comic.widthLimit.enabled
+   • reader.comic.widthLimit.label
+   • reader.comic.scrollAmount.label
+   • reader.comic.autoScroll.enabled
+   • reader.comic.autoScroll.speed
+   • reader.comic.autoScroll.smooth
+   • reader.comic.readingModePreview.label
+   • reader.comic.tapZonePreview.label
+   • reader.comic.imagePreloadAmount.label
+   • reader.comic.pageGap.label
+   • reader.comic.readingDirection.ltr
+   • reader.comic.readingDirection.rtl
+   • reader.comic.readingDirection.label
+   • reader.comic.readingMode.default
+   • reader.comic.readingMode.singlePage
+   • reader.comic.readingMode.doublePage
+   • reader.comic.readingMode.continuousVertical
+   • reader.comic.readingMode.continuousHorizontal
+   • reader.comic.readingMode.webtoon
+   • reader.comic.readingMode.label
+   • reader.comic.scaleType.fitWidth
+   • reader.comic.scaleType.fitHeight
+   • reader.comic.scaleType.fitScreen
+   • reader.comic.scaleType.originalSize
+   • reader.comic.scaleType.label
+   • reader.comic.tapZones.default
+   • reader.comic.tapZones.edge
+   • reader.comic.tapZones.kindle
+   • reader.comic.tapZones.lShape
+   • reader.comic.tapZones.rightAndLeft
+   • reader.comic.tapZones.disabled
+   • reader.comic.tapZones.label
+   • reader.app.header.sources.label
+   • reader.app.header.sources.loading
+   • reader.app.header.sources.available
 
    SHARED (9 keys):
    • reader.playback.preferences.audio.title
@@ -155,16 +711,16 @@ PT-PT (90% complete, 84% of inferred usage)
    • reader.preferences.noRuby.label
 
 
-AR (68% complete, 63% of inferred usage)
-   thorium-shared.json   ■■■■■■■□□□  73%  (138/188)
-   thorium-web.json      ■■■■■□□□□□  52%  (32/62)
-   TOTAL                 ■■■■■■□□□□  68%  (170/250)
-   USED                  ■■■■■■□□□□  63%  (80/126)
+AR (61% complete, 48% of inferred usage)
+   thorium-shared.json   ■■■■■■■■□□  80%  (151/189)
+   thorium-web.json      ■■■□□□□□□□  33%  (40/122)
+   TOTAL                 ■■■■■■□□□□  61%  (191/311)
+   USED                  ■■■■□□□□□□  48%  (90/187)
 
    ----------------------------------------
    Missing Keys:
 
-   WEB (26 keys):
+   WEB (77 keys):
    • reader.jumpToPosition.label
    • reader.jumpToPosition.error.notFound
    • reader.overflowMenu.active.trigger
@@ -180,6 +736,8 @@ AR (68% complete, 63% of inferred usage)
    • audio.settings.sleepTimer.start
    • audio.player.controls
    • audio.player.progress
+   • reader.comic.imageLoad.retry
+   • reader.comic.imageLoad.failed
    • reader.app.errors.notFound
    • reader.app.errors.accessDenied
    • reader.app.errors.network
@@ -187,12 +745,167 @@ AR (68% complete, 63% of inferred usage)
    • reader.app.errors.clientError
    • reader.app.errors.generic
    • reader.app.errors.title
+   • reader.comic.overlayMode.auto
+   • reader.comic.overlayMode.pinned
+   • reader.comic.overlayMode.label
+   • reader.comic.showPageNumber.label
+   • reader.comic.staticNavigation.label
+   • reader.comic.progressBar.hidden
+   • reader.comic.progressBar.standard
+   • reader.comic.progressBar.type
+   • reader.comic.progressBar.position.auto
+   • reader.comic.progressBar.position.bottom
+   • reader.comic.progressBar.position.left
+   • reader.comic.progressBar.position.right
+   • reader.comic.progressBar.position.label
+   • reader.comic.stretchSmallPages.label
+   • reader.comic.widthLimit.enabled
+   • reader.comic.widthLimit.label
+   • reader.comic.scrollAmount.label
+   • reader.comic.autoScroll.enabled
+   • reader.comic.autoScroll.speed
+   • reader.comic.autoScroll.smooth
+   • reader.comic.readingModePreview.label
+   • reader.comic.tapZonePreview.label
+   • reader.comic.imagePreloadAmount.label
+   • reader.comic.pageGap.label
+   • reader.comic.readingDirection.ltr
+   • reader.comic.readingDirection.rtl
+   • reader.comic.readingDirection.label
+   • reader.comic.readingMode.default
+   • reader.comic.readingMode.singlePage
+   • reader.comic.readingMode.doublePage
+   • reader.comic.readingMode.continuousVertical
+   • reader.comic.readingMode.continuousHorizontal
+   • reader.comic.readingMode.webtoon
+   • reader.comic.readingMode.label
+   • reader.comic.scaleType.fitWidth
+   • reader.comic.scaleType.fitHeight
+   • reader.comic.scaleType.fitScreen
+   • reader.comic.scaleType.originalSize
+   • reader.comic.scaleType.label
+   • reader.comic.tapZones.default
+   • reader.comic.tapZones.edge
+   • reader.comic.tapZones.kindle
+   • reader.comic.tapZones.lShape
+   • reader.comic.tapZones.rightAndLeft
+   • reader.comic.tapZones.disabled
+   • reader.comic.tapZones.label
    • reader.settings.spacing.advanced.trigger
    • reader.settings.spacing.advanced.tooltip
    • reader.settings.text.advanced.trigger
    • reader.settings.text.advanced.tooltip
+   • reader.app.header.sources.label
+   • reader.app.header.sources.loading
+   • reader.app.header.sources.available
 
    SHARED (20 keys):
+   • reader.search.title
+   • reader.search.placeholder
+   • reader.playback.preferences.audio.title
+   • reader.playback.preferences.autoPlay.title
+   • reader.playback.preferences.autoPlay.label
+   • reader.playback.preferences.audio.skipBackwardInterval
+   • reader.playback.preferences.audio.skipForwardInterval
+   • reader.playback.preferences.audio.skipInterval
+   • reader.playback.preferences.playbackRate.descriptive
+   • reader.playback.preferences.sleepTimer.presets.endOfResource
+   • reader.playback.preferences.sleepTimer.descriptive
+   • reader.playback.preferences.audio.volume
+   • reader.playback.actions.pause
+   • reader.playback.actions.play
+   • reader.playback.actions.skipBackward.descriptive
+   • reader.playback.actions.skipForward.descriptive
+   • reader.preferences.ligatures.title
+   • reader.preferences.ligatures.label
+   • reader.preferences.noRuby.title
+   • reader.preferences.noRuby.label
+
+
+PT-BR (53% complete, 51% of inferred usage)
+   thorium-shared.json   ■■■■■■□□□□  61%  (116/189)
+   thorium-web.json      ■■■■□□□□□□  40%  (49/122)
+   TOTAL                 ■■■■■□□□□□  53%  (165/311)
+   USED                  ■■■■■□□□□□  51%  (95/187)
+
+   ----------------------------------------
+   Missing Keys:
+
+   WEB (70 keys):
+   • reader.jumpToPosition.error.notFound
+   • audio.player.coverAlt
+   • audio.remotePlayback.connected
+   • audio.remotePlayback.trigger
+   • audio.settings.sleepTimer.minutes
+   • audio.settings.sleepTimer.seconds
+   • audio.settings.sleepTimer.hours
+   • audio.settings.sleepTimer.remaining
+   • audio.settings.sleepTimer.instruction
+   • audio.settings.sleepTimer.start
+   • audio.player.controls
+   • audio.player.progress
+   • reader.comic.imageLoad.retry
+   • reader.comic.imageLoad.failed
+   • reader.app.errors.notFound
+   • reader.app.errors.accessDenied
+   • reader.app.errors.network
+   • reader.app.errors.serverError
+   • reader.app.errors.clientError
+   • reader.app.errors.generic
+   • reader.app.errors.title
+   • reader.comic.overlayMode.auto
+   • reader.comic.overlayMode.pinned
+   • reader.comic.overlayMode.label
+   • reader.comic.showPageNumber.label
+   • reader.comic.staticNavigation.label
+   • reader.comic.progressBar.hidden
+   • reader.comic.progressBar.standard
+   • reader.comic.progressBar.type
+   • reader.comic.progressBar.position.auto
+   • reader.comic.progressBar.position.bottom
+   • reader.comic.progressBar.position.left
+   • reader.comic.progressBar.position.right
+   • reader.comic.progressBar.position.label
+   • reader.comic.stretchSmallPages.label
+   • reader.comic.widthLimit.enabled
+   • reader.comic.widthLimit.label
+   • reader.comic.scrollAmount.label
+   • reader.comic.autoScroll.enabled
+   • reader.comic.autoScroll.speed
+   • reader.comic.autoScroll.smooth
+   • reader.comic.readingModePreview.label
+   • reader.comic.tapZonePreview.label
+   • reader.comic.imagePreloadAmount.label
+   • reader.comic.pageGap.label
+   • reader.comic.readingDirection.ltr
+   • reader.comic.readingDirection.rtl
+   • reader.comic.readingDirection.label
+   • reader.comic.readingMode.default
+   • reader.comic.readingMode.singlePage
+   • reader.comic.readingMode.doublePage
+   • reader.comic.readingMode.continuousVertical
+   • reader.comic.readingMode.continuousHorizontal
+   • reader.comic.readingMode.webtoon
+   • reader.comic.readingMode.label
+   • reader.comic.scaleType.fitWidth
+   • reader.comic.scaleType.fitHeight
+   • reader.comic.scaleType.fitScreen
+   • reader.comic.scaleType.originalSize
+   • reader.comic.scaleType.label
+   • reader.comic.tapZones.default
+   • reader.comic.tapZones.edge
+   • reader.comic.tapZones.kindle
+   • reader.comic.tapZones.lShape
+   • reader.comic.tapZones.rightAndLeft
+   • reader.comic.tapZones.disabled
+   • reader.comic.tapZones.label
+   • reader.app.header.sources.label
+   • reader.app.header.sources.loading
+   • reader.app.header.sources.available
+
+   SHARED (22 keys):
+   • reader.search.title
+   • reader.search.placeholder
    • reader.playback.preferences.audio.title
    • reader.playback.preferences.autoPlay.title
    • reader.playback.preferences.autoPlay.label
@@ -215,16 +928,16 @@ AR (68% complete, 63% of inferred usage)
    • reader.preferences.noRuby.label
 
 
-PT-BR (63% complete, 69% of inferred usage)
-   thorium-shared.json   ■■■■■■□□□□  62%  (116/188)
-   thorium-web.json      ■■■■■■□□□□  66%  (41/62)
-   TOTAL                 ■■■■■■□□□□  63%  (157/250)
-   USED                  ■■■■■■□□□□  69%  (87/126)
+TA (37% complete, 46% of inferred usage)
+   thorium-shared.json   ■■■□□□□□□□  35%  (66/189)
+   thorium-web.json      ■■■■□□□□□□  40%  (49/122)
+   TOTAL                 ■■■□□□□□□□  37%  (115/311)
+   USED                  ■■■■□□□□□□  46%  (86/187)
 
    ----------------------------------------
    Missing Keys:
 
-   WEB (19 keys):
+   WEB (70 keys):
    • reader.jumpToPosition.error.notFound
    • audio.player.coverAlt
    • audio.remotePlayback.connected
@@ -237,6 +950,8 @@ PT-BR (63% complete, 69% of inferred usage)
    • audio.settings.sleepTimer.start
    • audio.player.controls
    • audio.player.progress
+   • reader.comic.imageLoad.retry
+   • reader.comic.imageLoad.failed
    • reader.app.errors.notFound
    • reader.app.errors.accessDenied
    • reader.app.errors.network
@@ -244,61 +959,59 @@ PT-BR (63% complete, 69% of inferred usage)
    • reader.app.errors.clientError
    • reader.app.errors.generic
    • reader.app.errors.title
+   • reader.comic.overlayMode.auto
+   • reader.comic.overlayMode.pinned
+   • reader.comic.overlayMode.label
+   • reader.comic.showPageNumber.label
+   • reader.comic.staticNavigation.label
+   • reader.comic.progressBar.hidden
+   • reader.comic.progressBar.standard
+   • reader.comic.progressBar.type
+   • reader.comic.progressBar.position.auto
+   • reader.comic.progressBar.position.bottom
+   • reader.comic.progressBar.position.left
+   • reader.comic.progressBar.position.right
+   • reader.comic.progressBar.position.label
+   • reader.comic.stretchSmallPages.label
+   • reader.comic.widthLimit.enabled
+   • reader.comic.widthLimit.label
+   • reader.comic.scrollAmount.label
+   • reader.comic.autoScroll.enabled
+   • reader.comic.autoScroll.speed
+   • reader.comic.autoScroll.smooth
+   • reader.comic.readingModePreview.label
+   • reader.comic.tapZonePreview.label
+   • reader.comic.imagePreloadAmount.label
+   • reader.comic.pageGap.label
+   • reader.comic.readingDirection.ltr
+   • reader.comic.readingDirection.rtl
+   • reader.comic.readingDirection.label
+   • reader.comic.readingMode.default
+   • reader.comic.readingMode.singlePage
+   • reader.comic.readingMode.doublePage
+   • reader.comic.readingMode.continuousVertical
+   • reader.comic.readingMode.continuousHorizontal
+   • reader.comic.readingMode.webtoon
+   • reader.comic.readingMode.label
+   • reader.comic.scaleType.fitWidth
+   • reader.comic.scaleType.fitHeight
+   • reader.comic.scaleType.fitScreen
+   • reader.comic.scaleType.originalSize
+   • reader.comic.scaleType.label
+   • reader.comic.tapZones.default
+   • reader.comic.tapZones.edge
+   • reader.comic.tapZones.kindle
+   • reader.comic.tapZones.lShape
+   • reader.comic.tapZones.rightAndLeft
+   • reader.comic.tapZones.disabled
+   • reader.comic.tapZones.label
+   • reader.app.header.sources.label
+   • reader.app.header.sources.loading
+   • reader.app.header.sources.available
 
-   SHARED (20 keys):
-   • reader.playback.preferences.audio.title
-   • reader.playback.preferences.autoPlay.title
-   • reader.playback.preferences.autoPlay.label
-   • reader.playback.preferences.audio.skipBackwardInterval
-   • reader.playback.preferences.audio.skipForwardInterval
-   • reader.playback.preferences.audio.skipInterval
-   • reader.playback.preferences.playbackRate.descriptive
-   • reader.playback.preferences.sleepTimer.presets.endOfResource
-   • reader.playback.preferences.sleepTimer.descriptive
-   • reader.playback.preferences.audio.volume
-   • reader.actions.goToNextResource.descriptive
-   • reader.playback.actions.pause
-   • reader.playback.actions.play
-   • reader.actions.goToPreviousResource.descriptive
-   • reader.playback.actions.skipBackward.descriptive
-   • reader.playback.actions.skipForward.descriptive
-   • reader.preferences.ligatures.title
-   • reader.preferences.ligatures.label
-   • reader.preferences.noRuby.title
-   • reader.preferences.noRuby.label
-
-
-TA (43% complete, 63% of inferred usage)
-   thorium-shared.json   ■■■□□□□□□□  35%  (66/188)
-   thorium-web.json      ■■■■■■□□□□  66%  (41/62)
-   TOTAL                 ■■■■□□□□□□  43%  (107/250)
-   USED                  ■■■■■■□□□□  63%  (80/126)
-
-   ----------------------------------------
-   Missing Keys:
-
-   WEB (19 keys):
-   • reader.jumpToPosition.error.notFound
-   • audio.player.coverAlt
-   • audio.remotePlayback.connected
-   • audio.remotePlayback.trigger
-   • audio.settings.sleepTimer.minutes
-   • audio.settings.sleepTimer.seconds
-   • audio.settings.sleepTimer.hours
-   • audio.settings.sleepTimer.remaining
-   • audio.settings.sleepTimer.instruction
-   • audio.settings.sleepTimer.start
-   • audio.player.controls
-   • audio.player.progress
-   • reader.app.errors.notFound
-   • reader.app.errors.accessDenied
-   • reader.app.errors.network
-   • reader.app.errors.serverError
-   • reader.app.errors.clientError
-   • reader.app.errors.generic
-   • reader.app.errors.title
-
-   SHARED (27 keys):
+   SHARED (31 keys):
+   • reader.search.title
+   • reader.search.placeholder
    • reader.playback.preferences.audio.title
    • reader.playback.preferences.autoPlay.title
    • reader.playback.preferences.autoPlay.label
@@ -316,6 +1029,8 @@ TA (43% complete, 63% of inferred usage)
    • reader.actions.goToPreviousResource.descriptive
    • reader.playback.actions.skipBackward.descriptive
    • reader.playback.actions.skipForward.descriptive
+   • reader.actions.goToNextPage.descriptive
+   • reader.actions.goToPreviousPage.descriptive
    • reader.preferences.columns.single.compact
    • reader.preferences.columns.dual.compact
    • reader.preferences.spacing.presets.title
@@ -328,16 +1043,16 @@ TA (43% complete, 63% of inferred usage)
    • reader.preferences.noRuby.label
 
 
-TR (28% complete, 18% of inferred usage)
-   thorium-shared.json   ■■■□□□□□□□  37%  (69/188)
-   thorium-web.json      □□□□□□□□□□   0%  (0/62)
-   TOTAL                 ■■□□□□□□□□  28%  (69/250)
-   USED                  ■□□□□□□□□□  18%  (23/126)
+TR (32% complete, 21% of inferred usage)
+   thorium-shared.json   ■■■■■□□□□□  53%  (101/189)
+   thorium-web.json      □□□□□□□□□□   0%  (0/122)
+   TOTAL                 ■■■□□□□□□□  32%  (101/311)
+   USED                  ■■□□□□□□□□  21%  (39/187)
 
    ----------------------------------------
    Missing Keys:
 
-   WEB (53 keys):
+   WEB (110 keys):
    • reader.fullscreen.close
    • reader.fullscreen.trigger
    • reader.fullscreen.tooltip
@@ -359,6 +1074,14 @@ TR (28% complete, 18% of inferred usage)
    • audio.settings.sleepTimer.start
    • audio.player.controls
    • audio.player.progress
+   • reader.app.publicationWrapper
+   • reader.comic.chapterBoundaries.previousChapter
+   • reader.comic.chapterBoundaries.nextChapter
+   • reader.comic.imageLoad.retry
+   • reader.comic.imageLoad.failed
+   • reader.comic.chapterBoundaries.finished
+   • reader.comic.chapterBoundaries.returnToMediaPage
+   • reader.comic.chapterBoundaries.returnHome
    • reader.app.docker.fullscreen.trigger
    • reader.app.docker.fullscreen.tooltip
    • reader.app.docker.popover.trigger
@@ -369,7 +1092,6 @@ TR (28% complete, 18% of inferred usage)
    • reader.app.docking.dockingClosed
    • reader.app.docking.dockingCollapsed
    • reader.app.docking.dockingEmpty
-   • reader.app.publicationWrapper
    • reader.app.errors.notFound
    • reader.app.errors.accessDenied
    • reader.app.errors.network
@@ -378,6 +1100,53 @@ TR (28% complete, 18% of inferred usage)
    • reader.app.errors.generic
    • reader.app.errors.title
    • reader.app.loading
+   • reader.comic.overlayMode.auto
+   • reader.comic.overlayMode.pinned
+   • reader.comic.overlayMode.label
+   • reader.comic.showPageNumber.label
+   • reader.comic.staticNavigation.label
+   • reader.comic.progressBar.hidden
+   • reader.comic.progressBar.standard
+   • reader.comic.progressBar.type
+   • reader.comic.progressBar.position.auto
+   • reader.comic.progressBar.position.bottom
+   • reader.comic.progressBar.position.left
+   • reader.comic.progressBar.position.right
+   • reader.comic.progressBar.position.label
+   • reader.comic.stretchSmallPages.label
+   • reader.comic.widthLimit.enabled
+   • reader.comic.widthLimit.label
+   • reader.comic.scrollAmount.label
+   • reader.comic.autoScroll.enabled
+   • reader.comic.autoScroll.speed
+   • reader.comic.autoScroll.smooth
+   • reader.comic.readingModePreview.label
+   • reader.comic.tapZonePreview.label
+   • reader.comic.imagePreloadAmount.label
+   • reader.comic.chapterBoundaries.label
+   • reader.comic.pageGap.label
+   • reader.comic.readingDirection.ltr
+   • reader.comic.readingDirection.rtl
+   • reader.comic.readingDirection.label
+   • reader.comic.readingMode.default
+   • reader.comic.readingMode.singlePage
+   • reader.comic.readingMode.doublePage
+   • reader.comic.readingMode.continuousVertical
+   • reader.comic.readingMode.continuousHorizontal
+   • reader.comic.readingMode.webtoon
+   • reader.comic.readingMode.label
+   • reader.comic.scaleType.fitWidth
+   • reader.comic.scaleType.fitHeight
+   • reader.comic.scaleType.fitScreen
+   • reader.comic.scaleType.originalSize
+   • reader.comic.scaleType.label
+   • reader.comic.tapZones.default
+   • reader.comic.tapZones.edge
+   • reader.comic.tapZones.kindle
+   • reader.comic.tapZones.lShape
+   • reader.comic.tapZones.rightAndLeft
+   • reader.comic.tapZones.disabled
+   • reader.comic.tapZones.label
    • reader.settings.spacing.advanced.trigger
    • reader.settings.spacing.advanced.tooltip
    • reader.settings.text.advanced.trigger
@@ -391,26 +1160,17 @@ TR (28% complete, 18% of inferred usage)
    • reader.app.progression.referenceFallback
    • reader.app.progression.wrapper
    • reader.app.header.runningHead
+   • reader.app.header.sources.label
+   • reader.app.header.sources.loading
+   • reader.app.header.sources.available
 
-   SHARED (50 keys):
-   • reader.playback.preferences.audio.title
+   SHARED (38 keys):
+   • reader.search.title
+   • reader.search.placeholder
    • reader.preferences.text
    • reader.preferences.spacing.title
    • reader.tableOfContents.title
    • reader.tableOfContents.emptyState.description
-   • reader.playback.preferences.autoPlay.title
-   • reader.playback.preferences.autoPlay.label
-   • reader.playback.preferences.audio.skipBackwardInterval
-   • reader.playback.preferences.audio.skipForwardInterval
-   • reader.playback.preferences.audio.skipInterval
-   • reader.playback.preferences.playbackRate.descriptive
-   • reader.playback.preferences.sleepTimer.presets.endOfResource
-   • reader.playback.preferences.sleepTimer.descriptive
-   • reader.playback.preferences.audio.volume
-   • reader.playback.actions.pause
-   • reader.playback.actions.play
-   • reader.playback.actions.skipBackward.descriptive
-   • reader.playback.actions.skipForward.descriptive
    • reader.preferences.layout.paginated
    • reader.preferences.layout.scrolled
    • reader.preferences.layout.title
@@ -445,47 +1205,81 @@ TR (28% complete, 18% of inferred usage)
    • reader.preferences.textNormalization.label
 
 
-EL (16% complete, 27% of inferred usage)
-   thorium-shared.json   □□□□□□□□□□   0%  (0/188)
-   thorium-web.json      ■■■■■■□□□□  66%  (41/62)
-   TOTAL                 ■□□□□□□□□□  16%  (41/250)
-   USED                  ■■□□□□□□□□  27%  (34/126)
+EL (23% complete, 32% of inferred usage)
+   thorium-shared.json   □□□□□□□□□□   0%  (0/189)
+   thorium-web.json      ■■■■■□□□□□  57%  (70/122)
+   TOTAL                 ■■□□□□□□□□  23%  (70/311)
+   USED                  ■■■□□□□□□□  32%  (59/187)
 
    ----------------------------------------
    Missing Keys:
 
-   WEB (19 keys):
-   • reader.jumpToPosition.error.notFound
-   • audio.player.coverAlt
-   • audio.remotePlayback.connected
-   • audio.remotePlayback.trigger
-   • audio.settings.sleepTimer.minutes
-   • audio.settings.sleepTimer.seconds
-   • audio.settings.sleepTimer.hours
-   • audio.settings.sleepTimer.remaining
-   • audio.settings.sleepTimer.instruction
-   • audio.settings.sleepTimer.start
-   • audio.player.controls
-   • audio.player.progress
-   • reader.app.errors.notFound
-   • reader.app.errors.accessDenied
-   • reader.app.errors.network
-   • reader.app.errors.serverError
-   • reader.app.errors.clientError
-   • reader.app.errors.generic
-   • reader.app.errors.title
+   WEB (51 keys):
+   • reader.comic.imageLoad.retry
+   • reader.comic.imageLoad.failed
+   • reader.comic.overlayMode.auto
+   • reader.comic.overlayMode.pinned
+   • reader.comic.overlayMode.label
+   • reader.comic.showPageNumber.label
+   • reader.comic.staticNavigation.label
+   • reader.comic.progressBar.hidden
+   • reader.comic.progressBar.standard
+   • reader.comic.progressBar.type
+   • reader.comic.progressBar.position.auto
+   • reader.comic.progressBar.position.bottom
+   • reader.comic.progressBar.position.left
+   • reader.comic.progressBar.position.right
+   • reader.comic.progressBar.position.label
+   • reader.comic.stretchSmallPages.label
+   • reader.comic.widthLimit.enabled
+   • reader.comic.widthLimit.label
+   • reader.comic.scrollAmount.label
+   • reader.comic.autoScroll.enabled
+   • reader.comic.autoScroll.speed
+   • reader.comic.autoScroll.smooth
+   • reader.comic.readingModePreview.label
+   • reader.comic.tapZonePreview.label
+   • reader.comic.imagePreloadAmount.label
+   • reader.comic.pageGap.label
+   • reader.comic.readingDirection.ltr
+   • reader.comic.readingDirection.rtl
+   • reader.comic.readingDirection.label
+   • reader.comic.readingMode.default
+   • reader.comic.readingMode.singlePage
+   • reader.comic.readingMode.doublePage
+   • reader.comic.readingMode.continuousVertical
+   • reader.comic.readingMode.continuousHorizontal
+   • reader.comic.readingMode.webtoon
+   • reader.comic.readingMode.label
+   • reader.comic.scaleType.fitWidth
+   • reader.comic.scaleType.fitHeight
+   • reader.comic.scaleType.fitScreen
+   • reader.comic.scaleType.originalSize
+   • reader.comic.scaleType.label
+   • reader.comic.tapZones.default
+   • reader.comic.tapZones.edge
+   • reader.comic.tapZones.kindle
+   • reader.comic.tapZones.lShape
+   • reader.comic.tapZones.rightAndLeft
+   • reader.comic.tapZones.disabled
+   • reader.comic.tapZones.label
+   • reader.app.header.sources.label
+   • reader.app.header.sources.loading
+   • reader.app.header.sources.available
 
-   SHARED (73 keys):
+   SHARED (77 keys):
    • reader.actions.goToPosition.descriptive
    • reader.actions.goToPosition.compact
+   • reader.search.title
+   • reader.search.placeholder
+   • common.actions.clear
+   • common.actions.search
    • reader.playback.preferences.audio.title
    • reader.preferences.title
    • reader.preferences.text
    • reader.preferences.spacing.title
    • reader.tableOfContents.title
    • reader.tableOfContents.emptyState.description
-   • common.actions.search
-   • common.actions.clear
    • reader.playback.preferences.autoPlay.title
    • reader.playback.preferences.autoPlay.label
    • reader.playback.preferences.audio.skipBackwardInterval
@@ -504,6 +1298,8 @@ EL (16% complete, 27% of inferred usage)
    • reader.actions.goToPreviousResource.descriptive
    • reader.playback.actions.skipBackward.descriptive
    • reader.playback.actions.skipForward.descriptive
+   • reader.actions.goToNextPage.descriptive
+   • reader.actions.goToPreviousPage.descriptive
    • common.actions.close
    • reader.preferences.columns.auto
    • reader.preferences.columns.single.compact
@@ -551,16 +1347,16 @@ EL (16% complete, 27% of inferred usage)
    • reader.progression.xOfY.descriptive
 
 
-HE (2% complete, 3% of inferred usage)
-   thorium-shared.json   □□□□□□□□□□   1%  (2/188)
-   thorium-web.json      □□□□□□□□□□   5%  (3/62)
-   TOTAL                 □□□□□□□□□□   2%  (5/250)
-   USED                  □□□□□□□□□□   3%  (4/126)
+HE (5% complete, 6% of inferred usage)
+   thorium-shared.json   □□□□□□□□□□   2%  (4/189)
+   thorium-web.json      □□□□□□□□□□   9%  (11/122)
+   TOTAL                 □□□□□□□□□□   5%  (15/311)
+   USED                  □□□□□□□□□□   6%  (11/187)
 
    ----------------------------------------
    Missing Keys:
 
-   WEB (51 keys):
+   WEB (102 keys):
    • reader.fullscreen.close
    • reader.fullscreen.trigger
    • reader.fullscreen.tooltip
@@ -582,6 +1378,8 @@ HE (2% complete, 3% of inferred usage)
    • audio.settings.sleepTimer.start
    • audio.player.controls
    • audio.player.progress
+   • reader.comic.imageLoad.retry
+   • reader.comic.imageLoad.failed
    • reader.app.docker.fullscreen.trigger
    • reader.app.docker.fullscreen.tooltip
    • reader.app.docker.popover.trigger
@@ -599,6 +1397,52 @@ HE (2% complete, 3% of inferred usage)
    • reader.app.errors.clientError
    • reader.app.errors.generic
    • reader.app.errors.title
+   • reader.comic.overlayMode.auto
+   • reader.comic.overlayMode.pinned
+   • reader.comic.overlayMode.label
+   • reader.comic.showPageNumber.label
+   • reader.comic.staticNavigation.label
+   • reader.comic.progressBar.hidden
+   • reader.comic.progressBar.standard
+   • reader.comic.progressBar.type
+   • reader.comic.progressBar.position.auto
+   • reader.comic.progressBar.position.bottom
+   • reader.comic.progressBar.position.left
+   • reader.comic.progressBar.position.right
+   • reader.comic.progressBar.position.label
+   • reader.comic.stretchSmallPages.label
+   • reader.comic.widthLimit.enabled
+   • reader.comic.widthLimit.label
+   • reader.comic.scrollAmount.label
+   • reader.comic.autoScroll.enabled
+   • reader.comic.autoScroll.speed
+   • reader.comic.autoScroll.smooth
+   • reader.comic.readingModePreview.label
+   • reader.comic.tapZonePreview.label
+   • reader.comic.imagePreloadAmount.label
+   • reader.comic.pageGap.label
+   • reader.comic.readingDirection.ltr
+   • reader.comic.readingDirection.rtl
+   • reader.comic.readingDirection.label
+   • reader.comic.readingMode.default
+   • reader.comic.readingMode.singlePage
+   • reader.comic.readingMode.doublePage
+   • reader.comic.readingMode.continuousVertical
+   • reader.comic.readingMode.continuousHorizontal
+   • reader.comic.readingMode.webtoon
+   • reader.comic.readingMode.label
+   • reader.comic.scaleType.fitWidth
+   • reader.comic.scaleType.fitHeight
+   • reader.comic.scaleType.fitScreen
+   • reader.comic.scaleType.originalSize
+   • reader.comic.scaleType.label
+   • reader.comic.tapZones.default
+   • reader.comic.tapZones.edge
+   • reader.comic.tapZones.kindle
+   • reader.comic.tapZones.lShape
+   • reader.comic.tapZones.rightAndLeft
+   • reader.comic.tapZones.disabled
+   • reader.comic.tapZones.label
    • reader.settings.spacing.advanced.trigger
    • reader.settings.spacing.advanced.tooltip
    • reader.settings.text.advanced.trigger
@@ -612,17 +1456,22 @@ HE (2% complete, 3% of inferred usage)
    • reader.app.progression.referenceFallback
    • reader.app.progression.wrapper
    • reader.app.header.runningHead
+   • reader.app.header.sources.label
+   • reader.app.header.sources.loading
+   • reader.app.header.sources.available
 
-   SHARED (71 keys):
+   SHARED (74 keys):
    • reader.actions.goToPosition.descriptive
    • reader.actions.goToPosition.compact
+   • reader.search.title
+   • reader.search.placeholder
+   • common.actions.search
    • reader.playback.preferences.audio.title
    • reader.preferences.title
    • reader.preferences.text
    • reader.preferences.spacing.title
    • reader.tableOfContents.title
    • reader.tableOfContents.emptyState.description
-   • common.actions.search
    • reader.playback.preferences.autoPlay.title
    • reader.playback.preferences.autoPlay.label
    • reader.playback.preferences.audio.skipBackwardInterval
@@ -633,7 +1482,6 @@ HE (2% complete, 3% of inferred usage)
    • reader.playback.preferences.playbackRate.descriptive
    • reader.playback.preferences.sleepTimer.presets.endOfResource
    • reader.playback.preferences.sleepTimer.descriptive
-   • common.actions.cancel
    • reader.playback.preferences.audio.volume
    • reader.actions.goToNextResource.descriptive
    • reader.playback.actions.pause
@@ -641,6 +1489,8 @@ HE (2% complete, 3% of inferred usage)
    • reader.actions.goToPreviousResource.descriptive
    • reader.playback.actions.skipBackward.descriptive
    • reader.playback.actions.skipForward.descriptive
+   • reader.actions.goToNextPage.descriptive
+   • reader.actions.goToPreviousPage.descriptive
    • reader.preferences.columns.auto
    • reader.preferences.columns.single.compact
    • reader.preferences.columns.dual.compact
@@ -687,16 +1537,16 @@ HE (2% complete, 3% of inferred usage)
    • reader.progression.xOfY.descriptive
 
 
-UK (0% complete, 0% of inferred usage)
-   thorium-shared.json   □□□□□□□□□□   0%  (0/188)
-   thorium-web.json      □□□□□□□□□□   0%  (0/62)
-   TOTAL                 □□□□□□□□□□   0%  (0/250)
-   USED                  □□□□□□□□□□   0%  (0/126)
+BG (4% complete, 6% of inferred usage)
+   thorium-shared.json   □□□□□□□□□□   0%  (0/189)
+   thorium-web.json      ■□□□□□□□□□  11%  (13/122)
+   TOTAL                 □□□□□□□□□□   4%  (13/311)
+   USED                  □□□□□□□□□□   6%  (12/187)
 
    ----------------------------------------
    Missing Keys:
 
-   WEB (53 keys):
+   WEB (98 keys):
    • reader.fullscreen.close
    • reader.fullscreen.trigger
    • reader.fullscreen.tooltip
@@ -718,25 +1568,67 @@ UK (0% complete, 0% of inferred usage)
    • audio.settings.sleepTimer.start
    • audio.player.controls
    • audio.player.progress
+   • reader.comic.chapterBoundaries.previousChapter
+   • reader.comic.chapterBoundaries.nextChapter
+   • reader.comic.imageLoad.retry
+   • reader.comic.imageLoad.failed
+   • reader.comic.chapterBoundaries.finished
+   • reader.comic.chapterBoundaries.returnToMediaPage
+   • reader.comic.chapterBoundaries.returnHome
    • reader.app.docker.fullscreen.trigger
    • reader.app.docker.fullscreen.tooltip
    • reader.app.docker.popover.trigger
    • reader.app.docker.popover.tooltip
    • reader.app.docker.wrapper
-   • reader.app.docking.dockingRight
-   • reader.app.docking.dockingLeft
    • reader.app.docking.dockingClosed
    • reader.app.docking.dockingCollapsed
-   • reader.app.docking.dockingEmpty
-   • reader.app.publicationWrapper
-   • reader.app.errors.notFound
-   • reader.app.errors.accessDenied
-   • reader.app.errors.network
-   • reader.app.errors.serverError
-   • reader.app.errors.clientError
-   • reader.app.errors.generic
-   • reader.app.errors.title
-   • reader.app.loading
+   • reader.comic.overlayMode.auto
+   • reader.comic.overlayMode.pinned
+   • reader.comic.overlayMode.label
+   • reader.comic.showPageNumber.label
+   • reader.comic.staticNavigation.label
+   • reader.comic.progressBar.hidden
+   • reader.comic.progressBar.standard
+   • reader.comic.progressBar.type
+   • reader.comic.progressBar.position.auto
+   • reader.comic.progressBar.position.bottom
+   • reader.comic.progressBar.position.left
+   • reader.comic.progressBar.position.right
+   • reader.comic.progressBar.position.label
+   • reader.comic.stretchSmallPages.label
+   • reader.comic.widthLimit.enabled
+   • reader.comic.widthLimit.label
+   • reader.comic.scrollAmount.label
+   • reader.comic.autoScroll.enabled
+   • reader.comic.autoScroll.speed
+   • reader.comic.autoScroll.smooth
+   • reader.comic.readingModePreview.label
+   • reader.comic.tapZonePreview.label
+   • reader.comic.imagePreloadAmount.label
+   • reader.comic.chapterBoundaries.label
+   • reader.comic.pageGap.label
+   • reader.comic.readingDirection.ltr
+   • reader.comic.readingDirection.rtl
+   • reader.comic.readingDirection.label
+   • reader.comic.readingMode.default
+   • reader.comic.readingMode.singlePage
+   • reader.comic.readingMode.doublePage
+   • reader.comic.readingMode.continuousVertical
+   • reader.comic.readingMode.continuousHorizontal
+   • reader.comic.readingMode.webtoon
+   • reader.comic.readingMode.label
+   • reader.comic.scaleType.fitWidth
+   • reader.comic.scaleType.fitHeight
+   • reader.comic.scaleType.fitScreen
+   • reader.comic.scaleType.originalSize
+   • reader.comic.scaleType.label
+   • reader.comic.tapZones.default
+   • reader.comic.tapZones.edge
+   • reader.comic.tapZones.kindle
+   • reader.comic.tapZones.lShape
+   • reader.comic.tapZones.rightAndLeft
+   • reader.comic.tapZones.disabled
+   • reader.comic.tapZones.label
    • reader.settings.spacing.advanced.trigger
    • reader.settings.spacing.advanced.tooltip
    • reader.settings.text.advanced.trigger
@@ -750,18 +1642,23 @@ UK (0% complete, 0% of inferred usage)
    • reader.app.progression.referenceFallback
    • reader.app.progression.wrapper
    • reader.app.header.runningHead
+   • reader.app.header.sources.label
+   • reader.app.header.sources.loading
+   • reader.app.header.sources.available
 
-   SHARED (73 keys):
+   SHARED (77 keys):
    • reader.actions.goToPosition.descriptive
    • reader.actions.goToPosition.compact
+   • reader.search.title
+   • reader.search.placeholder
+   • common.actions.clear
+   • common.actions.search
    • reader.playback.preferences.audio.title
    • reader.preferences.title
    • reader.preferences.text
    • reader.preferences.spacing.title
    • reader.tableOfContents.title
    • reader.tableOfContents.emptyState.description
-   • common.actions.search
-   • common.actions.clear
    • reader.playback.preferences.autoPlay.title
    • reader.playback.preferences.autoPlay.label
    • reader.playback.preferences.audio.skipBackwardInterval
@@ -780,6 +1677,404 @@ UK (0% complete, 0% of inferred usage)
    • reader.actions.goToPreviousResource.descriptive
    • reader.playback.actions.skipBackward.descriptive
    • reader.playback.actions.skipForward.descriptive
+   • reader.actions.goToNextPage.descriptive
+   • reader.actions.goToPreviousPage.descriptive
+   • common.actions.close
+   • reader.preferences.columns.auto
+   • reader.preferences.columns.single.compact
+   • reader.preferences.columns.dual.compact
+   • reader.preferences.columns.title
+   • reader.preferences.layout.paginated
+   • reader.preferences.layout.scrolled
+   • reader.preferences.layout.title
+   • reader.preferences.letterSpacing
+   • reader.preferences.lineHeight.small
+   • reader.preferences.lineHeight.medium
+   • reader.preferences.lineHeight.large
+   • reader.preferences.lineHeight.default
+   • reader.preferences.lineHeight.title
+   • reader.preferences.paragraphIndent
+   • reader.preferences.paragraphSpacing
+   • reader.preferences.spacing.presets.title
+   • reader.preferences.wordSpacing
+   • common.actions.reset
+   • reader.preferences.publisherStyles.label
+   • reader.preferences.themes.title
+   • reader.preferences.zoom
+   • reader.preferences.fontSize
+   • reader.preferences.fontFamily.publisher
+   • reader.preferences.fontFamily.title
+   • reader.preferences.fontWeight.normal
+   • reader.preferences.fontWeight.bold
+   • reader.preferences.fontWeight.title
+   • reader.preferences.hyphens.title
+   • reader.preferences.hyphens.label
+   • reader.preferences.ligatures.title
+   • reader.preferences.ligatures.label
+   • reader.preferences.noRuby.title
+   • reader.preferences.noRuby.label
+   • reader.preferences.textAlign.default
+   • reader.preferences.textAlign.right
+   • reader.preferences.textAlign.left
+   • reader.preferences.textAlign.justify
+   • reader.preferences.textAlign.title
+   • reader.preferences.textNormalization.title
+   • reader.preferences.textNormalization.label
+   • reader.actions.goForward
+   • reader.actions.goBackward
+   • reader.progression.xOfY.compact
+   • reader.progression.xOfY.descriptive
+
+
+UK (3% complete, 3% of inferred usage)
+   thorium-shared.json   □□□□□□□□□□   0%  (0/189)
+   thorium-web.json      □□□□□□□□□□   7%  (8/122)
+   TOTAL                 □□□□□□□□□□   3%  (8/311)
+   USED                  □□□□□□□□□□   3%  (6/187)
+
+   ----------------------------------------
+   Missing Keys:
+
+   WEB (104 keys):
+   • reader.fullscreen.close
+   • reader.fullscreen.trigger
+   • reader.fullscreen.tooltip
+   • reader.jumpToPosition.label
+   • reader.jumpToPosition.error.notFound
+   • reader.jumpToPosition.go
+   • reader.overflowMenu.active.trigger
+   • reader.overflowMenu.active.tooltip
+   • reader.toc.entries
+   • audio.player.coverAlt
+   • reader.app.header.actions
+   • audio.remotePlayback.connected
+   • audio.remotePlayback.trigger
+   • audio.settings.sleepTimer.minutes
+   • audio.settings.sleepTimer.seconds
+   • audio.settings.sleepTimer.hours
+   • audio.settings.sleepTimer.remaining
+   • audio.settings.sleepTimer.instruction
+   • audio.settings.sleepTimer.start
+   • audio.player.controls
+   • audio.player.progress
+   • reader.app.publicationWrapper
+   • reader.comic.imageLoad.retry
+   • reader.comic.imageLoad.failed
+   • reader.app.docker.fullscreen.trigger
+   • reader.app.docker.fullscreen.tooltip
+   • reader.app.docker.popover.trigger
+   • reader.app.docker.popover.tooltip
+   • reader.app.docker.wrapper
+   • reader.app.docking.dockingRight
+   • reader.app.docking.dockingLeft
+   • reader.app.docking.dockingClosed
+   • reader.app.docking.dockingCollapsed
+   • reader.app.docking.dockingEmpty
+   • reader.app.errors.notFound
+   • reader.app.errors.accessDenied
+   • reader.app.errors.network
+   • reader.app.errors.serverError
+   • reader.app.errors.clientError
+   • reader.app.errors.generic
+   • reader.app.errors.title
+   • reader.app.loading
+   • reader.comic.overlayMode.auto
+   • reader.comic.overlayMode.pinned
+   • reader.comic.overlayMode.label
+   • reader.comic.showPageNumber.label
+   • reader.comic.staticNavigation.label
+   • reader.comic.progressBar.hidden
+   • reader.comic.progressBar.standard
+   • reader.comic.progressBar.type
+   • reader.comic.progressBar.position.auto
+   • reader.comic.progressBar.position.bottom
+   • reader.comic.progressBar.position.left
+   • reader.comic.progressBar.position.right
+   • reader.comic.progressBar.position.label
+   • reader.comic.stretchSmallPages.label
+   • reader.comic.widthLimit.enabled
+   • reader.comic.widthLimit.label
+   • reader.comic.scrollAmount.label
+   • reader.comic.autoScroll.enabled
+   • reader.comic.autoScroll.speed
+   • reader.comic.autoScroll.smooth
+   • reader.comic.readingModePreview.label
+   • reader.comic.tapZonePreview.label
+   • reader.comic.imagePreloadAmount.label
+   • reader.comic.pageGap.label
+   • reader.comic.readingDirection.ltr
+   • reader.comic.readingDirection.rtl
+   • reader.comic.readingDirection.label
+   • reader.comic.readingMode.default
+   • reader.comic.readingMode.singlePage
+   • reader.comic.readingMode.doublePage
+   • reader.comic.readingMode.continuousVertical
+   • reader.comic.readingMode.continuousHorizontal
+   • reader.comic.readingMode.webtoon
+   • reader.comic.readingMode.label
+   • reader.comic.scaleType.fitWidth
+   • reader.comic.scaleType.fitHeight
+   • reader.comic.scaleType.fitScreen
+   • reader.comic.scaleType.originalSize
+   • reader.comic.scaleType.label
+   • reader.comic.tapZones.default
+   • reader.comic.tapZones.edge
+   • reader.comic.tapZones.kindle
+   • reader.comic.tapZones.lShape
+   • reader.comic.tapZones.rightAndLeft
+   • reader.comic.tapZones.disabled
+   • reader.comic.tapZones.label
+   • reader.settings.spacing.advanced.trigger
+   • reader.settings.spacing.advanced.tooltip
+   • reader.settings.text.advanced.trigger
+   • reader.settings.text.advanced.tooltip
+   • reader.app.back.trigger
+   • reader.app.header.backLink.tooltip
+   • reader.app.header.backLink.trigger
+   • reader.app.footer.label
+   • reader.navigation.scroll.wrapper
+   • reader.app.header.label
+   • reader.app.progression.referenceFallback
+   • reader.app.progression.wrapper
+   • reader.app.header.runningHead
+   • reader.app.header.sources.label
+   • reader.app.header.sources.loading
+   • reader.app.header.sources.available
+
+   SHARED (77 keys):
+   • reader.actions.goToPosition.descriptive
+   • reader.actions.goToPosition.compact
+   • reader.search.title
+   • reader.search.placeholder
+   • common.actions.clear
+   • common.actions.search
+   • reader.playback.preferences.audio.title
+   • reader.preferences.title
+   • reader.preferences.text
+   • reader.preferences.spacing.title
+   • reader.tableOfContents.title
+   • reader.tableOfContents.emptyState.description
+   • reader.playback.preferences.autoPlay.title
+   • reader.playback.preferences.autoPlay.label
+   • reader.playback.preferences.audio.skipBackwardInterval
+   • common.actions.decrease
+   • common.actions.increase
+   • reader.playback.preferences.audio.skipForwardInterval
+   • reader.playback.preferences.audio.skipInterval
+   • reader.playback.preferences.playbackRate.descriptive
+   • reader.playback.preferences.sleepTimer.presets.endOfResource
+   • reader.playback.preferences.sleepTimer.descriptive
+   • common.actions.cancel
+   • reader.playback.preferences.audio.volume
+   • reader.actions.goToNextResource.descriptive
+   • reader.playback.actions.pause
+   • reader.playback.actions.play
+   • reader.actions.goToPreviousResource.descriptive
+   • reader.playback.actions.skipBackward.descriptive
+   • reader.playback.actions.skipForward.descriptive
+   • reader.actions.goToNextPage.descriptive
+   • reader.actions.goToPreviousPage.descriptive
+   • common.actions.close
+   • reader.preferences.columns.auto
+   • reader.preferences.columns.single.compact
+   • reader.preferences.columns.dual.compact
+   • reader.preferences.columns.title
+   • reader.preferences.layout.paginated
+   • reader.preferences.layout.scrolled
+   • reader.preferences.layout.title
+   • reader.preferences.letterSpacing
+   • reader.preferences.lineHeight.small
+   • reader.preferences.lineHeight.medium
+   • reader.preferences.lineHeight.large
+   • reader.preferences.lineHeight.default
+   • reader.preferences.lineHeight.title
+   • reader.preferences.paragraphIndent
+   • reader.preferences.paragraphSpacing
+   • reader.preferences.spacing.presets.title
+   • reader.preferences.wordSpacing
+   • common.actions.reset
+   • reader.preferences.publisherStyles.label
+   • reader.preferences.themes.title
+   • reader.preferences.zoom
+   • reader.preferences.fontSize
+   • reader.preferences.fontFamily.publisher
+   • reader.preferences.fontFamily.title
+   • reader.preferences.fontWeight.normal
+   • reader.preferences.fontWeight.bold
+   • reader.preferences.fontWeight.title
+   • reader.preferences.hyphens.title
+   • reader.preferences.hyphens.label
+   • reader.preferences.ligatures.title
+   • reader.preferences.ligatures.label
+   • reader.preferences.noRuby.title
+   • reader.preferences.noRuby.label
+   • reader.preferences.textAlign.default
+   • reader.preferences.textAlign.right
+   • reader.preferences.textAlign.left
+   • reader.preferences.textAlign.justify
+   • reader.preferences.textAlign.title
+   • reader.preferences.textNormalization.title
+   • reader.preferences.textNormalization.label
+   • reader.actions.goForward
+   • reader.actions.goBackward
+   • reader.progression.xOfY.compact
+   • reader.progression.xOfY.descriptive
+
+
+BRH (0% complete, 0% of inferred usage)
+   thorium-shared.json   □□□□□□□□□□   0%  (0/189)
+   thorium-web.json      □□□□□□□□□□   0%  (0/122)
+   TOTAL                 □□□□□□□□□□   0%  (0/311)
+   USED                  □□□□□□□□□□   0%  (0/187)
+
+   ----------------------------------------
+   Missing Keys:
+
+   WEB (110 keys):
+   • reader.fullscreen.close
+   • reader.fullscreen.trigger
+   • reader.fullscreen.tooltip
+   • reader.jumpToPosition.label
+   • reader.jumpToPosition.error.notFound
+   • reader.jumpToPosition.go
+   • reader.overflowMenu.active.trigger
+   • reader.overflowMenu.active.tooltip
+   • reader.toc.entries
+   • audio.player.coverAlt
+   • reader.app.header.actions
+   • audio.remotePlayback.connected
+   • audio.remotePlayback.trigger
+   • audio.settings.sleepTimer.minutes
+   • audio.settings.sleepTimer.seconds
+   • audio.settings.sleepTimer.hours
+   • audio.settings.sleepTimer.remaining
+   • audio.settings.sleepTimer.instruction
+   • audio.settings.sleepTimer.start
+   • audio.player.controls
+   • audio.player.progress
+   • reader.app.publicationWrapper
+   • reader.comic.chapterBoundaries.previousChapter
+   • reader.comic.chapterBoundaries.nextChapter
+   • reader.comic.imageLoad.retry
+   • reader.comic.imageLoad.failed
+   • reader.comic.chapterBoundaries.finished
+   • reader.comic.chapterBoundaries.returnToMediaPage
+   • reader.comic.chapterBoundaries.returnHome
+   • reader.app.docker.fullscreen.trigger
+   • reader.app.docker.fullscreen.tooltip
+   • reader.app.docker.popover.trigger
+   • reader.app.docker.popover.tooltip
+   • reader.app.docker.wrapper
+   • reader.app.docking.dockingRight
+   • reader.app.docking.dockingLeft
+   • reader.app.docking.dockingClosed
+   • reader.app.docking.dockingCollapsed
+   • reader.app.docking.dockingEmpty
+   • reader.app.errors.notFound
+   • reader.app.errors.accessDenied
+   • reader.app.errors.network
+   • reader.app.errors.serverError
+   • reader.app.errors.clientError
+   • reader.app.errors.generic
+   • reader.app.errors.title
+   • reader.app.loading
+   • reader.comic.overlayMode.auto
+   • reader.comic.overlayMode.pinned
+   • reader.comic.overlayMode.label
+   • reader.comic.showPageNumber.label
+   • reader.comic.staticNavigation.label
+   • reader.comic.progressBar.hidden
+   • reader.comic.progressBar.standard
+   • reader.comic.progressBar.type
+   • reader.comic.progressBar.position.auto
+   • reader.comic.progressBar.position.bottom
+   • reader.comic.progressBar.position.left
+   • reader.comic.progressBar.position.right
+   • reader.comic.progressBar.position.label
+   • reader.comic.stretchSmallPages.label
+   • reader.comic.widthLimit.enabled
+   • reader.comic.widthLimit.label
+   • reader.comic.scrollAmount.label
+   • reader.comic.autoScroll.enabled
+   • reader.comic.autoScroll.speed
+   • reader.comic.autoScroll.smooth
+   • reader.comic.readingModePreview.label
+   • reader.comic.tapZonePreview.label
+   • reader.comic.imagePreloadAmount.label
+   • reader.comic.chapterBoundaries.label
+   • reader.comic.pageGap.label
+   • reader.comic.readingDirection.ltr
+   • reader.comic.readingDirection.rtl
+   • reader.comic.readingDirection.label
+   • reader.comic.readingMode.default
+   • reader.comic.readingMode.singlePage
+   • reader.comic.readingMode.doublePage
+   • reader.comic.readingMode.continuousVertical
+   • reader.comic.readingMode.continuousHorizontal
+   • reader.comic.readingMode.webtoon
+   • reader.comic.readingMode.label
+   • reader.comic.scaleType.fitWidth
+   • reader.comic.scaleType.fitHeight
+   • reader.comic.scaleType.fitScreen
+   • reader.comic.scaleType.originalSize
+   • reader.comic.scaleType.label
+   • reader.comic.tapZones.default
+   • reader.comic.tapZones.edge
+   • reader.comic.tapZones.kindle
+   • reader.comic.tapZones.lShape
+   • reader.comic.tapZones.rightAndLeft
+   • reader.comic.tapZones.disabled
+   • reader.comic.tapZones.label
+   • reader.settings.spacing.advanced.trigger
+   • reader.settings.spacing.advanced.tooltip
+   • reader.settings.text.advanced.trigger
+   • reader.settings.text.advanced.tooltip
+   • reader.app.back.trigger
+   • reader.app.header.backLink.tooltip
+   • reader.app.header.backLink.trigger
+   • reader.app.footer.label
+   • reader.navigation.scroll.wrapper
+   • reader.app.header.label
+   • reader.app.progression.referenceFallback
+   • reader.app.progression.wrapper
+   • reader.app.header.runningHead
+   • reader.app.header.sources.label
+   • reader.app.header.sources.loading
+   • reader.app.header.sources.available
+
+   SHARED (77 keys):
+   • reader.actions.goToPosition.descriptive
+   • reader.actions.goToPosition.compact
+   • reader.search.title
+   • reader.search.placeholder
+   • common.actions.clear
+   • common.actions.search
+   • reader.playback.preferences.audio.title
+   • reader.preferences.title
+   • reader.preferences.text
+   • reader.preferences.spacing.title
+   • reader.tableOfContents.title
+   • reader.tableOfContents.emptyState.description
+   • reader.playback.preferences.autoPlay.title
+   • reader.playback.preferences.autoPlay.label
+   • reader.playback.preferences.audio.skipBackwardInterval
+   • common.actions.decrease
+   • common.actions.increase
+   • reader.playback.preferences.audio.skipForwardInterval
+   • reader.playback.preferences.audio.skipInterval
+   • reader.playback.preferences.playbackRate.descriptive
+   • reader.playback.preferences.sleepTimer.presets.endOfResource
+   • reader.playback.preferences.sleepTimer.descriptive
+   • common.actions.cancel
+   • reader.playback.preferences.audio.volume
+   • reader.actions.goToNextResource.descriptive
+   • reader.playback.actions.pause
+   • reader.playback.actions.play
+   • reader.actions.goToPreviousResource.descriptive
+   • reader.playback.actions.skipBackward.descriptive
+   • reader.playback.actions.skipForward.descriptive
+   • reader.actions.goToNextPage.descriptive
+   • reader.actions.goToPreviousPage.descriptive
    • common.actions.close
    • reader.preferences.columns.auto
    • reader.preferences.columns.single.compact
@@ -847,7 +2142,7 @@ DYNAMIC TEMPLATE LITERALS WARNING
       t(`reader.${ actionKey }.heading`)
    📄 components/Settings/Spacing/StatefulSpacingPresets.tsx:171
       t(`reader.preferences.spacing.presets.${ key === ThSpacingPresetKeys.publisher ? "default" : key }`)
-   📄 components/Settings/StatefulTheme.tsx:176
+   📄 components/Settings/StatefulTheme.tsx:205
       t(`reader.preferences.themes.${ themeItem }`)
 
    These patterns depend on runtime values and cannot be automatically validated.
