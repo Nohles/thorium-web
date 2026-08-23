@@ -85,10 +85,7 @@ import {
 } from "../Reader/ReaderInteractions";
 import { useReaderDecorations } from "../Reader/useReaderDecorations";
 import {
-  activateDictionaryDecoration,
-  applyDictionaryDecorations,
-  selectionFromReadium,
-  type DictionaryReaderCallbacks,
+  mergeReaderInteractions,
 } from "../Reader/DictionaryReaderAdapter";
 
 export const ExperimentalWebPubStatefulReader = ({
@@ -116,6 +113,14 @@ export const ExperimentalWebPubStatefulReader = ({
     setPluginsRegistered(true);
   }, [plugins]);
 
+  const interactions = useMemo(
+    () => mergeReaderInteractions(
+      { decorations, onTextSelected, onContextMenu, onDecorationActivated },
+      dictionary,
+    ),
+    [decorations, dictionary, onContextMenu, onDecorationActivated, onTextSelected],
+  );
+
   if (!pluginsRegistered) {
     return null;
   }
@@ -124,17 +129,14 @@ export const ExperimentalWebPubStatefulReader = ({
     <>
       <ThPluginProvider>
         <StatefulReaderInner publication={ publication } localDataKey={ localDataKey } positionStorage={ positionStorage } containerRefSetter={ containerRefSetter }
-          interactions={ { decorations, onTextSelected, onContextMenu, onDecorationActivated } }
-          dictionary={ dictionary }
+          interactions={ interactions }
         />
       </ThPluginProvider>
     </>
   );
 };
 
-const StatefulReaderInner = ({ publication, localDataKey, positionStorage, containerRefSetter, interactions, dictionary }: { publication: Publication; localDataKey: string | null; positionStorage?: PositionStorage; containerRefSetter?: (el: Element | null) => void; interactions: ReaderInteractionProps; dictionary?: DictionaryReaderCallbacks }) => {
-  const dictionaryRef = useRef(dictionary);
-  dictionaryRef.current = dictionary;
+const StatefulReaderInner = ({ publication, localDataKey, positionStorage, containerRefSetter, interactions }: { publication: Publication; localDataKey: string | null; positionStorage?: PositionStorage; containerRefSetter?: (el: Element | null) => void; interactions: ReaderInteractionProps }) => {
   const { preferences, getFontMetadata, getFontInjectables } = usePreferences();
   const { t } = useI18n();
   const { getEffectiveSpacingValue } = useSpacingPresets();
@@ -287,38 +289,8 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     return { ...config, disableContextMenu: true };
   };
 
-  // Frames load resources from session-scoped blob: URLs, so events carry the
-  // navigator's real resource href alongside the frame URL.
-  const resolveResourceHref = useCallback(() => {
-    const locator = currentLocator();
-    return typeof locator?.href === "string" ? locator.href : undefined;
-  }, [currentLocator]);
-
-  const applyDictionaryDecorationsToFrames = useCallback(() => {
-    applyDictionaryDecorations(getCframes(), dictionary?.decorations ?? []);
-  }, [dictionary?.decorations, getCframes]);
-
-  const handleDictionaryClick = useCallback((event: FrameClickEvent) => {
-    const currentDictionary = dictionaryRef.current;
-    const activation = activateDictionaryDecoration(
-      event,
-      getCframes(),
-      currentDictionary?.decorations ?? [],
-    );
-    if (!activation) return false;
-    currentDictionary?.onDecorationActivated?.(activation);
-    return true;
-  }, [getCframes]);
-
-  const handleDictionarySelection = useCallback((selection: BasicTextSelection) => {
-    const resolved = selectionFromReadium(selection, currentLocator());
-    if (resolved) dictionaryRef.current?.onTextSelected?.(resolved);
-  }, [currentLocator]);
-
   const listeners: WebPubNavigatorListeners = useMemo(() => ({
-    frameLoaded: async function (_wnd: Window): Promise<void> {
-      window.requestAnimationFrame(applyDictionaryDecorationsToFrames);
-    },
+    frameLoaded: async function (_wnd: Window): Promise<void> {},
     timelineItemChanged: function (item: TimelineItem | undefined): void {
       setCurrentTimelineItem(item);
 
@@ -333,7 +305,6 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     },
     positionChanged: async function (locator: Locator): Promise<void> {
       setLocalData(locator);
-      applyDictionaryDecorationsToFrames();
 
       if (canGoBackward()) {
         dispatch(setPublicationStart(false));
@@ -350,7 +321,7 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     tap: function (_e: FrameClickEvent): boolean {
       const { decorations: currentDecorations, onDecorationActivated: activate } = interactionRef.current;
       if (activate && currentDecorations) {
-        const activation = resolveDecorationActivation(_e, container.current, currentDecorations);
+        const activation = resolveDecorationActivation(_e, container.current, currentDecorations, getCframes());
         if (activation) {
           activate(activation);
           return true;
@@ -362,13 +333,12 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     click: function (_e: FrameClickEvent): boolean {
       const { decorations: currentDecorations, onDecorationActivated: activate } = interactionRef.current;
       if (activate && currentDecorations) {
-        const activation = resolveDecorationActivation(_e, container.current, currentDecorations);
+        const activation = resolveDecorationActivation(_e, container.current, currentDecorations, getCframes());
         if (activation) {
           activate(activation);
           return true;
         }
       }
-      if (handleDictionaryClick(_e)) return true;
       return false;
     },
     zoom: function (_scale: number): void { },
@@ -392,16 +362,15 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     textSelected: function (selection: BasicTextSelection): void {
       const { onTextSelected: handle } = interactionRef.current;
       if (handle) {
-        const event = textSelectionToEvent(container.current, selection, resolveResourceHref());
+        const event = textSelectionToEvent(container.current, selection, currentLocator());
         if (event) handle(event);
       }
-      handleDictionarySelection(selection);
     },
     contentProtection: function (_type: string, _data: SuspiciousActivityEvent): void {},
     contextMenu: function (data: ContextMenuEvent): void {
       const { onContextMenu: handle } = interactionRef.current;
       if (!handle) return;
-      const event = contextMenuToEvent(container.current, data, resolveResourceHref());
+      const event = contextMenuToEvent(container.current, data, currentLocator());
       if (event) handle(event);
     },
     peripheral: function (data): void {
@@ -432,7 +401,7 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
         }
       }
     },
-  }), [setLocalData, canGoBackward, canGoForward, dispatch, toggleIsImmersive, zoomIn, zoomOut, profile, handleFullscreen, getFocusedDockableKey, resolveResourceHref, applyDictionaryDecorationsToFrames, handleDictionaryClick, handleDictionarySelection, updateAdjacentItems, clearAdjacentItems, updateCurrentTocEntry, clearCurrentTocEntry]);
+  }), [setLocalData, canGoBackward, canGoForward, dispatch, toggleIsImmersive, zoomIn, zoomOut, profile, handleFullscreen, getFocusedDockableKey, currentLocator, getCframes, updateAdjacentItems, clearAdjacentItems, updateCurrentTocEntry, clearCurrentTocEntry]);
 
   // getLocalData() returns a plain JSON.parse()'d object on cold load (not yet a real
   // Locator instance) — the navigator calls Timeline.locate() on this at startup, which
@@ -471,12 +440,6 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     getNavigator: getNavigatorInstance,
     decorations,
   });
-
-  useLayoutEffect(() => {
-    if (!navigatorReady) return;
-    const frame = window.requestAnimationFrame(applyDictionaryDecorationsToFrames);
-    return () => window.cancelAnimationFrame(frame);
-  }, [applyDictionaryDecorationsToFrames, navigatorReady]);
 
   useTocTreeBuilder(publication, navigatorReady, getNavigatorTimeline);
 

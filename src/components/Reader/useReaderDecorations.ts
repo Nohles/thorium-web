@@ -58,6 +58,7 @@ export function useReaderDecorations({
     return () => {
       disposed = true;
       clearInterval(interval);
+      void pushDecorationsToFrames(getNavigator(), []);
     };
   }, [getNavigator, decorations, signature]);
 }

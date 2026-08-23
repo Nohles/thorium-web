@@ -65,6 +65,7 @@ export interface StatefulReaderProps extends ReaderInteractionProps {
   positionStorage?: PositionStorage;
   coverUrl?: string;
   containerRefSetter?: (el: Element | null) => void;
+  /** @deprecated Use ReaderInteractionProps directly. */
   dictionary?: DictionaryReaderCallbacks;
 }
 
@@ -99,6 +100,7 @@ export interface ReaderComponentProps<
     : P extends "epub" | "webPub" | "comic"
     ? { initialPreferences?: ThPreferences<K>; adapter?: ThPreferencesAdapter<K> }
     : never;
+  /** @deprecated Use ReaderInteractionProps directly. */
   dictionary?: DictionaryReaderCallbacks;
 }
 
