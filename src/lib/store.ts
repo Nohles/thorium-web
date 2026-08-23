@@ -1,10 +1,14 @@
-import { ThDockingKeys } from "@/preferences/models";
+import { ThDockingKeys, DECORATION_TOKEN_DEFAULTS } from "@/preferences/models";
 
 import { configureStore, Reducer } from "@reduxjs/toolkit";
 
 import readerReducer, { ReaderReducerState } from "@/lib/readerReducer";
 import settingsReducer, { SettingsReducerState } from "@/lib/settingsReducer";
-import themeReducer, { ThemeReducerState } from "@/lib/themeReducer";
+import themeReducer, {
+  type SavedCustomTheme,
+  setSavedCustomThemes,
+  ThemeReducerState
+} from "@/lib/themeReducer";
 import actionsReducer, { ActionsReducerState, ActionStateObject } from "@/lib/actionsReducer";
 import publicationReducer, { PublicationReducerState } from "./publicationReducer";
 import preferencesReducer, { PreferencesReducerState } from "./preferencesReducer";
@@ -12,8 +16,11 @@ import globalPreferencesReducer, { GlobalPreferencesReducerState } from "./globa
 import webPubSettingsReducer, { WebPubSettingsReducerState } from "./webPubSettingsReducer";
 import audioSettingsReducer, { AudioSettingsState } from "./audioSettingsReducer";
 import playerReducer, { PlayerReducerState } from "./playerReducer";
+import comicSettingsReducer, { ComicSettingsReducerState } from "./comicSettingsReducer";
+import comicPositionReducer, { ComicPositionReducerState } from "./comicPositionReducer";
 
 import debounce from "debounce";
+import { ThSettingsKeys } from "@/preferences/models";
 
 interface ExternalReducerConfig {
   reducer: any;
@@ -32,10 +39,86 @@ export type RootState = {
   webPubSettings: WebPubSettingsReducerState;
   audioSettings: AudioSettingsState;
   player: PlayerReducerState;
+  comicSettings: ComicSettingsReducerState;
+  comicPosition: ComicPositionReducerState;
   [key: string]: any; // For external reducers
 };
 
 const DEFAULT_STORAGE_KEY = "thorium-web-state";
+const LEGACY_SAVED_CUSTOM_THEMES_KEY = "thorium-web.saved-custom-themes.v1";
+const MAX_SAVED_CUSTOM_THEMES = 12;
+const SAVED_THEME_TOKEN_KEYS = [
+  "background",
+  "text",
+  "link",
+  "visited",
+  "subdue",
+  "disable",
+  "hover",
+  "onHover",
+  "select",
+  "onSelect",
+  "focus",
+  "elevate",
+  "immerse"
+] as const;
+
+const isSavedCustomTheme = (value: unknown): value is SavedCustomTheme => {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Record<string, unknown>;
+  if (typeof candidate.id !== "string" || typeof candidate.updatedAt !== "number") return false;
+  if (!candidate.tokens || typeof candidate.tokens !== "object") return false;
+  const tokens = candidate.tokens as Record<string, unknown>;
+  return SAVED_THEME_TOKEN_KEYS.every(key => typeof tokens[key] === "string");
+};
+
+// Decoration tints arrived after saved themes shipped; backfill them so
+// every loaded theme always carries usable colors.
+const withDecorationTokenDefaults = (theme: SavedCustomTheme): SavedCustomTheme => ({
+  ...theme,
+  tokens: {
+    ...theme.tokens,
+    ...(typeof theme.tokens.highlight !== "string"
+      ? { highlight: DECORATION_TOKEN_DEFAULTS.highlight }
+      : {}),
+    ...(typeof theme.tokens.dictionary !== "string"
+      ? { dictionary: DECORATION_TOKEN_DEFAULTS.dictionary }
+      : {})
+  }
+});
+
+const readLegacySavedCustomThemes = (): SavedCustomTheme[] => {
+  try {
+    const serialized = localStorage.getItem(LEGACY_SAVED_CUSTOM_THEMES_KEY);
+    if (!serialized) return [];
+    const parsed: unknown = JSON.parse(serialized);
+    return Array.isArray(parsed)
+      ? parsed.filter(isSavedCustomTheme).slice(0, MAX_SAVED_CUSTOM_THEMES)
+      : [];
+  } catch {
+    return [];
+  }
+};
+
+const mergeSavedCustomThemes = (
+  current: SavedCustomTheme[],
+  legacy: SavedCustomTheme[]
+) => {
+  const fingerprints = new Set(
+    current.map(theme => SAVED_THEME_TOKEN_KEYS.map(key => theme.tokens[key]).join("|"))
+  );
+  const ids = new Set(current.map(theme => theme.id));
+  return [
+    ...current,
+    ...legacy.filter(theme => {
+      const fingerprint = SAVED_THEME_TOKEN_KEYS.map(key => theme.tokens[key]).join("|");
+      return !ids.has(theme.id) && !fingerprints.has(fingerprint);
+    })
+  ]
+    .map(withDecorationTokenDefaults)
+    .sort((left, right) => right.updatedAt - left.updatedAt)
+    .slice(0, MAX_SAVED_CUSTOM_THEMES);
+};
 
 // Migrate font family state
 const migrateFontFamily = (stateSlice: SettingsReducerState | WebPubSettingsReducerState) => {
@@ -53,7 +136,7 @@ const migrateFontFamily = (stateSlice: SettingsReducerState | WebPubSettingsRedu
 
 const updateActionsState = (state: ActionsReducerState) => {
   // Check if keys are already profile-keyed
-  if (state.keys && typeof state.keys === "object" && ("epub" in state.keys || "webPub" in state.keys || "audio" in state.keys)) {
+  if (state.keys && typeof state.keys === "object" && ("epub" in state.keys || "webPub" in state.keys || "audio" in state.keys || "comic" in state.keys)) {
     // Keys are already profile-keyed, update each profile
     const updatedKeys: any = {};
     for (const profile in state.keys) {
@@ -105,7 +188,7 @@ const updateActionsState = (state: ActionsReducerState) => {
 
 const migrateDockStateToProfileKeyed = (state: ActionsReducerState): ActionsReducerState => {
   // Check if dock state is in old format (not profile-keyed)
-  if (state.dock && typeof state.dock === "object" && !("epub" in state.dock || "webPub" in state.dock || "audio" in state.dock)) {
+  if (state.dock && typeof state.dock === "object" && !("epub" in state.dock || "webPub" in state.dock || "audio" in state.dock || "comic" in state.dock)) {
     // Old format: dock has direct start/end keys
     const oldDock = state.dock as any;
     if (oldDock[ThDockingKeys.start] || oldDock[ThDockingKeys.end]) {
@@ -127,13 +210,13 @@ const migrateDockStateToProfileKeyed = (state: ActionsReducerState): ActionsRedu
 const migrateKeysStateToProfileKeyed = (state: ActionsReducerState): ActionsReducerState => {
   // If keys is not profile-keyed, migrate to profile-keyed format
   // Old format: keys is a flat object like { [key]: ActionStateObject }
-  // New format: keys is profile-keyed like { epub: { [key]: ActionStateObject }, webPub: { ... }, audio: { ... } }
+  // New format: keys is profile-keyed like { epub: { [key]: ActionStateObject }, webPub: { ... }, audio: { ... }, comic: { ... } }
   if (!state.keys) {
     return state;
   }
   
   // Check if keys is already profile-keyed by looking for known profile keys
-  const isProfileKeyed = "epub" in state.keys || "webPub" in state.keys || "audio" in state.keys;
+  const isProfileKeyed = "epub" in state.keys || "webPub" in state.keys || "audio" in state.keys || "comic" in state.keys;
   
   if (!isProfileKeyed) {
     // Old flat format - migrate to epub profile
@@ -141,7 +224,8 @@ const migrateKeysStateToProfileKeyed = (state: ActionsReducerState): ActionsRedu
     const newKeys: any = {
       epub: { ...oldKeys },
       webPub: {},
-      audio: {}
+      audio: {},
+      comic: {}
     };
     return {
       ...state,
@@ -153,7 +237,8 @@ const migrateKeysStateToProfileKeyed = (state: ActionsReducerState): ActionsRedu
   const migratedKeys: any = {
     epub: state.keys.epub || {},
     webPub: state.keys.webPub || {},
-    audio: state.keys.audio || {}
+    audio: state.keys.audio || {},
+    comic: state.keys.comic || {}
   };
   
   return {
@@ -174,7 +259,9 @@ const loadState = (storageKey: string = DEFAULT_STORAGE_KEY) => {
         preferences: undefined,
         globalPreferences: undefined,
         webPubSettings: undefined,
-        audioSettings: undefined
+        audioSettings: undefined,
+        comicSettings: undefined,
+        comicPosition: undefined
       };
     }
     
@@ -200,6 +287,26 @@ const loadState = (storageKey: string = DEFAULT_STORAGE_KEY) => {
         // Old dock state only applied to epub profile
         state.actions = migrateDockStateToProfileKeyed(state.actions);
       }
+
+      // Ensure comic settings order includes theme for existing users
+      if (state.preferences?.settings) {
+        const comicOrder: string[] =
+          state.preferences.settings.comicOrder ||
+          [];
+        if (!comicOrder.includes(ThSettingsKeys.theme)) {
+          state.preferences.settings.comicOrder = [
+            ThSettingsKeys.theme,
+            ...comicOrder,
+          ];
+        }
+      }
+
+      // Backfill decoration tints onto persisted saved themes
+      if (Array.isArray(state.theming?.savedCustomThemes)) {
+        state.theming.savedCustomThemes = state.theming.savedCustomThemes
+          .filter(isSavedCustomTheme)
+          .map(withDecorationTokenDefaults);
+      }
     }
     
     return state;
@@ -209,8 +316,11 @@ const loadState = (storageKey: string = DEFAULT_STORAGE_KEY) => {
       settings: undefined,
       theming: undefined,
       preferences: undefined,
+
       globalPreferences: undefined,
-      webPubSettings: undefined
+      webPubSettings: undefined,
+      comicSettings: undefined,
+      comicPosition: undefined
     };
   }
 };
@@ -230,6 +340,8 @@ const saveState = (state: any, storageKey?: string, externalReducers: Record<str
     if (state.globalPreferences) stateToPersist.globalPreferences = state.globalPreferences;
     if (state.webPubSettings) stateToPersist.webPubSettings = state.webPubSettings;
     if (state.audioSettings) stateToPersist.audioSettings = state.audioSettings;
+    if (state.comicSettings) stateToPersist.comicSettings = state.comicSettings;
+    if (state.comicPosition) stateToPersist.comicPosition = state.comicPosition;
     
     // External reducers to persist
     Object.entries(externalReducers).forEach(([key, config]) => {
@@ -258,6 +370,8 @@ export const makeStore = (storageKey?: string, externalReducers: Record<string, 
     webPubSettings: webPubSettingsReducer,
     audioSettings: audioSettingsReducer,
     player: playerReducer,
+    comicSettings: comicSettingsReducer,
+    comicPosition: comicPositionReducer,
     ...Object.entries(externalReducers).reduce((acc, [key, config]) => ({
       ...acc,
       [key]: config.reducer
@@ -276,6 +390,8 @@ export const makeStore = (storageKey?: string, externalReducers: Record<string, 
     globalPreferences: persistedState.globalPreferences,
     webPubSettings: persistedState.webPubSettings,
     audioSettings: persistedState.audioSettings,
+    comicSettings: persistedState.comicSettings,
+    comicPosition: persistedState.comicPosition,
     // Include persisted state for external reducers that have it
     ...Object.entries(externalReducers).reduce((acc, [key, config]) => {
       if (config.persist && persistedState[key] !== undefined) {
@@ -295,6 +411,18 @@ export const makeStore = (storageKey?: string, externalReducers: Record<string, 
   }, 250);
 
   store.subscribe(saveStateDebounced);
+
+  const legacySavedCustomThemes = readLegacySavedCustomThemes();
+  if (legacySavedCustomThemes.length > 0) {
+    const currentSavedCustomThemes = store.getState().theming.savedCustomThemes ?? [];
+    const mergedSavedCustomThemes = mergeSavedCustomThemes(
+      currentSavedCustomThemes,
+      legacySavedCustomThemes
+    );
+    if (mergedSavedCustomThemes.length !== currentSavedCustomThemes.length) {
+      store.dispatch(setSavedCustomThemes(mergedSavedCustomThemes));
+    }
+  }
 
   return store;
 }

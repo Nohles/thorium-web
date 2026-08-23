@@ -10,6 +10,7 @@
   flex-direction: column;
   align-items: center;
   outline: none;
+  color: var(--th-theme-text);
 }
 
 .button[data-focus-visible] {

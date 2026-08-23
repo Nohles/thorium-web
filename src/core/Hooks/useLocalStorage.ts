@@ -2,8 +2,18 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+const readStoredValue = (storageKey: string | null) => {
+  if (!storageKey || typeof window === "undefined") return null;
+  try {
+    const value = localStorage.getItem(storageKey);
+    return value ? JSON.parse(value) : null;
+  } catch {
+    return null;
+  }
+};
+
 export const useLocalStorage = (key: string | null) => {
-  const [localData, setLocalData] = useState<any>(null);
+  const [localData, setLocalData] = useState<any>(() => readStoredValue(key));
   const cachedLocalData = useRef<any>(null);
 
   const setValue = useCallback((newValue: any) => {
@@ -23,6 +33,10 @@ export const useLocalStorage = (key: string | null) => {
     if (!key) return;
     setLocalData(null);
     localStorage.removeItem(key);
+  }, [key]);
+
+  useEffect(() => {
+    setLocalData(readStoredValue(key));
   }, [key]);
 
   useEffect(() => {

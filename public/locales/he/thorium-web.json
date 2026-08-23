@@ -1,9 +1,21 @@
 {
-    "reader": {
-        "app": {
-            "loading": "טעינה",
-            "printingDisabled": "הדפסה אינה זמינה",
-            "publicationWrapper": "אתה עכשיו בכותר"
-        }
+  "reader": {
+    "comic": {
+      "chapterBoundaries": {
+        "label": "ניווט לפי פרקי המניפסט (תוכן העניינים)",
+        "nextChapter": "הפרק הבא",
+        "previousChapter": "הפרק הקודם",
+        "finished": "הסתיים:",
+        "next": "הבא:",
+        "previous": "הקודם:",
+        "returnToMediaPage": "Return to media page",
+        "returnHome": "Return home"
+      }
+    },
+    "app": {
+      "loading": "טעינה",
+      "printingDisabled": "הדפסה אינה זמינה",
+      "publicationWrapper": "אתה עכשיו בכותר"
     }
+  }
 }

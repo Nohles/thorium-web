@@ -66,6 +66,10 @@ You can customize this project extensively through [Preferences](./src/preferenc
 
 See [Customization in docs](./docs/customization/Customization.md) for further details.
 
+## Publishing the npm package
+
+`@nohles/thorium-web` is published to the team Verdaccio registry at `http://192.168.1.202:4873/`. See **[Publishing](./docs/Publishing.md)** for one-time setup and the commands to run on each release (`pnpm release:patch`, etc.).
+
 ## Building and Deploying
 
 To build and deploy Thorium Web, run the following commands:

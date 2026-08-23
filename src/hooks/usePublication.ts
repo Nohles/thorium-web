@@ -57,7 +57,17 @@ const detectProfile = (manifest: Manifest): ReaderProfile => {
   if (!metadata) return "webPub"; // Default to webPub when no metadata
   
   const conformsTo = metadata.conformsTo;
-  if (!conformsTo) return "webPub"; // Default to webPub when no conformsTo
+  if (!conformsTo) {
+    // Robust fallback for mis-labeled manifests: treat image-only readingOrder as comics.
+    const items = manifest.readingOrder?.items ?? [];
+    if (
+      items.length > 0 &&
+      items.every((item) => typeof item.type === "string" && item.type.startsWith("image/"))
+    ) {
+      return "comic";
+    }
+    return "webPub"; // Default to webPub when no conformsTo
+  }
   
   // Handle both string and array formats
   const profiles = Array.isArray(conformsTo) ? conformsTo : [conformsTo];
@@ -69,6 +79,13 @@ const detectProfile = (manifest: Manifest): ReaderProfile => {
     return "audio";
   }
   
+  // Check for comics profile (DIVINA)
+  if (profiles.some((profile: Profile) =>
+    profile === Profile.DIVINA
+  )) {
+    return "comic";
+  }
+  
   // Check for epub profile
   if (profiles.some((profile: Profile) => 
     profile === Profile.EPUB
@@ -78,6 +95,30 @@ const detectProfile = (manifest: Manifest): ReaderProfile => {
   
   // Default to webPub for any other profile or no specific profile
   return "webPub";
+};
+
+const isLocalhostUrl = (url: string): boolean => {
+  try {
+    const { hostname } = new URL(url);
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+  } catch {
+    return false;
+  }
+};
+
+const assertLocalAudioLinksArePlayable = (manifest: Manifest, manifestUrl: string) => {
+  if (!isLocalhostUrl(manifestUrl)) return;
+
+  const audioLinks = manifest.readingOrder?.items.filter((link) => link.type?.startsWith("audio/")) ?? [];
+  const hasGeneratedLocalAssetPaths = audioLinks.some((link) => link.href.startsWith("/"));
+  const generatorVersion = manifest.metadata.otherMetadata?.["https://github.com/nohles/go-toolkit#version"];
+
+  if (hasGeneratedLocalAssetPaths && generatorVersion) {
+    throw new Error(
+      "This local audiobook manifest uses generated root-relative audio hrefs that the browser cannot play from the publication server. " +
+      "Regenerate the manifest with playable audio asset hrefs before opening it in Thorium Web."
+    );
+  }
 };
 
 export const usePublication = ({
@@ -106,6 +147,7 @@ export const usePublication = ({
   const handleManifestError = (error: unknown, context: string) => {
     console.error(`${ context }:`, error);
     const processedError = ErrorHandler.process(error, context);
+    onError(processedError);
     setError(processedError);
     setIsLoading(false);
   };
@@ -154,6 +196,10 @@ export const usePublication = ({
 
             // Detect profile from parsed manifest
             const detectedProfile = detectProfile(manifestObj);
+            if (detectedProfile === "audio") {
+              assertLocalAudioLinksArePlayable(manifestObj, selfHref);
+            }
+
             setProfile(detectedProfile);
             dispatch(setReaderProfile(detectedProfile));
 
@@ -197,11 +243,16 @@ export const usePublication = ({
     setIsRTL(rtl);
     dispatch(setRTL(rtl));
 
-    // FXL detection (only relevant for epub)
+    // FXL detection
+    // - epub: detect from metadata
+    // - comic (DIVINA): treat as fixed layout for theming + UI behavior parity
     if (profile === "epub") {
       const fxl = publication.metadata.effectiveLayout === Layout.fixed;
       setIsFXL(fxl);
       dispatch(setFXL(fxl));
+    } else if (profile === "comic") {
+      setIsFXL(true);
+      dispatch(setFXL(true));
     }
 
     // Display transformability

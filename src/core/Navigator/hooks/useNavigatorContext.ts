@@ -6,10 +6,20 @@ import { Link, Locator } from "@readium/shared";
 // Import the navigator hook types
 import type { useEpubNavigator } from "../../Hooks/Epub/useEpubNavigator";
 import type { useWebPubNavigator } from "../../Hooks/WebPub/useWebPubNavigator";
+import type { useComicNavigator } from "../../Hooks/Comic/useComicNavigator";
 import type { useAudioNavigator } from "../../Hooks/Audio/useAudioNavigator";
 
+function isComicNavigator(
+  v: ReturnType<typeof useEpubNavigator> | ReturnType<typeof useWebPubNavigator> | ReturnType<typeof useComicNavigator>
+): v is ReturnType<typeof useComicNavigator> {
+  return "isComicNavigator" in v && v.isComicNavigator === true;
+}
+
 // Define proper types for navigator interfaces
-type VisualNavigator = ReturnType<typeof useEpubNavigator> | ReturnType<typeof useWebPubNavigator>;
+type VisualNavigator =
+  | ReturnType<typeof useEpubNavigator>
+  | ReturnType<typeof useWebPubNavigator>
+  | ReturnType<typeof useComicNavigator>;
 type MediaNavigator = ReturnType<typeof useAudioNavigator>;
 
 // Union of all settings keys across both navigator types
@@ -51,7 +61,7 @@ const createUnifiedGetSetting = (navigator: VisualNavigator) => {
 
 // Type guards to check navigator type - using context reference instead of fragile method detection
 const isVisualNavigator = (
-  navigator: VisualNavigator | MediaNavigator, 
+  navigator: VisualNavigator | MediaNavigator,
   contextVisual: VisualNavigator | undefined
 ): navigator is VisualNavigator => {
   return navigator === contextVisual;
@@ -97,10 +107,12 @@ export const useNavigator = () => {
       isVisual: () => isVisual,
 
       getScriptMode: (): ScriptMode | undefined => {
-        if (isVisual && (navigator as ReturnType<typeof useEpubNavigator> | ReturnType<typeof useWebPubNavigator>).getScriptMode) {
-          return (navigator as ReturnType<typeof useEpubNavigator> | ReturnType<typeof useWebPubNavigator>).getScriptMode?.();
+        if (!isVisual) return undefined;
+        if (isComicNavigator(navigator as VisualNavigator)) {
+          return navigator.getScriptMode?.();
         }
-        return undefined;
+        const visual = navigator as ReturnType<typeof useEpubNavigator> | ReturnType<typeof useWebPubNavigator>;
+        return visual.getScriptMode?.();
       },
 
       getCframes: isVisual ? navigator.getCframes?.bind(navigator) : undefined,
@@ -126,6 +138,7 @@ export const useNavigator = () => {
   }, [context.media]);
 
   return useMemo(() => ({
+    publication: context.publication,
     get visual() {
       if (!visualMemo) throw new Error("Visual navigator not available");
       return visualMemo;
@@ -137,5 +150,5 @@ export const useNavigator = () => {
     get unified(): UnifiedNavigator {
       return unified;
     }
-  }), [visualMemo, mediaMemo, unified]);
+  }), [context.publication, visualMemo, mediaMemo, unified]);
 };

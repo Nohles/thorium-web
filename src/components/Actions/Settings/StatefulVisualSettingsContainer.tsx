@@ -23,6 +23,7 @@ import { StatefulActionContainerProps } from "../models/actions";
 import { StatefulSettingsWrapper } from "./StatefulSettingsWrapper";
 import { StatefulSpacingGroupContainer } from "../../Settings/Spacing/StatefulSpacingGroup";
 import { StatefulTextGroupContainer } from "../../Settings/Text/StatefulTextGroup";
+import { StatefulCustomTheme } from "../../Settings/StatefulTheme";
 
 import { usePreferences } from "@/preferences/hooks/usePreferences";
 import { usePlugins } from "@/components/Plugins/PluginProvider";
@@ -43,6 +44,7 @@ export const StatefulVisualSettingsContainer = ({
     subPanelSpacingSettingsKeys,
     subPanelTextSettingsKeys,
     webPubSettingsKeys,
+    comicSettingsKeys
   } = useFilteredPreferenceKeys();
   const { preferences } = usePreferences();
   const { t } = useI18n();
@@ -56,10 +58,12 @@ export const StatefulVisualSettingsContainer = ({
   const settingItems = useMemo(() => {
     return profile === "webPub"
       ? webPubSettingsKeys
-      : isFXL
-        ? fxlSettingsKeys
-        : reflowSettingsKeys
-  }, [profile, isFXL, fxlSettingsKeys, reflowSettingsKeys, webPubSettingsKeys]);
+      : profile === "comic"
+        ? comicSettingsKeys
+        : isFXL
+          ? fxlSettingsKeys
+          : reflowSettingsKeys;
+  }, [profile, isFXL, fxlSettingsKeys, reflowSettingsKeys, webPubSettingsKeys, comicSettingsKeys]);
 
   const setInitial = useCallback(() => {
     dispatch(setSettingsContainer(ThSettingsContainerKeys.initial));
@@ -117,6 +121,9 @@ export const StatefulVisualSettingsContainer = ({
       case ThSettingsContainerKeys.spacing:
         return <StatefulSpacingGroupContainer />;
 
+      case ThSettingsContainerKeys.customTheme:
+        return <StatefulCustomTheme />;
+
       case ThSettingsContainerKeys.initial:
       default:
         return (
@@ -157,6 +164,11 @@ export const StatefulVisualSettingsContainer = ({
       case ThSettingsContainerKeys.spacing:
         return t("reader.preferences.spacing.title");
 
+      case ThSettingsContainerKeys.customTheme:
+        return t("reader.preferences.themes.customPalette", {
+          defaultValue: "Custom palette"
+        });
+
       case ThSettingsContainerKeys.initial:
       default:
         return t("reader.preferences.title");
@@ -170,6 +182,9 @@ export const StatefulVisualSettingsContainer = ({
 
       case ThSettingsContainerKeys.spacing:
         return preferences.settings.spacing?.header || ThSheetHeaderVariant.close;
+
+      case ThSettingsContainerKeys.customTheme:
+        return ThSheetHeaderVariant.previous;
 
       case ThSettingsContainerKeys.initial:
       default:

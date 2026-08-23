@@ -27,7 +27,12 @@
         },
         "label": "Top bar",
         "runningHead": "Running head",
-        "actions": "Actions"
+        "actions": "Actions",
+        "sources": {
+          "label": "Comic source",
+          "available": "Available sources",
+          "loading": "Opening source"
+        }
       },
       "footer": {
         "label": "Bottom bar"
@@ -102,6 +107,103 @@
           "tooltip": "More options",
           "trigger": "More spacing options"
         }
+      }
+    },
+    "comic": {
+      "readingMode": {
+        "label": "Reading mode",
+        "default": "Default",
+        "singlePage": "Single page",
+        "doublePage": "Double page",
+        "continuousVertical": "Continuous vertical",
+        "continuousHorizontal": "Continuous horizontal",
+        "webtoon": "Webtoon"
+      },
+      "chapterBoundaries": {
+        "label": "Navigate by manifest chapters (TOC)",
+        "nextChapter": "Next chapter",
+        "previousChapter": "Previous chapter",
+        "finished": "Finished:",
+        "next": "Next:",
+        "previous": "Previous:",
+        "returnToMediaPage": "Return to media page",
+        "returnHome": "Return home"
+      },
+      "imageLoad": {
+        "failed": "Failed to load image.",
+        "retry": "Try again"
+      },
+      "pageGap": {
+        "label": "Page gap"
+      },
+      "readingDirection": {
+        "label": "Reading direction",
+        "ltr": "Left to right",
+        "rtl": "Right to left"
+      },
+      "tapZones": {
+        "label": "Tap zones",
+        "default": "Default",
+        "edge": "Edge",
+        "kindle": "Kindle",
+        "lShape": "L-shape",
+        "rightAndLeft": "Right and left",
+        "disabled": "Disabled"
+      },
+      "scaleType": {
+        "label": "Scale type",
+        "fitWidth": "Fit width",
+        "fitHeight": "Fit height",
+        "fitScreen": "Fit screen",
+        "originalSize": "Original size"
+      },
+      "overlayMode": {
+        "label": "Overlay mode",
+        "auto": "Auto",
+        "pinned": "Pinned"
+      },
+      "showPageNumber": {
+        "label": "Show page number"
+      },
+      "staticNavigation": {
+        "label": "Static navigation"
+      },
+      "progressBar": {
+        "type": "Progress bar type",
+        "hidden": "Hidden",
+        "standard": "Standard",
+        "size": "Progress bar size (px)",
+        "position": {
+          "label": "Progress bar position",
+          "auto": "Auto",
+          "bottom": "Bottom",
+          "left": "Left",
+          "right": "Right"
+        }
+      },
+      "stretchSmallPages": {
+        "label": "Stretch small pages"
+      },
+      "widthLimit": {
+        "enabled": "Limit page width",
+        "label": "Width limit (%)"
+      },
+      "scrollAmount": {
+        "label": "Scroll amount (%)"
+      },
+      "autoScroll": {
+        "enabled": "Enable auto-scroll",
+        "speed": "Auto-scroll speed (seconds)",
+        "smooth": "Smooth auto-scroll"
+      },
+      "readingModePreview": {
+        "label": "Show reading mode preview"
+      },
+      "tapZonePreview": {
+        "label": "Show tap zone preview"
+      },
+      "imagePreloadAmount": {
+        "label": "Image preload amount"
       }
     }
   },

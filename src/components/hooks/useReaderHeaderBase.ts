@@ -13,6 +13,7 @@ import { useFocusWithin } from "react-aria";
 import { setHovering } from "@/lib/readerReducer";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { useIsScroll } from "@/hooks";
+import { useNavigator } from "@/core/Navigator";
 
 import { isPositionsListValid } from "../Actions/JumpToPosition/helpers/utils";
 import { isIOSish } from "@/core/Helpers/getPlatform";
@@ -21,6 +22,7 @@ export const useReaderHeaderBase = (actionKeys: string[]) => {
   const headerRef = useRef<HTMLDivElement>(null);
   const { t } = useI18n();
   const { actionsComponentsMap } = usePlugins();
+  const { publication } = useNavigator();
 
   const overflowMap = useAppSelector(state => state.actions.overflow);
   const isScroll = useIsScroll();
@@ -79,12 +81,15 @@ export const useReaderHeaderBase = (actionKeys: string[]) => {
       if (item.key === ThActionsKeys.jumpToPosition) {
         return isPositionsListValid(positionsList);
       }
+      if (item.key === ThActionsKeys.search) {
+        return Boolean(publication?.linkWithRel("search"));
+      }
       if (item.key === ThActionsKeys.fullscreen) {
         return document.fullscreenEnabled && !isIOSish();
       }
       return true;
     });
-  }, [actionKeys, actionsComponentsMap, positionsList]);
+  }, [actionKeys, actionsComponentsMap, positionsList, publication]);
 
   useEffect(() => {
     if (isImmersive) {

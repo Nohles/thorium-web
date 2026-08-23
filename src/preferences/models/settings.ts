@@ -29,7 +29,26 @@ export interface ThSettingsRadioPref<T extends string> {
 }
 
 export enum ThSettingsKeys {
+  comicChapterBoundaries = "comicChapterBoundaries",
+  comicImagePreloadAmount = "comicImagePreloadAmount",
   columns = "columns",
+  comicOverlayMode = "comicOverlayMode",
+  comicPageGap = "comicPageGap",
+  comicProgressBarPosition = "comicProgressBarPosition",
+  comicProgressBarSizePx = "comicProgressBarSizePx",
+  comicProgressBarType = "comicProgressBarType",
+  comicReadingDirection = "comicReadingDirection",
+  comicReadingMode = "comicReadingMode",
+  comicReadingModePreview = "comicReadingModePreview",
+  comicScaleType = "comicScaleType",
+  comicScrollAmountPercent = "comicScrollAmountPercent",
+  comicShowPageNumber = "comicShowPageNumber",
+  comicStaticNavigation = "comicStaticNavigation",
+  comicStretchSmallPages = "comicStretchSmallPages",
+  comicTapZones = "comicTapZones",
+  comicTapZonePreview = "comicTapZonePreview",
+  comicWidthLimitEnabled = "comicWidthLimitEnabled",
+  comicWidthLimitPercent = "comicWidthLimitPercent",
   fontFamily = "fontFamily",
   fontWeight = "fontWeight",
   hyphens = "hyphens",
@@ -74,7 +93,8 @@ export enum ThSpacingSettingsKeys {
 export enum ThSettingsContainerKeys {
   initial = "initial",
   text = "text",
-  spacing = "spacing"
+  spacing = "spacing",
+  customTheme = "customTheme"
 }
 
 export enum ThSettingsRangeVariant {

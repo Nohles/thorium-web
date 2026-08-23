@@ -1,5 +1,5 @@
 {
-  "name": "@edrlab/thorium-web",
+  "name": "@nohles/thorium-web",
   "description": "Play with the capabilities of the Readium Web toolkit",
   "keywords": [
     "edrlab",
@@ -10,19 +10,23 @@
   ],
   "license": "BSD-3-Clause",
   "author": {
-    "name": "EDRLab",
-    "url": "https://www.edrlab.org"
+    "name": "Nohles",
+    "url": "https://www.nohles.com"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/edrlab/thorium-web.git"
+    "url": "https://github.com/nohles/thorium-web.git"
   },
   "bugs": {
-    "url": "https://github.com/edrlab/thorium-web/issues"
+    "url": "https://github.com/nohles/thorium-web/issues"
   },
-  "version": "1.5.7",
+  "version": "1.5.19",
   "packageManager": "pnpm@11.1.0",
   "private": false,
+  "publishConfig": {
+    "registry": "http://192.168.1.202:4873/",
+    "access": "public"
+  },
   "files": [
     "./dist"
   ],
@@ -46,7 +50,9 @@
     "./reader": "./dist/components/Reader/index.mjs",
     "./reader/styles": "./dist/components/Reader/index.css",
     "./webpub": "./dist/components/WebPub/index.mjs",
-    "./webpub/styles": "./dist/components/WebPub/index.css"
+    "./webpub/styles": "./dist/components/WebPub/index.css",
+    "./comic": "./dist/components/Comic/index.mjs",
+    "./comic/styles": "./dist/components/Comic/index.css"
   },
   "devEngines": {
     "packageManager": {
@@ -68,7 +74,13 @@
     "check-locales": "node scripts/check-locales.mjs",
     "update-locales": "node scripts/update-locales.mjs && pnpm check-locales --summary --show-missing",
     "bundle": "tsup --config tsup.config.ts && pnpm copy-locales && pnpm copy-fonts",
-    "increment": "node scripts/increment.mjs"
+    "bundle:watch": "pnpm copy-locales && pnpm copy-fonts && tsup --config tsup.config.ts --watch",
+    "increment": "node scripts/increment.mjs",
+    "prepublishOnly": "pnpm bundle",
+    "publish:verdaccio": "pnpm publish",
+    "release:patch": "pnpm increment patch && pnpm publish:verdaccio",
+    "release:minor": "pnpm increment minor && pnpm publish:verdaccio",
+    "release:major": "pnpm increment major && pnpm publish:verdaccio"
   },
   "peerDependencies": {
     "@readium/css": "^2.0.5",

@@ -1,4 +1,4 @@
-button {
+/* button {
   -webkit-appearance: none;
   appearance: none;
   border: none;
@@ -29,4 +29,4 @@ input {
 ::selection {
   background-color: var(--th-theme-select);
   color: var(--th-theme-onSelect);
-}
+} */

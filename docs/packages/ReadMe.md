@@ -27,6 +27,10 @@ Note that these components do not require Next.js, you should be able to use the
 
 Styles are exported as CSS stylesheets with `thorium_web_` scoped classnames. You can find detailed documentation about available classes in the [Styling docs](./Styling/ReadMe.md).
 
+## Publishing
+
+To publish a new version to the team Verdaccio registry, see **[Publishing](../Publishing.md)**.
+
 ## Contributing
 
 If you want to contribute to the Thorium Web package, here are the steps to bundle them and test locally.

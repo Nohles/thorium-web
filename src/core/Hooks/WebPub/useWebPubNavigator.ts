@@ -26,6 +26,8 @@ type cbb = (ok: boolean) => void;
 
 // Module scoped, singleton instance of navigator
 let navigatorInstance: InstanceType<typeof ExperimentalWebPubNavigator> | null = null;
+let navigatorDestroyPromise: Promise<void> = Promise.resolve();
+let navigatorGeneration = 0;
 
 export interface WebPubNavigatorLoadProps {
   container: HTMLDivElement | null;
@@ -52,14 +54,18 @@ export const useWebPubNavigator = () => {
       return navigatorInstance?.settings[settingKey] as WebPubSettings[K];
     }, []);
 
-  const WebPubNavigatorLoad = useCallback((config: WebPubNavigatorLoadProps, cb: Function) => {
-    if (config.container) {
+  const WebPubNavigatorLoad = useCallback((config: WebPubNavigatorLoadProps, cb: () => void) => {
+    const generation = ++navigatorGeneration;
+
+    void navigatorDestroyPromise.then(async () => {
+      if (!config.container || generation !== navigatorGeneration) return;
+
       container.current = config.container;
       containerParent.current = container.current?.parentElement || null;
 
       publication.current = config.publication;
 
-      navigatorInstance = new ExperimentalWebPubNavigator(
+      const instance = new ExperimentalWebPubNavigator(
         config.container, 
         config.publication, 
         config.listeners, 
@@ -72,18 +78,24 @@ export const useWebPubNavigator = () => {
           keyboardPeripherals: config.keyboardPeripherals || []
         }
       );
+      navigatorInstance = instance;
 
-      navigatorInstance.load().then(() => {
+      await instance.load();
+      if (navigatorInstance === instance && generation === navigatorGeneration) {
         cb();
-      });
-    }
+      }
+    });
   }, []);
 
-  const WebPubNavigatorDestroy = useCallback((cb: Function) => {
+  const WebPubNavigatorDestroy = useCallback((cb: () => void) => {
+    navigatorGeneration += 1;
+    const instance = navigatorInstance;
+    navigatorInstance = null;
     cb();
-    navigatorInstance?.destroy().then(() => {
-      navigatorInstance = null; // Clear the singleton reference
-    });
+
+    if (instance) {
+      navigatorDestroyPromise = instance.destroy();
+    }
   }, []);
 
   const goRight = useCallback((animated: boolean, callback: cbb) => {
@@ -138,6 +150,10 @@ export const useWebPubNavigator = () => {
     return navigatorInstance?._cframes;
   }, []);
 
+  const getNavigatorInstance = useCallback(() => {
+    return navigatorInstance;
+  }, []);
+
   const currentScriptMode = useCallback((): ScriptMode | undefined => {
     const metadata = navigatorInstance?.publication?.metadata;
     if (!metadata) return undefined;
@@ -167,6 +183,7 @@ export const useWebPubNavigator = () => {
     getSetting,
     submitPreferences,
     getCframes,
+    getNavigatorInstance,
     getScriptMode: currentScriptMode,
     timeline,
   }

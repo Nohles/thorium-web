@@ -12,6 +12,11 @@ export * from "../index";
 export * from "../Audio/audio-core";
 export * from "../Epub/epub-core";
 export * from "../WebPub/webpub-core";
+export * from "../Comic/comic-core";
 
 // StatefulReaderWrapper
 export * from "./StatefulReaderWrapper";
+export * from "./ReaderNavigationContext";
+export * from "./ReaderInteractions";
+export * from "./useReaderDecorations";
+export * from "../StatefulReaderSourceSelector";

@@ -17,6 +17,7 @@ const isBlockedHost = (hostname: string): boolean => {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const targetUrl = searchParams.get("url");
+  const allowLocalHosts = process.env.NODE_ENV !== "production";
 
   if (!targetUrl) {
     return NextResponse.json({ error: "url parameter is required" }, { status: 400 });
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Only http/https URLs are allowed" }, { status: 400 });
   }
 
-  if (isBlockedHost(parsed.hostname)) {
+  if (!allowLocalHosts && isBlockedHost(parsed.hostname)) {
     return NextResponse.json({ error: "Blocked host" }, { status: 403 });
   }
 

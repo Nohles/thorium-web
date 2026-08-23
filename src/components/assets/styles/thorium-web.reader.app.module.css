@@ -72,6 +72,8 @@
 
 .main :global(.thorium_web_layeredUI) {
   position: relative;
+  display: flex;
+  flex-direction: column;
   top: 0;
   bottom: 0;
   left: 0;
@@ -80,6 +82,17 @@
   height: 100dvh;
   max-height: 100%;
   background-color: var(--th-theme-background);
+}
+
+/* Sole in-flow column between absolutely positioned top/bottom bars — fill viewport and allow nested scroll */
+:global(.thorium_web_layeredUI) .wrapper {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+:global(.thorium_web_stackedUI) .wrapper {
+  flex: 1 1 0;
+  min-height: 0;
 }
 
 :global(.thorium_web_layeredUI) .topBar,
@@ -163,6 +176,17 @@
   border-width: 0;
 }
 
+.hiddenScrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hiddenScrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 /* FXL: Loading spinner for resources */
 @keyframes loading {
   0% {
@@ -171,6 +195,24 @@
   100% {
     transform: rotate(360deg);
   }
+}
+
+.comicImageSpinner {
+  display: block;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 5px solid color-mix(in srgb, var(--th-theme-text, #fff) 20%, transparent);
+  border-top-color: var(--th-theme-text, #fff);
+  animation: loading 0.8s linear infinite;
+}
+
+.comicImage {
+  visibility: hidden;
+}
+
+.comicImage[data-ready="true"] {
+  visibility: visible;
 }
 
 .iframeContainer :global(div:has(> .readium-navigator-iframe.blank))::after {
@@ -198,4 +240,212 @@
   position: absolute;
   white-space: nowrap;
   width: 1px;
+}
+
+.comicProgressRoot {
+  position: relative;
+  pointer-events: auto;
+  outline: none;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.comicProgressRoot[data-position="bottom"] {
+  display: flex;
+  align-items: flex-end;
+  padding: 0 12px 4px;
+}
+
+.comicProgressRoot[data-position="left"] {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 12px 4px;
+}
+
+.comicProgressRoot[data-position="right"] {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 12px 4px;
+}
+
+/* Compact rail (default thin bar) */
+.comicProgressCompactRail {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  min-height: 0;
+  padding: 1px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--th-theme-surface, #000) 72%, transparent);
+  box-shadow: 0 1px 6px rgb(0 0 0 / 24%);
+  transition: opacity 180ms ease;
+}
+
+.comicProgressRoot[data-position="bottom"] .comicProgressCompactRail {
+  grid-auto-flow: column;
+  width: 100%;
+  height: 6px;
+}
+
+.comicProgressRoot[data-position="left"] .comicProgressCompactRail,
+.comicProgressRoot[data-position="right"] .comicProgressCompactRail {
+  grid-auto-flow: row;
+  height: 100%;
+  width: 6px;
+}
+
+.comicProgressRoot:hover .comicProgressCompactRail,
+.comicProgressRoot:focus-within .comicProgressCompactRail {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.comicProgressIndicator {
+  min-width: 0;
+  min-height: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 14%);
+}
+
+.comicProgressIndicator[data-loaded="true"] {
+  background: rgb(177 177 177 / 88%);
+}
+
+.comicProgressIndicator[data-completed="true"] {
+  background: rgb(255 255 255);
+}
+
+.comicProgressIndicator[data-current="true"] {
+  background: rgb(255 255 255);
+}
+
+/* Expanded rail (shown on hover, replaces compact in-place) */
+.comicProgressExpandedRail {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--th-theme-surface, #000) 86%, transparent);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 12px rgb(0 0 0 / 32%);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 200ms ease,
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.comicProgressRoot[data-position="bottom"] .comicProgressExpandedRail {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0 14px;
+  height: 28px;
+  transform: translateY(4px) scaleY(0.6);
+  transform-origin: bottom center;
+}
+
+.comicProgressRoot[data-position="left"] .comicProgressExpandedRail {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  padding: 14px 0;
+  width: 28px;
+  flex-direction: column;
+  transform: translateX(-4px) scaleX(0.6);
+  transform-origin: left center;
+}
+
+.comicProgressRoot[data-position="right"] .comicProgressExpandedRail {
+  top: 0;
+  bottom: 0;
+  right: 0;
+  padding: 14px 0;
+  width: 28px;
+  flex-direction: column;
+  transform: translateX(4px) scaleX(0.6);
+  transform-origin: right center;
+}
+
+.comicProgressRoot:hover .comicProgressExpandedRail,
+.comicProgressRoot:focus-within .comicProgressExpandedRail {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) translateX(0) scaleY(1) scaleX(1);
+}
+
+/* Expanded track (grid of buttons inside expanded rail) */
+.comicProgressExpandedTrack {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  align-self: stretch;
+}
+
+.comicProgressRoot[data-position="bottom"] .comicProgressExpandedTrack {
+  grid-auto-flow: column;
+  padding: 5px 0;
+}
+
+.comicProgressRoot[data-position="left"] .comicProgressExpandedTrack,
+.comicProgressRoot[data-position="right"] .comicProgressExpandedTrack {
+  grid-auto-flow: row;
+  padding: 0 5px;
+}
+
+/* Page label (current / total) */
+.comicProgressPageLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgb(255 255 255 / 80%);
+  white-space: nowrap;
+  user-select: none;
+  flex-shrink: 0;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Progress buttons */
+.comicProgressButton {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 3px;
+  background: rgb(255 255 255 / 14%);
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.comicProgressButton[data-loaded="true"] {
+  background: rgb(177 177 177 / 88%);
+}
+
+.comicProgressButton[data-completed="true"] {
+  background: rgb(255 255 255);
+}
+
+.comicProgressButton[data-current="true"] {
+  background: rgb(255 255 255);
+}
+
+.comicProgressButton:hover {
+  background: rgb(255 255 255 / 60%);
+}
+
+.comicProgressButton[data-current="true"]:hover {
+  background: rgb(255 255 255);
+}
+
+.comicProgressButton:focus-visible,
+.comicProgressRoot:focus-visible {
+  outline: 2px solid rgb(255 255 255 / 72%);
+  outline-offset: 2px;
 }

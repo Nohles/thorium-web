@@ -27,7 +27,7 @@ import {
   FrameClickEvent,
   SuspiciousActivityEvent,
 } from "@readium/navigator-html-injectables";
-import { WebPubNavigatorListeners } from "@readium/navigator";
+import { WebPubNavigatorListeners, IContentProtectionConfig } from "@readium/navigator";
 import {
   Locator,
   Publication,
@@ -78,6 +78,13 @@ import { getReaderClassNames } from "../Helpers/getReaderClassNames";
 import { resolveContentProtectionConfig } from "@/preferences/models/protection";
 import { NavPeripheralType, fromActionPeripheralType, fromDockingPeripheralType } from "@/helpers/peripherals";
 import {
+  contextMenuToEvent,
+  resolveDecorationActivation,
+  textSelectionToEvent,
+  type ReaderInteractionProps,
+} from "../Reader/ReaderInteractions";
+import { useReaderDecorations } from "../Reader/useReaderDecorations";
+import {
   activateDictionaryDecoration,
   applyDictionaryDecorations,
   selectionFromReadium,
@@ -90,6 +97,10 @@ export const ExperimentalWebPubStatefulReader = ({
   plugins,
   positionStorage,
   containerRefSetter,
+  decorations,
+  onTextSelected,
+  onContextMenu,
+  onDecorationActivated,
   dictionary,
 }: StatefulReaderProps) => {
   const [pluginsRegistered, setPluginsRegistered] = useState(false);
@@ -112,16 +123,18 @@ export const ExperimentalWebPubStatefulReader = ({
   return (
     <>
       <ThPluginProvider>
-        <StatefulReaderInner publication={ publication } localDataKey={ localDataKey } positionStorage={ positionStorage } containerRefSetter={ containerRefSetter } dictionary={ dictionary } />
+        <StatefulReaderInner publication={ publication } localDataKey={ localDataKey } positionStorage={ positionStorage } containerRefSetter={ containerRefSetter }
+          interactions={ { decorations, onTextSelected, onContextMenu, onDecorationActivated } }
+          dictionary={ dictionary }
+        />
       </ThPluginProvider>
     </>
   );
 };
 
-const StatefulReaderInner = ({ publication, localDataKey, positionStorage, containerRefSetter, dictionary }: { publication: Publication; localDataKey: string | null; positionStorage?: PositionStorage; containerRefSetter?: (el: Element | null) => void; dictionary?: DictionaryReaderCallbacks }) => {
+const StatefulReaderInner = ({ publication, localDataKey, positionStorage, containerRefSetter, interactions, dictionary }: { publication: Publication; localDataKey: string | null; positionStorage?: PositionStorage; containerRefSetter?: (el: Element | null) => void; interactions: ReaderInteractionProps; dictionary?: DictionaryReaderCallbacks }) => {
   const dictionaryRef = useRef(dictionary);
   dictionaryRef.current = dictionary;
-
   const { preferences, getFontMetadata, getFontInjectables } = usePreferences();
   const { t } = useI18n();
   const { getEffectiveSpacingValue } = useSpacingPresets();
@@ -189,10 +202,11 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
   const webPubNavigator = useWebPubNavigator();
   const {
     currentPositions,
+    currentLocator,
     canGoBackward,
     canGoForward,
-    currentLocator,
     getCframes,
+    getNavigatorInstance,
     timeline: getNavigatorTimeline
   } = webPubNavigator;
 
@@ -260,6 +274,26 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
 
   const { zoomIn, zoomOut } = useZoomCallbacks(webPubNavigator);
 
+  const interactionRef = useRef(interactions);
+  interactionRef.current = interactions;
+
+  const { decorations } = interactions;
+
+  const mergeContentProtection = (
+    config: IContentProtectionConfig | undefined,
+    withContextMenu: boolean
+  ): IContentProtectionConfig | undefined => {
+    if (!withContextMenu) return config;
+    return { ...config, disableContextMenu: true };
+  };
+
+  // Frames load resources from session-scoped blob: URLs, so events carry the
+  // navigator's real resource href alongside the frame URL.
+  const resolveResourceHref = useCallback(() => {
+    const locator = currentLocator();
+    return typeof locator?.href === "string" ? locator.href : undefined;
+  }, [currentLocator]);
+
   const applyDictionaryDecorationsToFrames = useCallback(() => {
     applyDictionaryDecorations(getCframes(), dictionary?.decorations ?? []);
   }, [dictionary?.decorations, getCframes]);
@@ -314,10 +348,26 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
       }
     },
     tap: function (_e: FrameClickEvent): boolean {
+      const { decorations: currentDecorations, onDecorationActivated: activate } = interactionRef.current;
+      if (activate && currentDecorations) {
+        const activation = resolveDecorationActivation(_e, container.current, currentDecorations);
+        if (activation) {
+          activate(activation);
+          return true;
+        }
+      }
       toggleIsImmersive();
       return true;
     },
     click: function (_e: FrameClickEvent): boolean {
+      const { decorations: currentDecorations, onDecorationActivated: activate } = interactionRef.current;
+      if (activate && currentDecorations) {
+        const activation = resolveDecorationActivation(_e, container.current, currentDecorations);
+        if (activation) {
+          activate(activation);
+          return true;
+        }
+      }
       if (handleDictionaryClick(_e)) return true;
       return false;
     },
@@ -340,10 +390,20 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
       return false;
     },
     textSelected: function (selection: BasicTextSelection): void {
+      const { onTextSelected: handle } = interactionRef.current;
+      if (handle) {
+        const event = textSelectionToEvent(container.current, selection, resolveResourceHref());
+        if (event) handle(event);
+      }
       handleDictionarySelection(selection);
     },
     contentProtection: function (_type: string, _data: SuspiciousActivityEvent): void {},
-    contextMenu: function (_data: ContextMenuEvent): void {},
+    contextMenu: function (data: ContextMenuEvent): void {
+      const { onContextMenu: handle } = interactionRef.current;
+      if (!handle) return;
+      const event = contextMenuToEvent(container.current, data, resolveResourceHref());
+      if (event) handle(event);
+    },
     peripheral: function (data): void {
       switch (data.type) {
         case NavPeripheralType.zoomIn:  zoomIn();  break;
@@ -372,7 +432,7 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
         }
       }
     },
-  }), [setLocalData, canGoBackward, canGoForward, dispatch, toggleIsImmersive, zoomIn, zoomOut, profile, handleFullscreen, getFocusedDockableKey, applyDictionaryDecorationsToFrames, handleDictionaryClick, handleDictionarySelection, updateAdjacentItems, clearAdjacentItems, updateCurrentTocEntry, clearCurrentTocEntry]);
+  }), [setLocalData, canGoBackward, canGoForward, dispatch, toggleIsImmersive, zoomIn, zoomOut, profile, handleFullscreen, getFocusedDockableKey, resolveResourceHref, applyDictionaryDecorationsToFrames, handleDictionaryClick, handleDictionarySelection, updateAdjacentItems, clearAdjacentItems, updateCurrentTocEntry, clearCurrentTocEntry]);
 
   // getLocalData() returns a plain JSON.parse()'d object on cold load (not yet a real
   // Locator instance) — the navigator calls Timeline.locate() on this at startup, which
@@ -397,11 +457,19 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     injectFontResources,
     removeFontResources,
     getFontInjectables,
-    contentProtectionConfig: resolveContentProtectionConfig(preferences.contentProtection, t),
+    contentProtectionConfig: mergeContentProtection(
+      resolveContentProtectionConfig(preferences.contentProtection, t),
+      Boolean(interactions.onContextMenu),
+    ),
     keyboardPeripherals,
     onNavigatorReady: () => {
       dispatch(setLoading(false));
     },
+  });
+
+  useReaderDecorations({
+    getNavigator: getNavigatorInstance,
+    decorations,
   });
 
   useLayoutEffect(() => {
@@ -414,7 +482,7 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
 
   return (
     <>
-    <NavigatorProvider visualNavigator={ webPubNavigator }>
+    <NavigatorProvider visualNavigator={ webPubNavigator } publication={ publication }>
       <main className={ readerStyles.main }>
         <StatefulDockingWrapper>
           <div

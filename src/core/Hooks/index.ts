@@ -19,3 +19,4 @@ export * from "./useTimelineAdjacency";
 export * from "./Audio";
 export * from "./Epub";
 export * from "./WebPub";
+export * from "./Comic";

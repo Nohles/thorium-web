@@ -27,6 +27,32 @@ type cbb = (ok: boolean) => void;
 
 // Module scoped, singleton instance of navigator
 let navigatorInstance: EpubNavigator | null = null;
+let navigatorDestroyPromise: Promise<void> = Promise.resolve();
+let navigatorGeneration = 0;
+const NAVIGATOR_DESTROY_TIMEOUT_MS = 1_000;
+
+const destroyNavigator = async (instance: EpubNavigator): Promise<void> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<void>((resolve) => {
+    timeoutId = setTimeout(() => {
+      console.warn(
+        `Epub navigator teardown exceeded ${ NAVIGATOR_DESTROY_TIMEOUT_MS }ms; continuing with the next publication.`,
+      );
+      resolve();
+    }, NAVIGATOR_DESTROY_TIMEOUT_MS);
+  });
+
+  try {
+    await Promise.race([
+      instance.destroy().catch((error: unknown) => {
+        console.error("Failed to destroy EPUB navigator:", error);
+      }),
+      timeout,
+    ]);
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+  }
+};
 
 export interface EpubNavigatorLoadProps {
   container: HTMLDivElement | null;
@@ -45,6 +71,7 @@ export const useEpubNavigator = () => {
   const container = useRef<HTMLDivElement | null>(null);
   const containerParent = useRef<HTMLElement | null>(null);
   const publication = useRef<Publication | null>(null);
+  const ownedInstance = useRef<EpubNavigator | null>(null);
 
   const submitPreferences = useCallback(async (preferences: IEpubPreferences) => {
     await navigatorInstance?.submitPreferences(new EpubPreferences(preferences));
@@ -54,14 +81,22 @@ export const useEpubNavigator = () => {
     return navigatorInstance?.settings[settingKey] as EpubSettings[K];
   }, []);
 
-  const EpubNavigatorLoad = useCallback((config: EpubNavigatorLoadProps, cb: Function) => {
-    if (config.container) {
+  const EpubNavigatorLoad = useCallback((
+    config: EpubNavigatorLoadProps,
+    onLoaded: () => void,
+    onError?: (error: unknown) => void,
+  ) => {
+    const generation = ++navigatorGeneration;
+
+    void navigatorDestroyPromise.then(async () => {
+      if (!config.container || generation !== navigatorGeneration) return;
+
       container.current = config.container;
       containerParent.current = container.current? container.current.parentElement : null;
       
       publication.current = config.publication;
 
-      navigatorInstance = new EpubNavigator(
+      const instance = new EpubNavigator(
         config.container,
         config.publication,
         config.listeners,
@@ -75,19 +110,33 @@ export const useEpubNavigator = () => {
           keyboardPeripherals: config.keyboardPeripherals || [],
         }
       );
+      ownedInstance.current = instance;
+      navigatorInstance = instance;
 
-      navigatorInstance.load().then(() => {
-        cb();
-      });
-    }
+      try {
+        await instance.load();
+        if (navigatorInstance === instance && generation === navigatorGeneration) {
+          onLoaded();
+        }
+      } catch (error: unknown) {
+        if (navigatorInstance === instance) navigatorInstance = null;
+        if (ownedInstance.current === instance) ownedInstance.current = null;
+        navigatorDestroyPromise = destroyNavigator(instance);
+        onError?.(error);
+      }
+    });
   }, []);
 
-  const EpubNavigatorDestroy = useCallback((cb: Function) => {
+  const EpubNavigatorDestroy = useCallback((cb: () => void) => {
+    navigatorGeneration += 1;
+    const instance = ownedInstance.current;
+    ownedInstance.current = null;
+    if (navigatorInstance === instance) navigatorInstance = null;
     cb();
 
-    navigatorInstance?.destroy().then(() => {
-      navigatorInstance = null; // Clear the singleton reference
-    });
+    if (instance) {
+      navigatorDestroyPromise = destroyNavigator(instance);
+    }
   }, []);
 
   const goRight = useCallback((animated: boolean, callback: cbb) => {
@@ -148,6 +197,10 @@ export const useEpubNavigator = () => {
     return navigatorInstance?._cframes;
   }, []);
 
+  const getNavigatorInstance = useCallback(() => {
+    return navigatorInstance;
+  }, []);
+
   const currentScriptMode = useCallback((): ScriptMode | undefined => {
     const metadata = navigatorInstance?.publication?.metadata;
     if (!metadata) return undefined;
@@ -178,6 +231,7 @@ export const useEpubNavigator = () => {
     getSetting,
     submitPreferences,
     getCframes,
+    getNavigatorInstance,
     getScriptMode: currentScriptMode,
     timeline,
   }

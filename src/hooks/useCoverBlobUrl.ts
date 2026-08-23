@@ -7,12 +7,23 @@ export const useCoverBlobUrl = (coverUrl: string | undefined): { coverBlobUrl: s
   const revokeRef = useRef<(() => void) | undefined>(undefined);
 
   useEffect(() => {
+    revokeRef.current?.();
+    revokeRef.current = undefined;
+    setCoverBlobUrl(undefined);
+    setCoverFailed(false);
+
     if (!coverUrl) return;
+
     const controller = new AbortController();
     const fetched = proxyUrl(coverUrl) ?? coverUrl;
     let objectUrl: string | undefined;
     fetch(fetched, { signal: controller.signal })
-      .then(r => r.blob())
+      .then(r => {
+        if (!r.ok) {
+          throw new Error(`Failed to fetch cover: ${ r.status }`);
+        }
+        return r.blob();
+      })
       .then(blob => {
         objectUrl = URL.createObjectURL(blob);
         revokeRef.current = () => URL.revokeObjectURL(objectUrl!);

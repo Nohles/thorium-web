@@ -14,6 +14,7 @@ export default defineConfig({
     "src/components/Audio/index.ts",
     "src/components/Epub/index.ts",
     "src/components/WebPub/index.ts",
+    "src/components/Comic/index.ts",
     "src/components/Reader/index.ts",
     "src/i18n/index.ts",
     "src/lib/index.ts",

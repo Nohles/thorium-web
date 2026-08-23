@@ -1,3 +1,6 @@
+# Branch allowed for `pnpm publish` / `pnpm publish:verdaccio` (pnpm git-checks)
+publishBranch: ComicReader
+
 ignoreScripts: true
 
 manage-package-manager-versions: true

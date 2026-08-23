@@ -6,6 +6,8 @@ import { StatefulJumpToPositionTrigger } from "../../Actions/JumpToPosition/Stat
 import { StatefulJumpToPositionContainer } from "../../Actions/JumpToPosition/StatefulJumpToPositionContainer";
 import { StatefulSettingsTrigger } from "../../Actions/Settings/StatefulSettingsTrigger";
 import { StatefulVisualSettingsContainer } from "../../Actions/Settings/StatefulVisualSettingsContainer";
+import { StatefulSearchTrigger } from "../../Actions/Search/StatefulSearchTrigger";
+import { StatefulSearchContainer } from "../../Actions/Search/StatefulSearchContainer";
 import { StatefulTocTrigger } from "../../Actions/Toc/StatefulTocTrigger";
 import { StatefulTocContainer } from "../../Actions/Toc/StatefulTocContainer";
 
@@ -29,13 +31,29 @@ import { StatefulNoRuby } from "../../Settings/Text/StatefulNoRuby";
 import { StatefulTheme } from "../../Settings/StatefulTheme";
 import { StatefulWordSpacing } from "../../Settings/Spacing/StatefulWordSpacing";
 import { StatefulZoom } from "../../Settings/StatefulZoom";
+import {
+  StatefulComicImagePreloadAmount,
+  StatefulComicPageGap,
+  StatefulComicProgressBarPosition,
+  StatefulComicProgressBarType,
+  StatefulComicReadingDirection,
+  StatefulComicReadingMode,
+  StatefulComicReadingModePreview,
+  StatefulComicScaleType,
+  StatefulComicScrollAmountPercent,
+  StatefulComicStretchSmallPages,
+  StatefulComicTapZones,
+  StatefulComicTapZonePreview,
+  StatefulComicWidthLimit,
+  StatefulComicWidthLimitEnabled,
+} from "../../Settings/Comic";
 
 export const createDefaultPlugin = (): ThPlugin => {
   return {
     id: "core",
     name: "Core Components",
     description: "Default components for Thorium Web Epub StatefulReader",
-    version: "1.5.7",
+    version: "1.5.19",
     components: {
       actions: {
         [ThActionsKeys.fullscreen]: {
@@ -48,6 +66,10 @@ export const createDefaultPlugin = (): ThPlugin => {
         [ThActionsKeys.settings]: {
           Trigger: StatefulSettingsTrigger,
           Target: StatefulVisualSettingsContainer
+        },
+        [ThActionsKeys.search]: {
+          Trigger: StatefulSearchTrigger,
+          Target: StatefulSearchContainer
         },
         [ThActionsKeys.toc]: {
           Trigger: StatefulTocTrigger,
@@ -128,6 +150,49 @@ export const createDefaultPlugin = (): ThPlugin => {
         },
         [ThSettingsKeys.zoom]: {
           Comp: StatefulZoom
+        }
+        ,
+        [ThSettingsKeys.comicReadingMode]: {
+          Comp: StatefulComicReadingMode
+        },
+        [ThSettingsKeys.comicProgressBarType]: {
+          Comp: StatefulComicProgressBarType
+        },
+        [ThSettingsKeys.comicProgressBarPosition]: {
+          Comp: StatefulComicProgressBarPosition
+        },
+        [ThSettingsKeys.comicPageGap]: {
+          Comp: StatefulComicPageGap
+        },
+        [ThSettingsKeys.comicReadingDirection]: {
+          Comp: StatefulComicReadingDirection
+        },
+        [ThSettingsKeys.comicTapZones]: {
+          Comp: StatefulComicTapZones
+        },
+        [ThSettingsKeys.comicScaleType]: {
+          Comp: StatefulComicScaleType
+        },
+        [ThSettingsKeys.comicStretchSmallPages]: {
+          Comp: StatefulComicStretchSmallPages
+        },
+        [ThSettingsKeys.comicWidthLimitEnabled]: {
+          Comp: StatefulComicWidthLimitEnabled
+        },
+        [ThSettingsKeys.comicWidthLimitPercent]: {
+          Comp: StatefulComicWidthLimit
+        },
+        [ThSettingsKeys.comicScrollAmountPercent]: {
+          Comp: StatefulComicScrollAmountPercent
+        },
+        [ThSettingsKeys.comicReadingModePreview]: {
+          Comp: StatefulComicReadingModePreview
+        },
+        [ThSettingsKeys.comicTapZonePreview]: {
+          Comp: StatefulComicTapZonePreview
+        },
+        [ThSettingsKeys.comicImagePreloadAmount]: {
+          Comp: StatefulComicImagePreloadAmount
         }
       }
     }

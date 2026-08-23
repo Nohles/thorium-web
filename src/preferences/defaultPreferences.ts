@@ -23,8 +23,10 @@ import {
   contrast1Theme,
   contrast2Theme,
   contrast3Theme,
+  customTheme,
   defaultSettingsAction,
   defaultFullscreenAction,
+  defaultSearchAction,
   defaultTocAction,
   defaultJumpToPositionAction,
   defaultContentProtectionConfig,
@@ -217,12 +219,19 @@ export const defaultPreferences: ThPreferences<DefaultKeys> = createPreferences<
         ThThemeKeys.dark, 
         ThThemeKeys.contrast1, 
         ThThemeKeys.contrast2, 
-        ThThemeKeys.contrast3
+        ThThemeKeys.contrast3,
+        ThThemeKeys.custom
       ],
       fxlOrder: [
         "auto",
         ThThemeKeys.light,
-        ThThemeKeys.dark
+        ThThemeKeys.paper,
+        ThThemeKeys.sepia,
+        ThThemeKeys.dark,
+        ThThemeKeys.contrast1,
+        ThThemeKeys.contrast2,
+        ThThemeKeys.contrast3,
+        ThThemeKeys.custom
       ],
       systemThemes: {
         light: ThThemeKeys.light,
@@ -235,7 +244,8 @@ export const defaultPreferences: ThPreferences<DefaultKeys> = createPreferences<
         [ThThemeKeys.sepia]: sepiaTheme,
         [ThThemeKeys.contrast1]: contrast1Theme,
         [ThThemeKeys.contrast2]: contrast2Theme,
-        [ThThemeKeys.contrast3]: contrast3Theme
+        [ThThemeKeys.contrast3]: contrast3Theme,
+        [ThThemeKeys.custom]: customTheme
       }
     },
   },
@@ -285,24 +295,28 @@ export const defaultPreferences: ThPreferences<DefaultKeys> = createPreferences<
     reflowOrder: [
       ThActionsKeys.settings,
       ThActionsKeys.toc,
+      ThActionsKeys.search,
       ThActionsKeys.fullscreen,
       ThActionsKeys.jumpToPosition
     ],
     fxlOrder: [
       ThActionsKeys.settings,
       ThActionsKeys.toc,
+      ThActionsKeys.search,
       ThActionsKeys.fullscreen,
       ThActionsKeys.jumpToPosition
     ],
     webPubOrder: [
       ThActionsKeys.settings,
       ThActionsKeys.toc,
+      ThActionsKeys.search,
       ThActionsKeys.fullscreen
     ],
     collapse: true,
     keys: {
       [ThActionsKeys.settings]: defaultSettingsAction,
       [ThActionsKeys.fullscreen]: defaultFullscreenAction,
+      [ThActionsKeys.search]: defaultSearchAction,
       [ThActionsKeys.toc]: defaultTocAction,
       [ThActionsKeys.jumpToPosition]: defaultJumpToPositionAction,
     }
@@ -353,6 +367,23 @@ export const defaultPreferences: ThPreferences<DefaultKeys> = createPreferences<
       ThSettingsKeys.zoom,
       ThSettingsKeys.textGroup,
       ThSettingsKeys.spacingGroup
+    ],
+    comicOrder: [
+      ThSettingsKeys.theme,
+      ThSettingsKeys.comicProgressBarType,
+      ThSettingsKeys.comicProgressBarPosition,
+      ThSettingsKeys.comicReadingMode,
+      ThSettingsKeys.comicReadingModePreview,
+      ThSettingsKeys.comicPageGap,
+      ThSettingsKeys.comicReadingDirection,
+      ThSettingsKeys.comicTapZones,
+      ThSettingsKeys.comicTapZonePreview,
+      ThSettingsKeys.comicScaleType,
+      ThSettingsKeys.comicStretchSmallPages,
+      ThSettingsKeys.comicWidthLimitEnabled,
+      ThSettingsKeys.comicWidthLimitPercent,
+      ThSettingsKeys.comicScrollAmountPercent,
+      ThSettingsKeys.comicImagePreloadAmount,
     ],
     keys: {
       [ThSettingsKeys.fontFamily]: {

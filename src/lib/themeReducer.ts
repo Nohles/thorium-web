@@ -2,12 +2,19 @@ import { createSlice } from "@reduxjs/toolkit";
 
 import { ThColorScheme } from "@/core/Hooks/useColorScheme";
 import { ThContrast } from "@/core/Hooks/useContrast";
+import { ThemeTokens } from "@/preferences/hooks/useTheming";
 import { ThBreakpoints } from "@/preferences/models";
 
 export interface ThemeStateObject {
   reflow?: string;
   fxl?: string;
   audio?: string;
+}
+
+export interface SavedCustomTheme {
+  id: string;
+  tokens: ThemeTokens;
+  updatedAt: number;
 }
 
 export interface ThemeStateChangePayload {
@@ -22,6 +29,8 @@ export interface ThemeReducerState {
   monochrome: boolean;
   colorScheme: ThColorScheme;
   theme: ThemeStateObject;
+  customThemes?: Record<string, ThemeTokens>;
+  savedCustomThemes?: SavedCustomTheme[];
   prefersReducedMotion: boolean;
   prefersReducedTransparency: boolean;
   prefersContrast: ThContrast;
@@ -38,6 +47,8 @@ const initialState: ThemeReducerState = {
     fxl: "auto",
     audio: "auto"
   },
+  customThemes: {},
+  savedCustomThemes: [],
   prefersReducedMotion: false,
   prefersReducedTransparency: false, 
   prefersContrast: ThContrast.none,
@@ -58,6 +69,21 @@ export const themeSlice = createSlice({
     },
     setTheme: (state, action: ThemeStateChangePayload) => {
       state.theme[action.payload.key] = action.payload.value || "auto"
+    },
+    setCustomTheme: (
+      state,
+      action: { payload: { key: string; tokens: ThemeTokens } }
+    ) => {
+      state.customThemes = {
+        ...state.customThemes,
+        [action.payload.key]: action.payload.tokens
+      }
+    },
+    setSavedCustomThemes: (
+      state,
+      action: { payload: SavedCustomTheme[] }
+    ) => {
+      state.savedCustomThemes = action.payload
     },
     setReducedMotion: (state, action) => {
       state.prefersReducedMotion = action.payload
@@ -81,10 +107,12 @@ export const themeSlice = createSlice({
 })
 
 // Action creators are generated for each case reducer function
-export const {
-  setMonochrome,
-  setColorScheme,
-  setTheme,
+export const { 
+  setMonochrome, 
+  setColorScheme, 
+  setTheme, 
+  setCustomTheme,
+  setSavedCustomThemes,
   setReducedMotion, 
   setReducedTransparency, 
   setContrast, 

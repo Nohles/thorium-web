@@ -10,6 +10,8 @@ export * from "./StatefulSwitch";
 export * from "./hooks";
 export * from "./models";
 
+export * from "./Comic";
+
 export * from "./Spacing";
 export * from "./Text";
 export * from "./StatefulPublisherStyles";

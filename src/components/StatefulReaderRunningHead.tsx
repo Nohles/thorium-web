@@ -11,6 +11,7 @@ import { useI18n } from "@/i18n/useI18n";
 
 import { useAppSelector } from "@/lib/hooks";
 import { makeBreakpointsMap } from "@/core/Helpers/breakpointsMap";
+import { useReaderNavigation } from "./Reader/ReaderNavigationContext";
 
 export const StatefulReaderRunningHead = ({ 
   formatPref
@@ -24,6 +25,7 @@ export const StatefulReaderRunningHead = ({
   const isHovering = useAppSelector(state => state.reader.isHovering);
   const isFullscreen = useAppSelector(state => state.reader.isFullscreen);
   const breakpoint = useAppSelector(state => state.theming.containerBreakpoint);
+  const { publicationHref } = useReaderNavigation();
 
   // Get the fallback format based on isFXL
   const fallbackFormat = useMemo<ThFormatPrefValue<ThRunningHeadFormat>>(() => ({
@@ -73,6 +75,9 @@ export const StatefulReaderRunningHead = ({
     }
     return "";
   }, [displayFormat, progress]);
+  const runningHeadHref = runningHead === progress?.title
+    ? publicationHref
+    : undefined;
 
   if (!runningHead || displayFormat === ThRunningHeadFormat.none) return null;
   
@@ -80,6 +85,7 @@ export const StatefulReaderRunningHead = ({
     <>
     <ThRunningHead 
       label={ runningHead } 
+      href={ runningHeadHref }
       aria-label={ t("reader.app.header.runningHead") }
     />
     </>
