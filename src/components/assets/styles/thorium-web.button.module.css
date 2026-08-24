@@ -84,7 +84,7 @@
   padding: 0.4rem 0.65rem;
   border-radius: var(--th-layout-radius);
   border: 1px solid color-mix(in srgb, var(--th-theme-background) 22%, transparent);
-  box-shadow: 0 6px 18px color-mix(in srgb, var(--th-theme-text) 20%, transparent);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 38%);
   font-size: 0.8125rem;
   line-height: 1.25;
 }

@@ -84,7 +84,7 @@
   border: 1px solid color-mix(in srgb, var(--th-theme-text) 14%, transparent);
   border-radius: 999px;
   background: color-mix(in srgb, var(--th-theme-background) 94%, var(--th-theme-text));
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--th-theme-text) 14%, transparent);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 18%);
   fill: currentColor;
   stroke: currentColor;
   transition: background-color 160ms ease-out, box-shadow 160ms ease-out, transform 160ms ease-out;
@@ -92,7 +92,7 @@
 
 .container button[data-hovered] svg {
   background: var(--th-theme-hover);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--th-theme-text) 18%, transparent);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 26%);
   transform: scale(1.04);
 }
 
@@ -101,7 +101,7 @@
   outline: 2px solid var(--th-theme-focus);
   outline-offset: 3px;
   box-shadow:
-    0 2px 8px color-mix(in srgb, var(--th-theme-text) 14%, transparent);
+    0 2px 8px rgb(0 0 0 / 18%);
 }
 
 @media (prefers-reduced-motion: reduce) {

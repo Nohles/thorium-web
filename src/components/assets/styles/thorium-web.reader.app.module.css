@@ -75,7 +75,9 @@
 
 :global(.thorium_web_stackedUI.thorium_web_isImmersive:not(.thorium_web_isHovering)) .topBar,
 :global(.thorium_web_stackedUI.thorium_web_isImmersive:not(.thorium_web_isHovering)) .bottomBar {
-  opacity: var(--th-theme-immerse);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
 }
 
 /* Layered UI */
@@ -112,7 +114,7 @@
   right: 0;
   height: calc(var(--th-icon-size, 24px) * 2.5);
   z-index: 2;
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--th-theme-text) 8%, transparent);
+  box-shadow: none;
   overflow: hidden;
   transition-property: transform, box-shadow, opacity;
   transition-duration: 180ms;

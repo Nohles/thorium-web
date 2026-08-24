@@ -176,20 +176,21 @@ Default behavior breakpoints are 600px, 840px, 1200px, and 1600px. The chrome al
 
 ## Elevation & Depth
 
-Depth is structural, not atmospheric. In-flow bars rely first on one-pixel rules and theme-derived tonal separation. Shadows appear only when a bar or surface actually overlaps the reading plane, and their color is derived from host ink so they remain coherent in light, dark, paper, sepia, contrast, and custom themes.
+Depth is structural, not atmospheric. In-flow bars rely on one-pixel rules and theme-derived tonal separation without a shadow. Shadows appear only when a control or surface actually overlaps the reading plane, and use neutral black occlusion so dark themes never turn foreground-colored shadows into light glows.
 
 ### Shadow Vocabulary
 
-- **Layered Bar** (`0 1px 3px color-mix(in srgb, var(--th-theme-text) 8%, transparent)`): Barely separates an overlaid header or footer from the publication.
-- **Page Arrow** (`0 2px 8px color-mix(in srgb, var(--th-theme-text) 14%, transparent)`): Keeps the compact circular affordance legible over content.
-- **Popover** (`0 10px 30px color-mix(in srgb, var(--th-theme-text) 18%, transparent)`): Separates overflow menus and dropdowns.
-- **Sheet** (`0 12px 32px color-mix(in srgb, var(--th-theme-text) 20%, transparent)`): Separates larger anchored overlays.
-- **Modal** (`0 18px 48px color-mix(in srgb, var(--th-theme-text) 22%, transparent)`): The strongest elevation, reserved for centered modal dialogs.
-- **Bottom Sheet** (`0 -8px 32px color-mix(in srgb, var(--th-theme-text) 18%, transparent)`): Lifts a mobile sheet from the obscured reader below.
+- **Page Arrow** (`0 2px 8px rgb(0 0 0 / 18%)`): Keeps the compact circular affordance legible over content; hover deepens to 26%.
+- **Popover** (`0 10px 30px rgb(0 0 0 / 42%)`): Separates overflow menus and dropdowns.
+- **Sheet** (`0 12px 32px rgb(0 0 0 / 42%)`): Separates larger anchored overlays.
+- **Modal** (`0 18px 48px rgb(0 0 0 / 52%)`): The strongest elevation, reserved for centered modal dialogs.
+- **Bottom Sheet** (`0 -8px 32px rgb(0 0 0 / 56%)`): Lifts a mobile sheet from the obscured reader below.
 
 ### Named Rules
 
 **The Structural Shadow Rule.** If a surface does not overlap the publication, use a fine rule or tonal shift instead of a shadow.
+
+**The No Glow Rule.** Drop shadows use neutral black, never theme foreground colors; theme text remains available for borders, focus rings, and control outlines.
 
 ## Shapes
 

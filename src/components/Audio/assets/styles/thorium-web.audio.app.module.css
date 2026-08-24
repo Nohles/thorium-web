@@ -25,5 +25,5 @@
   background-color: color-mix(in srgb, var(--th-theme-background) 98%, var(--th-theme-text));
   color: var(--th-theme-text);
   border-bottom: 1px solid color-mix(in srgb, var(--th-theme-text) 10%, transparent);
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--th-theme-text) 7%, transparent);
+  box-shadow: none;
 }

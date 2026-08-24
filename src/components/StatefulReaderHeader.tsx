@@ -8,8 +8,6 @@ import { ThFormatPref } from "@/preferences";
 
 import readerStyles from "./assets/styles/thorium-web.reader.app.module.css";
 import readerHeaderStyles from "./assets/styles/thorium-web.reader.header.module.css";
-import overflowMenuStyles from "./Actions/assets/styles/thorium-web.overflow.module.css";
-
 import { ThHeader } from "@/core/Components/Reader/ThHeader";
 import { StatefulBackLink } from "./StatefulBackLink";
 import { StatefulReaderRunningHead } from "./StatefulReaderRunningHead";
@@ -36,7 +34,7 @@ export const StatefulReaderHeader = ({
 }) => {
   const {
     headerRef, focusWithinProps, setHover, removeHover,
-    listActionItems, isImmersive, isHovering, isScroll, t,
+    listActionItems, isImmersive, isHovering, t,
   } = useReaderHeaderBase(actionKeys);
 
   const { preferences } = usePreferences();
@@ -76,11 +74,6 @@ export const StatefulReaderHeader = ({
             prefs={{ ...preferences.actions, displayOrder: actionsOrder }}
             className={ readerHeaderStyles.actionsWrapper }
             aria-label={ t("reader.app.header.actions") }
-            overflowMenuClassName={
-              (!isScroll || preferences.affordances.scroll.hintInImmersive)
-                ? overflowMenuStyles.hint
-                : undefined
-            }
           />
         </div>
       </ThHeader>

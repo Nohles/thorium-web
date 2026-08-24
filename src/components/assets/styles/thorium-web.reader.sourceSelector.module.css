@@ -90,7 +90,7 @@
   padding: calc(var(--th-layout-spacing) / 2);
   border-radius: calc(var(--th-layout-radius) * 1.5);
   border: 1px solid color-mix(in srgb, var(--th-theme-text) 14%, transparent);
-  box-shadow: 0 10px 30px color-mix(in srgb, var(--th-theme-text) 18%, transparent);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 42%);
   box-sizing: border-box;
   min-width: var(--trigger-width);
   width: max-content;

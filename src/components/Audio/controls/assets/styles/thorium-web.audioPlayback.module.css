@@ -30,7 +30,7 @@
   border-radius: 999px;
   background: var(--th-theme-text);
   color: var(--th-theme-background);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--th-theme-text) 18%, transparent);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 30%);
 }
 
 .audioPlayPauseButton[data-hovered] {
