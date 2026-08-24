@@ -1,7 +1,10 @@
-.wrapper {}
+.wrapper {
+  color: var(--th-theme-text);
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
 
 .group {
-  margin: calc(var(--th-layout-spacing) * 2) 0; 
+  margin: calc(var(--th-layout-spacing) * 1.5) 0;
 }
 
 .advancedGroup {
@@ -16,8 +19,11 @@
 
 .label {
   display: block;
-  font-weight: bold;
-  font-size: 1rem;
+  color: var(--th-theme-text);
+  font-weight: 650;
+  font-size: 0.875rem;
+  letter-spacing: -0.006em;
+  line-height: 1.4;
   margin: 0;
 }
 
@@ -27,7 +33,7 @@
 
 .radioWrapper,
 .groupWrapper {
-  margin: var(--th-layout-spacing) 0;
+  margin: calc(var(--th-layout-spacing) * 0.75) 0;
   text-align: center;
   border-radius: var(--th-layout-radius);
 }
@@ -39,14 +45,17 @@
 .radioWrapper {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 100px), 1fr));
-  gap: calc(var(--th-layout-spacing) / 4);
+  gap: calc(var(--th-layout-spacing) / 2);
   width: 100%; 
 }
 
 .groupWrapper {
   display: flex;
   width: fit-content;
-  gap: var(--th-layout-spacing) calc(var(--th-layout-spacing) / 2);
+  gap: calc(var(--th-layout-spacing) / 2);
+  padding: 4px;
+  border: 1px solid color-mix(in srgb, var(--th-theme-text) 14%, transparent);
+  background: color-mix(in srgb, var(--th-theme-text) 5%, transparent);
 }
 
 .advancedGroup .radioWrapper {
@@ -55,6 +64,7 @@
 
 .groupWrapper[data-focus-within]:has(input[data-focus-visible]) {
   outline: 2px solid var(--th-theme-focus);
+  outline-offset: 2px;
 }
 
 .numberFieldWrapper,
@@ -86,9 +96,17 @@
 /* Number field */
 
 .numberField .input {
-  background-color: var(--th-theme-background);
+  appearance: none;
+  min-height: 32px;
+  padding: 0 calc(var(--th-layout-spacing) / 2);
+  border: 0;
+  border-radius: calc(var(--th-layout-radius) / 2);
+  outline: 0;
+  background-color: transparent;
   color: var(--th-theme-text);
-  font-weight: bold;
+  font: inherit;
+  font-weight: 600;
+  box-shadow: none;
   align-self: center;
   max-width: 20ch;
 }
@@ -98,10 +116,13 @@
 }
 
 .radio {
+  min-height: 40px;
   padding: calc(var(--th-layout-spacing) / 2);
   border-radius: var(--th-layout-radius);
   box-sizing: border-box;
-  border: 2px solid transparent;
+  border: 1px solid color-mix(in srgb, var(--th-theme-text) 12%, transparent);
+  background: color-mix(in srgb, var(--th-theme-text) 3%, transparent);
+  transition: background-color 160ms ease-out, border-color 160ms ease-out, color 160ms ease-out;
 }
 
 .radio:not(.themeRadio) {
@@ -134,7 +155,9 @@
 }
 
 .radio:not(.themeRadio)[data-selected] {
-  border: 2px solid var(--th-theme-subdue);
+  border: 1px solid color-mix(in srgb, var(--th-theme-text) 34%, transparent);
+  background: color-mix(in srgb, var(--th-theme-text) 9%, transparent);
+  font-weight: 700;
 }
 
 .radio[data-disabled] {
@@ -167,7 +190,8 @@
 }
 
 .themeRadio {
-  padding-block: calc(var(--th-layout-spacing) / 4);
+  min-height: 42px;
+  padding-block: calc(var(--th-layout-spacing) / 2);
   padding-inline: calc((var(--th-icon-size, 24px) * 5/6) + (var(--th-layout-spacing) / 4));
   position: relative;
   white-space: nowrap;
@@ -185,14 +209,19 @@
   fill: currentColor;
 }
 
+.themeRadio[data-selected] {
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+
 .customThemeEditor {
   display: grid;
   gap: var(--th-layout-spacing);
   margin: 0;
   padding: var(--th-layout-spacing);
   color: var(--th-theme-text);
-  border: 1px solid var(--th-theme-subdue);
+  border: 1px solid color-mix(in srgb, var(--th-theme-text) 14%, transparent);
   border-radius: var(--th-layout-radius);
+  background: color-mix(in srgb, var(--th-theme-text) 3%, transparent);
 }
 
 .customThemePreview {
@@ -257,7 +286,7 @@
   display: grid;
   gap: calc(var(--th-layout-spacing) / 2);
   padding-block-start: var(--th-layout-spacing);
-  border-block-start: 1px solid var(--th-theme-subdue);
+  border-block-start: 1px solid color-mix(in srgb, var(--th-theme-text) 12%, transparent);
 }
 
 .savedCustomThemes h3 {
@@ -282,8 +311,8 @@
   padding: calc(var(--th-layout-spacing) / 2);
   color: var(--th-theme-text);
   background: var(--th-theme-background);
-  border: 1px solid var(--th-theme-subdue);
-  border-radius: calc(var(--th-layout-radius) / 1.5);
+  border: 1px solid color-mix(in srgb, var(--th-theme-text) 14%, transparent);
+  border-radius: var(--th-layout-radius);
   text-align: start;
   cursor: pointer;
 }
@@ -300,6 +329,7 @@
 
 .savedCustomTheme[data-selected="true"] {
   border-color: var(--th-theme-focus);
+  background: color-mix(in srgb, var(--th-theme-text) 7%, transparent);
 }
 
 .savedCustomThemeSample {
@@ -354,7 +384,7 @@
 
 .separator {
   border: none;
-  border-top: 1px solid var(--th-theme-subdue);
+  border-top: 1px solid color-mix(in srgb, var(--th-theme-text) 12%, transparent);
 }
 
 /* Slider */
@@ -380,6 +410,9 @@
 
 .sliderOutput {
   grid-area: output;
+  color: color-mix(in srgb, var(--th-theme-text) 72%, var(--th-theme-background));
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .slider[data-disabled] .sliderLabel,
@@ -400,19 +433,20 @@
   content: "";
   display: block;
   position: absolute;
-  background: var(--th-theme-subdue);
-  height: 3px;
+  background: color-mix(in srgb, var(--th-theme-text) 24%, transparent);
+  height: 4px;
   width: 100%;
   top: 50%;
   transform: translateY(-50%);
 }
 
 .sliderThumb {
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1rem;
+  height: 1rem;
   border-radius: 50%;
   background: var(--th-theme-text);
-  border: 2px solid var(--th-theme-subdue);
+  border: 3px solid var(--th-theme-background);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--th-theme-text) 22%, transparent), 0 2px 5px rgb(0 0 0 / 28%);
   top: 50%;
 }
 
@@ -422,7 +456,7 @@
 }
 
 .sliderThumb[data-dragging] {
-  background: var(--th-theme-subdue);
+  background: color-mix(in srgb, var(--th-theme-text) 78%, var(--th-theme-background));
 }
 
 .sliderThumb[data-focus-visible] {
@@ -465,7 +499,7 @@
   padding: calc(var(--th-layout-spacing) / 2);
   border-radius: var(--th-layout-radius);
   box-sizing: border-box;
-  border: 2px solid transparent;
+  border: 1px solid color-mix(in srgb, var(--th-theme-text) 12%, transparent);
   text-align: center;
   font-variant-numeric: tabular-nums;
   background: transparent;
@@ -473,7 +507,9 @@
 }
 
 .sliderWithPresetsRadio[data-selected] {
-  border: 2px solid var(--th-theme-subdue);
+  border: 1px solid color-mix(in srgb, var(--th-theme-text) 34%, transparent);
+  background: color-mix(in srgb, var(--th-theme-text) 9%, transparent);
+  font-weight: 700;
 }
 
 .sliderWithPresetsRadio[data-hovered] {
@@ -553,18 +589,24 @@
 }
 
 .dropdownButton {
-  margin-top: var(--th-layout-spacing);
+  color: var(--th-theme-text);
+  min-height: 40px;
+  margin-top: calc(var(--th-layout-spacing) / 2);
   position: relative;
   padding-block: calc(var(--th-layout-spacing) / 2);
   padding-inline: calc(var(--th-layout-spacing) / 2) calc(var(--th-icon-size, 24px) * 6/5);
   border-radius: var(--th-layout-radius);
   box-sizing: border-box;
-  border: 1px solid var(--th-theme-subdue);
+  border: 1px solid color-mix(in srgb, var(--th-theme-text) 16%, transparent);
+  background: color-mix(in srgb, var(--th-theme-text) 4%, transparent);
+  font-size: 0.875rem;
+  transition: background-color 160ms ease-out, border-color 160ms ease-out;
   max-width: 100%;
 }
 
 .dropdownButton[data-focus-visible] {
   outline: 2px solid var(--th-theme-focus);
+  outline-offset: 2px;
 }
 
 .dropdownButton svg {
@@ -577,12 +619,12 @@
 }
 
 .dropdownPopover {
-  background-color: var(--th-theme-background);
+  background-color: color-mix(in srgb, var(--th-theme-background) 97%, var(--th-theme-text));
   color: var(--th-theme-text);
   padding: calc(var(--th-layout-spacing) / 2);
-  border-radius: var(--th-layout-radius);
-  border: 1px solid var(--th-theme-subdue);
-  filter: drop-shadow(var(--th-theme-elevate));
+  border-radius: calc(var(--th-layout-radius) * 1.5);
+  border: 1px solid color-mix(in srgb, var(--th-theme-text) 14%, transparent);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 42%);
   box-sizing: border-box;
   width: max-content;
   overflow-y: auto;
@@ -597,13 +639,15 @@
 }
 
 .dropdownListboxItem {
-  padding: calc(var(--th-layout-spacing) / 4);
+  min-height: 36px;
+  padding: calc(var(--th-layout-spacing) / 2);
   border-radius: var(--th-layout-radius);
   outline: none;
 }
 
 .dropdownListboxItem[data-selected] {
-  color: var(--th-theme-subdue);
+  background: color-mix(in srgb, var(--th-theme-text) 8%, transparent);
+  color: var(--th-theme-text);
 }
 
 .dropdownListboxItem[data-hovered] {
@@ -613,6 +657,7 @@
 
 .dropdownListboxItem[data-focus-visible] {
   outline: 2px solid var(--th-theme-focus);
+  outline-offset: 1px;
 }
 
 .dropdownListboxItem[data-disabled] {
@@ -630,33 +675,39 @@
 }
 
 .switchIndicator {
-  width: 2rem;
-  height: 1.143rem;
-  border: 2px solid var(--th-theme-subdue);
-  background: var(--th-theme-background);
-  border-radius: 1.143rem;
-  transition: all 200ms;
+  width: 2.25rem;
+  height: 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--th-theme-text) 24%, transparent);
+  background: color-mix(in srgb, var(--th-theme-text) 8%, transparent);
+  border-radius: 999px;
+  transition: background-color 180ms ease-out, border-color 180ms ease-out;
   flex-shrink: 0;
 }
 
 .switchIndicator::before {
   content: "";
   display: block;
-  margin: 0.143rem;
-  width: 0.857rem;
-  height: 0.857rem;
-  background: var(--th-theme-subdue);
-  border-radius: 16px;
-  transition: all 200ms;
+  margin: 0.125rem;
+  width: 0.875rem;
+  height: 0.875rem;
+  background: color-mix(in srgb, var(--th-theme-text) 56%, var(--th-theme-background));
+  border-radius: 999px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 32%);
+  transition: background-color 180ms ease-out, transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .switch[data-selected] .switchIndicator::before {
-  background: var(--th-theme-text);
+  background: var(--th-theme-background);
   transform: translateX(100%);
 }
 
-:dir(rtl) .switch[data-selected] .switchIndicator::before {
+.switch[data-selected] .switchIndicator {
+  border-color: var(--th-theme-text);
   background: var(--th-theme-text);
+}
+
+:dir(rtl) .switch[data-selected] .switchIndicator::before {
+  background: var(--th-theme-background);
   transform: translateX(-100%);
 }
 
@@ -670,4 +721,13 @@
 
 .switch[data-disabled] .switchIndicator::before {
   background: var(--th-theme-disable) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .radio,
+  .dropdownButton,
+  .switchIndicator,
+  .switchIndicator::before {
+    transition: none;
+  }
 }

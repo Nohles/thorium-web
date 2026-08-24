@@ -27,16 +27,19 @@
 
 .container button {
   width: var(--th-arrow-size, 40px);
-  /* height: var(--th-arrow-size, 40px); */
   height: 40vh;
   height: 40dvh;
-  border-radius: var(--th-layout-radius);
   pointer-events: auto;
   box-sizing: border-box;
-  padding: 5px;
-
-  background-color: var(--th-theme-background);
-  border: 1px solid var(--th-theme-text);
+  display: grid;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--th-theme-text);
+  opacity: 0.62;
+  transition: opacity 160ms ease-out;
 }
 
 .container .occupiesSpace {
@@ -50,15 +53,15 @@
 
 .container button[data-hovered] {
   opacity: 1;
-  transition: all 200ms;
 }
 
 .container .visuallyHidden {
   opacity: 0;
 }
 
-.container button[data-focused] {
-  outline: 2px solid var(--th-theme-focus);
+.container button[data-focused],
+.container button[data-focus-visible] {
+  outline: none;
   opacity: 1;
 }
 
@@ -70,13 +73,56 @@
 @media (hover: hover) and (pointer: fine) {
   .container button:not([data-disabled])[data-hovered] {
     opacity: 1;
-    transition: all 200ms;
   }
 }
 
 .container button svg {
-  fill: var(--th-theme-text);
-  stroke: var(--th-theme-text);
-  width: 100%;
-  height: 100%;
+  box-sizing: content-box;
+  width: calc(var(--th-icon-size, 24px) * 0.8);
+  height: calc(var(--th-icon-size, 24px) * 0.8);
+  padding: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--th-theme-text) 14%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--th-theme-background) 94%, var(--th-theme-text));
+  box-shadow: 0 2px 8px rgb(0 0 0 / 18%);
+  fill: currentColor;
+  stroke: currentColor;
+  transition: background-color 160ms ease-out, box-shadow 160ms ease-out, transform 160ms ease-out;
+}
+
+.container button[data-hovered] svg {
+  background: var(--th-theme-hover);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 26%);
+  transform: scale(1.04);
+}
+
+.container button[data-focused] svg,
+.container button[data-focus-visible] svg {
+  outline: 2px solid var(--th-theme-focus);
+  outline-offset: 3px;
+  box-shadow:
+    0 2px 8px rgb(0 0 0 / 18%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .container button,
+  .container button svg {
+    transition: none;
+  }
+}
+
+@media (max-width: 40rem) {
+  .leftContainer button {
+    margin-left: max(var(--th-arrow-offset, 0), 4px);
+  }
+
+  .rightContainer button {
+    margin-right: max(var(--th-arrow-offset, 0), 4px);
+  }
+
+  .container button svg {
+    width: calc(var(--th-icon-size, 24px) * 0.72);
+    height: calc(var(--th-icon-size, 24px) * 0.72);
+    padding: 0.45rem;
+  }
 }

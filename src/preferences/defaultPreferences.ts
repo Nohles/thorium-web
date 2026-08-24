@@ -188,8 +188,8 @@ export const defaultPreferences: ThPreferences<DefaultKeys> = createPreferences<
         fxl: ThLayoutUI.layered,
         webPub: ThLayoutUI.stacked,
       },
-      radius: 5, // border-radius of containers
-      spacing: 20, // padding of containers/sheets
+      radius: 8, // border-radius of containers
+      spacing: 16, // padding of containers/sheets
       defaults: {
         dockingWidth: 340, // default width of resizable panels
         scrim: "rgba(0, 0, 0, 0.2)" // default scrim/underlay bg-color
