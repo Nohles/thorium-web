@@ -95,7 +95,8 @@ export const defaultComicSettings: ComicSettings = {
   autoScrollSmooth: true,
   readingModePreview: true,
   tapZonePreview: false,
-  imagePreloadAmount: 5,
+  /** Current page plus N neighbors in the scroll direction. Webtoon pages can be very tall, so this stays small by default. */
+  imagePreloadAmount: 1,
   comicChapterBoundaries: true,
 };
 

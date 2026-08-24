@@ -53,7 +53,7 @@ export const createDefaultPlugin = (): ThPlugin => {
     id: "core",
     name: "Core Components",
     description: "Default components for Thorium Web Epub StatefulReader",
-    version: "1.5.19",
+    version: "1.5.21",
     components: {
       actions: {
         [ThActionsKeys.fullscreen]: {

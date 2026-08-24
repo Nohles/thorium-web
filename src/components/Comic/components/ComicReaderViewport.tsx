@@ -31,11 +31,22 @@ import {
 } from "@/components/Comic/lib/comicReaderLayout";
 import { ComicPage } from "../hooks/useComicReaderController";
 import { ComicPageLoadState } from "../lib/comicProgress";
+import {
+  acquireComicImageMount,
+  recordComicImageDecode,
+  recordComicImageFetch,
+  recordComicImageRetry,
+  releaseComicImageMount,
+} from "../lib/comicReaderTelemetry";
 
-const MAX_CONCURRENT_COMIC_IMAGE_READS = 5;
+/** Webtoon pages can be extremely large once decoded; keep concurrent reads low. */
+const MAX_CONCURRENT_COMIC_IMAGE_READS = 3;
 /** Keep encoded blob data bounded for publications that cannot use direct HTTP URLs. */
 const MAX_COMIC_IMAGE_BLOB_CACHE = 12;
 const COMIC_IMAGE_LOAD_TIMEOUT_MS = 15_000;
+/** Automatic retries for transient network failures and 5xx; auth errors surface immediately. */
+const COMIC_IMAGE_RETRY_LIMIT = 2;
+const COMIC_IMAGE_RETRY_BASE_DELAY_MS = 400;
 
 type QueuedImageRead = {
   priority: number;
@@ -46,6 +57,7 @@ type QueuedImageRead = {
 
 const comicImageBlobCache = new WeakMap<Publication, Map<string, Blob>>();
 const comicImageAspectRatioCache = new WeakMap<Publication, Map<string, number>>();
+const comicImageInFlightReads = new WeakMap<Publication, Map<string, Promise<Blob>>>();
 const comicImageReadQueue: QueuedImageRead[] = [];
 let activeComicImageReads = 0;
 let comicImageReadDrainScheduled = false;
@@ -118,6 +130,59 @@ const touchComicImageBlobCache = (cache: Map<string, Blob>, href: string, value:
   }
 };
 
+const isAbortError = (error: unknown): boolean =>
+  error instanceof DOMException && error.name === "AbortError";
+
+const isRetryableComicImageError = (error: unknown): boolean => {
+  if (isAbortError(error)) return false;
+  if (error instanceof TypeError) return true;
+  if (error instanceof Error) {
+    const match = /Failed to load image \((\d{3})\)/.exec(error.message);
+    const status = match ? Number(match[1]) : undefined;
+    return status !== undefined && (status >= 500 || status === 429);
+  }
+  return false;
+};
+
+const delayComicImageRetry = (ms: number, signal: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException("Image read cancelled.", "AbortError"));
+      return;
+    }
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const handleAbort = () => {
+      if (timeoutId !== undefined) clearTimeout(timeoutId);
+      reject(new DOMException("Image read cancelled.", "AbortError"));
+    };
+    timeoutId = setTimeout(() => {
+      signal.removeEventListener("abort", handleAbort);
+      resolve();
+    }, ms);
+    signal.addEventListener("abort", handleAbort, { once: true });
+  });
+
+const readComicImageBytesWithRetries = async (
+  publication: Publication,
+  link: Link,
+  signal: AbortSignal
+): Promise<Uint8Array> => {
+  let attempt = 0;
+  for (;;) {
+    try {
+      const bytes = await publication.get(link).read();
+      if (!bytes) throw new Error("Failed to load image bytes.");
+      return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+    } catch (error) {
+      if (signal.aborted || isAbortError(error)) throw error;
+      attempt += 1;
+      if (attempt > COMIC_IMAGE_RETRY_LIMIT || !isRetryableComicImageError(error)) throw error;
+      recordComicImageRetry(link.href, `publication.read retry ${attempt}`);
+      await delayComicImageRetry(COMIC_IMAGE_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1), signal);
+    }
+  }
+};
+
 const getComicImageBlob = async (
   publication: Publication,
   link: Link,
@@ -135,15 +200,33 @@ const getComicImageBlob = async (
     return cached;
   }
 
-  const bytes = await publication.get(link).read();
-  if (!bytes) {
-    throw new Error("Failed to load image bytes.");
+  let inFlight = comicImageInFlightReads.get(publication);
+  if (!inFlight) {
+    inFlight = new Map();
+    comicImageInFlightReads.set(publication, inFlight);
   }
-  if (signal.aborted) throw new DOMException("Image read cancelled.", "AbortError");
-  const byteArray = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-  const blob = new Blob([new Uint8Array(byteArray)], { type: link.type || "image/jpeg" });
+  const pending = inFlight.get(link.href);
+  if (pending) {
+    const blob = await pending;
+    if (signal.aborted) throw new DOMException("Image read cancelled.", "AbortError");
+    return blob;
+  }
 
-  if (!signal.aborted) touchComicImageBlobCache(publicationCache, link.href, blob);
+  const readPromise = (async () => {
+    try {
+      const byteArray = await readComicImageBytesWithRetries(publication, link, signal);
+      const blob = new Blob([new Uint8Array(byteArray)], { type: link.type || "image/jpeg" });
+      touchComicImageBlobCache(publicationCache!, link.href, blob);
+      return blob;
+    } finally {
+      const current = comicImageInFlightReads.get(publication);
+      current?.delete(link.href);
+    }
+  })();
+  inFlight.set(link.href, readPromise);
+
+  const blob = await readPromise;
+  if (signal.aborted) throw new DOMException("Image read cancelled.", "AbortError");
   return blob;
 };
 
@@ -221,11 +304,6 @@ const isHttpUrl = (href: string | undefined): href is string => {
   }
 };
 
-const isSameOriginHttpUrl = (href: string): boolean => {
-  if (!isHttpUrl(href) || typeof window === "undefined") return false;
-  return new URL(href).origin === window.location.origin;
-};
-
 const withComicImageTimeout = <T,>(
   operation: () => Promise<T>,
   abortController: AbortController
@@ -281,33 +359,30 @@ const useObjectUrl = (
         return;
       }
       if (!shouldLoad) {
+        // Outside the directional load window: release the mounted source so
+        // its decoded bitmap can be reclaimed. The measured aspect ratio is
+        // retained, so scroll geometry stays stable if the page re-enters.
         setIsLoading(false);
+        setObjectUrl(null);
         return;
       }
 
-      // Cross-origin images may not allow fetch(), so retain the direct DOM path
-      // for them. Reader-server assets are same-origin and use the queued blob path.
-      if (isHttpUrl(currentLink.href) && !isSameOriginHttpUrl(currentLink.href)) {
+      // HTTP(S) resources go straight to <img>: native loading/prioritization,
+      // no intermediate Blob copies, no manual object-URL lifetime. Only
+      // resources requiring Publication.read() use the queued blob path below.
+      if (isHttpUrl(currentLink.href)) {
         setIsLoading(false);
         setObjectUrl(currentLink.href);
         return;
       }
 
       setIsLoading(true);
+      const startedAt = performance.now();
       try {
         const sourceUrl = await enqueueComicImageRead(
           () =>
             withComicImageTimeout(async () => {
-              const blob = isHttpUrl(currentLink.href)
-                ? await fetch(currentLink.href, { signal: abortController.signal }).then(
-                    async (response) => {
-                      if (!response.ok) {
-                        throw new Error(`Failed to load image (${response.status}).`);
-                      }
-                      return response.blob();
-                    }
-                  )
-                : await getComicImageBlob(publication, currentLink, abortController.signal);
+              const blob = await getComicImageBlob(publication, currentLink, abortController.signal);
               if (abortController.signal.aborted) {
                 throw new DOMException("Image read cancelled.", "AbortError");
               }
@@ -319,9 +394,16 @@ const useObjectUrl = (
         );
         if (cancelled) return;
         handedOffObjectUrl = true;
+        recordComicImageFetch(performance.now() - startedAt, true, currentLink.href);
         setObjectUrl(sourceUrl);
       } catch (e) {
         const wasAborted = e instanceof DOMException && e.name === "AbortError";
+        recordComicImageFetch(
+          performance.now() - startedAt,
+          false,
+          currentLink.href,
+          e instanceof Error ? e.message : String(e)
+        );
         if (!cancelled && !wasAborted) {
           setObjectUrl(null);
           setError(e instanceof Error ? e.message : "Failed to load image.");
@@ -345,6 +427,14 @@ const useObjectUrl = (
     },
     [objectUrl]
   );
+
+  useEffect(() => {
+    if (!objectUrl) return;
+    acquireComicImageMount(href);
+    return () => {
+      releaseComicImageMount();
+    };
+  }, [href, objectUrl]);
 
   return { objectUrl, error, isLoading };
 };
@@ -548,6 +638,20 @@ const ComicImage = memo(function ComicImage({
     setImageError(null);
   }, [link.href, reloadKey]);
 
+  // When a page leaves the load window its src is released; drop ready/stretch
+  // state so the placeholder (with the retained aspect ratio) takes over again.
+  useEffect(() => {
+    if (!objectUrl) {
+      shouldStretchRef.current = false;
+      setIsImageReady(false);
+    }
+  }, [objectUrl]);
+
+  const decodeStartRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    decodeStartRef.current = objectUrl ? performance.now() : undefined;
+  }, [objectUrl]);
+
   useEffect(() => {
     setAspectRatio(getComicImageAspectRatio(publication, link));
   }, [link, publication]);
@@ -587,6 +691,10 @@ const ComicImage = memo(function ComicImage({
         rememberComicImageAspectRatio(publication, link, nextAspectRatio);
         setAspectRatio(nextAspectRatio);
       }
+      if (decodeStartRef.current !== undefined) {
+        recordComicImageDecode(performance.now() - decodeStartRef.current, link.href);
+        decodeStartRef.current = undefined;
+      }
       shouldStretchRef.current = stretch;
       setIsImageReady(true);
     },
@@ -614,8 +722,8 @@ const ComicImage = memo(function ComicImage({
   );
 
   const placeholderStyle = useMemo(
-    () => getImagePlaceholderStyling(scaleType, shouldStretch, layoutMode),
-    [scaleType, shouldStretch, layoutMode]
+    () => getImagePlaceholderStyling(scaleType, shouldStretch, layoutMode, aspectRatio),
+    [aspectRatio, scaleType, shouldStretch, layoutMode]
   );
 
   const loadState = useMemo<ComicPageLoadState>(() => {

@@ -20,7 +20,7 @@
   "bugs": {
     "url": "https://github.com/nohles/thorium-web/issues"
   },
-  "version": "1.5.19",
+  "version": "1.5.21",
   "packageManager": "pnpm@11.1.0",
   "private": false,
   "publishConfig": {

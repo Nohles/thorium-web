@@ -109,6 +109,10 @@ const getChapterImages = (
         href,
         type: link.type,
         title: link.title || `${chapter.title} - Page ${pageIndexInChapter + 1}`,
+        // Preserve probed pixel dimensions so placeholders can reserve the
+        // eventual page height without decoding the image first.
+        ...(link.width && link.width > 0 ? { width: link.width } : null),
+        ...(link.height && link.height > 0 ? { height: link.height } : null),
       });
       const index = startIndex + pageIndexInChapter;
       return {
