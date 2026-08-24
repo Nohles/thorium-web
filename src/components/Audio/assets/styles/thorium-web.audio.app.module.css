@@ -20,8 +20,10 @@
   flex: 0 0 calc(var(--th-icon-size, 24px) * 2.5);
   height: calc(var(--th-icon-size, 24px) * 2.5);
   box-sizing: border-box;
-  gap: 2px;
+  gap: 4px;
   touch-action: manipulation;
-  background-color: var(--th-theme-background);
+  background-color: color-mix(in srgb, var(--th-theme-background) 98%, var(--th-theme-text));
   color: var(--th-theme-text);
+  border-bottom: 1px solid color-mix(in srgb, var(--th-theme-text) 10%, transparent);
+  box-shadow: none;
 }

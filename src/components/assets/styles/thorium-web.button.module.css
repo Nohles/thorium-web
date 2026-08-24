@@ -3,11 +3,17 @@
 .closeButton,
 .backButton {
   box-sizing: border-box;
+  appearance: none;
+  border: 0;
+  background: transparent;
   padding: calc(var(--th-icon-size, 24px) * (1/4));
   text-align: center;
   border-radius: var(--th-layout-radius);
   line-height: 0;
   color: var(--th-theme-text);
+  cursor: pointer;
+  font: inherit;
+  transition: background-color 160ms ease-out, color 160ms ease-out, opacity 160ms ease-out;
 }
 
 .backButton {
@@ -28,8 +34,8 @@
 .closeButton svg,
 .backButton svg {
   fill: currentColor;
-  width: var(--th-icon-size, 24px);
-  height: var(--th-icon-size, 24px);
+  width: calc(var(--th-icon-size, 24px) * 0.8);
+  height: calc(var(--th-icon-size, 24px) * 0.8);
 }
 
 .icon[data-hovered],
@@ -45,10 +51,28 @@
 .closeButton[data-focus-visible],
 .backButton[data-focus-visible] {
   outline: 2px solid var(--th-theme-focus);
+  outline-offset: 2px;
+}
+
+.icon[data-pressed],
+.dockerButton[data-pressed],
+.closeButton[data-pressed],
+.backButton[data-pressed] {
+  background-color: color-mix(in srgb, var(--th-theme-hover) 78%, var(--th-theme-text));
 }
 
 .backButton[data-disabled] {
-  color: var(--th-theme-disable)
+  color: var(--th-theme-disable);
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icon,
+  .dockerButton,
+  .closeButton,
+  .backButton {
+    transition: none;
+  }
 }
 
 .tooltip {
@@ -57,14 +81,18 @@
   gap: 0.5em;
   background-color: var(--th-theme-text);
   color: var(--th-theme-background);
-  padding: 5px 10px;
+  padding: 0.4rem 0.65rem;
   border-radius: var(--th-layout-radius);
+  border: 1px solid color-mix(in srgb, var(--th-theme-background) 22%, transparent);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 38%);
+  font-size: 0.8125rem;
+  line-height: 1.25;
 }
 
 .tooltipShortcut {
   font-family: monospace;
   font-weight: bold;
-  padding: 5px;
+  padding: 0.2rem 0.35rem;
   border-radius: var(--th-layout-radius);
   border: 1px solid currentColor;
 }

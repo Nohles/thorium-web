@@ -15,8 +15,8 @@
   width: auto;
   max-width: 100%;
   object-fit: contain;
-  border-radius: var(--th-layout-radius);
-  filter: drop-shadow(var(--th-theme-elevate));
+  border-radius: calc(var(--th-layout-radius) * 1.5);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 32%);
 }
 
 .audioCoverPlaceholder {
@@ -30,9 +30,9 @@
   align-items: center;
   justify-content: center;
   background-color: var(--th-theme-background);
-  border-radius: var(--th-layout-radius);
-  border: 1px solid var(--th-theme-subdue);
-  filter: drop-shadow(var(--th-theme-elevate));
+  border-radius: calc(var(--th-layout-radius) * 1.5);
+  border: 1px solid color-mix(in srgb, var(--th-theme-text) 14%, transparent);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 32%);
 }
 
 .audioCoverPlaceholder svg {
@@ -53,7 +53,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--th-layout-radius);
+  border-radius: calc(var(--th-layout-radius) * 1.5);
   background-color: color-mix(in srgb, var(--th-theme-background) 60%, transparent);
 }
 
@@ -67,4 +67,10 @@
 @keyframes audioCoverSpin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .audioCoverSyncIcon {
+    animation: none;
+  }
 }
