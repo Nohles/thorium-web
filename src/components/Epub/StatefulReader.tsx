@@ -65,6 +65,7 @@ import { usePaginatedArrows } from "@/hooks/usePaginatedArrows";
 import { useFonts } from "@/core/Hooks/fonts/useFonts";
 import { useZoomCallbacks } from "@/components/Settings/hooks/useZoomCallbacks";
 import { useFocusedDockableKey } from "../Docking/hooks/useFocusedDockableKey";
+import { resolveInitialPosition } from "./helpers/resolveInitialPosition";
 
 import { useAppSelector, useAppDispatch } from "@/lib/hooks";
 
@@ -593,13 +594,9 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     },
   }), [navLayout, setLocalData, dispatch, handleTap, handleClick, cache, preferences.affordances.scroll, isScrollStart, isScrollEnd, updatePublicationNavigationState, moveTo, goProgression, zoomIn, zoomOut, profile, handleFullscreen, getFocusedDockableKey, currentLocator, getCframes, updateAdjacentItems, clearAdjacentItems, updateCurrentTocEntry, clearCurrentTocEntry]);
   
-  // getLocalData() returns a plain JSON.parse()'d object on cold load (not yet a real
-  // Locator instance) — EpubNavigator calls Timeline.locate() on this at startup, which
-  // needs real prototype methods (.time(), etc.), so deserialize it here at the point of use.
   const initialPosition = useMemo(() => {
-    const stored = getLocalData();
-    return stored ? (Locator.deserialize(stored) ?? null) : null;
-  }, [getLocalData]);
+    return resolveInitialPosition(getLocalData(), positionsList);
+  }, [getLocalData, positionsList]);
 
   // Initialize reader using the new composite hook
   const { navigatorReady, navigatorError } = useEpubReaderInit({
