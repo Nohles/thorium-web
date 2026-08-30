@@ -25,6 +25,7 @@ import {
   contrast3Theme,
   customTheme,
   defaultSettingsAction,
+  defaultDictionaryAction,
   defaultFullscreenAction,
   defaultSearchAction,
   defaultTocAction,
@@ -295,6 +296,7 @@ export const defaultPreferences: ThPreferences<DefaultKeys> = createPreferences<
     reflowOrder: [
       ThActionsKeys.settings,
       ThActionsKeys.toc,
+      ThActionsKeys.dictionary,
       ThActionsKeys.search,
       ThActionsKeys.fullscreen,
       ThActionsKeys.jumpToPosition
@@ -302,6 +304,7 @@ export const defaultPreferences: ThPreferences<DefaultKeys> = createPreferences<
     fxlOrder: [
       ThActionsKeys.settings,
       ThActionsKeys.toc,
+      ThActionsKeys.dictionary,
       ThActionsKeys.search,
       ThActionsKeys.fullscreen,
       ThActionsKeys.jumpToPosition
@@ -309,6 +312,7 @@ export const defaultPreferences: ThPreferences<DefaultKeys> = createPreferences<
     webPubOrder: [
       ThActionsKeys.settings,
       ThActionsKeys.toc,
+      ThActionsKeys.dictionary,
       ThActionsKeys.search,
       ThActionsKeys.fullscreen
     ],
@@ -318,6 +322,7 @@ export const defaultPreferences: ThPreferences<DefaultKeys> = createPreferences<
       [ThActionsKeys.fullscreen]: defaultFullscreenAction,
       [ThActionsKeys.search]: defaultSearchAction,
       [ThActionsKeys.toc]: defaultTocAction,
+      [ThActionsKeys.dictionary]: defaultDictionaryAction,
       [ThActionsKeys.jumpToPosition]: defaultJumpToPositionAction,
     }
   },

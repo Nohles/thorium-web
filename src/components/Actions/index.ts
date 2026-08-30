@@ -3,6 +3,7 @@
 export * from "./hooks";
 export * from "./models";
 
+export * from "./Dictionary";
 export * from "./Fullscreen";
 export * from "./JumpToPosition";
 export * from "./Settings";

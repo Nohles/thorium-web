@@ -352,6 +352,10 @@
                 "title": "No table of contents"
             },
             "title": "Table of contents"
+        },
+        "dictionary": {
+            "title": "Dictionary",
+            "heading": "Dictionary"
         }
     }
 }

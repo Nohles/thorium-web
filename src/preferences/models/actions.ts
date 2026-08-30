@@ -65,6 +65,7 @@ export interface ThDockingPref<T extends string> {
 };
 
 export enum ThActionsKeys {
+  dictionary = "dictionary",
   fullscreen = "fullscreen",
   jumpToPosition = "jumpToPosition",
   search = "search",
@@ -132,6 +133,28 @@ export const defaultSettingsAction: ThActionsTokens = {
 export const defaultFullscreenAction: ThActionsTokens = {
   visibility: ThCollapsibilityVisibility.partially,
   shortcut: null
+}
+
+export const defaultDictionaryAction: ThActionsTokens = {
+  visibility: ThCollapsibilityVisibility.partially,
+  shortcut: {
+    label: "D",
+    keyCombos: [{ keyCode: 68, shift: true, alt: true, suppressOnInteractiveElement: TEXT_INPUT_SELECTORS }]
+  },
+  sheet: {
+    defaultSheet: ThSheetTypes.popover,
+    breakpoints: {
+      [ThBreakpoints.compact]: ThSheetTypes.fullscreen,
+      [ThBreakpoints.medium]: ThSheetTypes.fullscreen
+    }
+  },
+  docked: {
+    dockable: ThDockingTypes.both,
+    dragIndicator: false,
+    width: 390,
+    minWidth: 320,
+    maxWidth: 450
+  }
 }
 
 export const defaultTocAction: ThActionsTokens = {

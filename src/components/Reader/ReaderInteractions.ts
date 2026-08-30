@@ -723,10 +723,59 @@ const quoteTolerance = (decorations: readonly ReaderDecorationInput[]): number =
 };
 
 /**
+ * Per-frame record of what was last synced, keyed by the frame's comms
+ * channel. Lets repeated pushes diff instead of clear+re-adding everything,
+ * which visibly flashes the highlights.
+ */
+interface DecorationFrameSync {
+  /** Decoration payload signature currently applied, by decoration id. */
+  applied: Map<string, string>;
+  /** False once a sync fails; the next push falls back to a full resync. */
+  clean: boolean;
+}
+
+const frameSyncStates = new WeakMap<object, DecorationFrameSync>();
+
+const toDecorationPayload = (decoration: ReaderDecorationInput) => {
+  const resolvedLocator = locatorFromUnknown(decoration.locator);
+  const serializedLocator = resolvedLocator?.serialize();
+  const sourceLocator =
+    typeof serializedLocator === "object" && serializedLocator !== null
+      ? (serializedLocator as Record<string, unknown>)
+      : typeof decoration.locator === "object" && decoration.locator !== null
+        ? (decoration.locator as Record<string, unknown>)
+        : {};
+  return {
+    group: DECORATION_GROUP,
+    action: "add" as const,
+    decoration: {
+      id: decoration.id,
+      // Locator.deserialize requires href and type; older mentions may be
+      // missing type, so default it rather than dropping the decoration.
+      locator: {
+        ...sourceLocator,
+        type: sourceLocator.type ?? "application/xhtml+xml",
+      },
+      extras: decoration.extras,
+      style: {
+        type: decoration.style?.type,
+        tint: decoration.style?.tint ?? "rgba(44, 157, 124, 0.32)",
+        layout: decoration.style?.layout ?? "boxes",
+        width: decoration.style?.width ?? "wrap",
+      },
+    },
+  };
+};
+
+/**
  * Pushes decorations into every live frame and waits for the frame-side
  * Decorator module to acknowledge each request. Returns true only when every
  * request was acked — callers can retry otherwise, since early messages can
  * be lost while a frame's comms channel is still coming up.
+ *
+ * Frames are synced incrementally: only decorations that were added, changed
+ * or removed since the last acknowledged push are sent, so identical pushes
+ * are cheap no-ops and genuine changes never flash.
  */
 export function pushDecorationsToFrames(
   navigator: unknown,
@@ -734,36 +783,7 @@ export function pushDecorationsToFrames(
 ): Promise<boolean> {
   const targets = decorationFrameTargetsFromNavigator(navigator);
   if (!targets || targets.length === 0) return Promise.resolve(false);
-  const payload = decorations.map((decoration) => {
-    const resolvedLocator = locatorFromUnknown(decoration.locator);
-    const serializedLocator = resolvedLocator?.serialize();
-    const sourceLocator =
-      typeof serializedLocator === "object" && serializedLocator !== null
-        ? (serializedLocator as Record<string, unknown>)
-        : typeof decoration.locator === "object" && decoration.locator !== null
-          ? (decoration.locator as Record<string, unknown>)
-          : {};
-    return {
-      group: DECORATION_GROUP,
-      action: "add" as const,
-      decoration: {
-        id: decoration.id,
-        // Locator.deserialize requires href and type; older mentions may be
-        // missing type, so default it rather than dropping the decoration.
-        locator: {
-          ...sourceLocator,
-          type: sourceLocator.type ?? "application/xhtml+xml",
-        },
-        extras: decoration.extras,
-        style: {
-          type: decoration.style?.type,
-          tint: decoration.style?.tint ?? "rgba(44, 157, 124, 0.32)",
-          layout: decoration.style?.layout ?? "boxes",
-          width: decoration.style?.width ?? "wrap",
-        },
-      },
-    };
-  });
+  const payload = decorations.map(toDecorationPayload);
 
   type Acked = { ok: boolean };
   const acked: Acked[] = [];
@@ -776,8 +796,14 @@ export function pushDecorationsToFrames(
     };
   };
 
+  const synced: { state: DecorationFrameSync; desired: Map<string, string> }[] =
+    [];
+  let reachableTargets = 0;
+
   for (const target of targets) {
     if (!target.msg) continue;
+    reachableTargets += 1;
+    const msg = target.msg;
     const matching =
       target.href === null
         ? payload
@@ -787,22 +813,78 @@ export function pushDecorationsToFrames(
               target.href as string,
             ),
           );
-    target.msg.send(
-      "decorate",
-      { group: DECORATION_GROUP, action: "clear", decoration: undefined },
-      track(),
-    );
+
+    const desired = new Map<string, string>();
     for (const item of matching) {
-      target.msg.send("decorate", item, track());
+      desired.set(
+        (item.decoration as { id: string }).id,
+        JSON.stringify(item.decoration),
+      );
     }
+
+    let state = frameSyncStates.get(msg);
+    if (!state) {
+      state = { applied: new Map(), clean: true };
+      frameSyncStates.set(msg, state);
+    }
+
+    if (!state.clean) {
+      // Frame state is unknown (a previous sync failed): full resync.
+      msg.send(
+        "decorate",
+        { group: DECORATION_GROUP, action: "clear", decoration: undefined },
+        track(),
+      );
+      for (const item of matching) {
+        msg.send("decorate", item, track());
+      }
+    } else {
+      for (const id of state.applied.keys()) {
+        if (!desired.has(id)) {
+          msg.send(
+            "decorate",
+            {
+              group: DECORATION_GROUP,
+              action: "remove",
+              decoration: { id },
+            },
+            track(),
+          );
+        }
+      }
+      for (const item of matching) {
+        const id = (item.decoration as { id: string }).id;
+        const signature = desired.get(id)!;
+        if (state.applied.get(id) === signature) continue;
+        const action = state.applied.has(id) ? "update" : "add";
+        msg.send("decorate", { ...item, action }, track());
+      }
+    }
+
+    synced.push({ state, desired });
+  }
+
+  if (reachableTargets === 0) return Promise.resolve(false);
+  if (acked.length === 0) {
+    // Live frames already match the desired state exactly.
+    for (const { state, desired } of synced) {
+      state.applied = desired;
+      state.clean = true;
+    }
+    return Promise.resolve(true);
   }
 
   return new Promise((resolve) => {
     const started = Date.now();
     const check = () => {
-      if (acked.length > 0 && acked.every((a) => a.ok)) {
+      if (acked.every((a) => a.ok)) {
+        for (const { state, desired } of synced) {
+          state.applied = desired;
+          state.clean = true;
+        }
         resolve(true);
       } else if (Date.now() - started > 2000) {
+        for (const { state } of synced) state.clean = false;
         resolve(false);
       } else {
         setTimeout(check, 120);
