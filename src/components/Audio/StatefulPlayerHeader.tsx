@@ -9,6 +9,7 @@ import { StatefulCollapsibleActionsBar } from "../Actions/StatefulCollapsibleAct
 
 import { useReaderHeaderBase } from "../hooks/useReaderHeaderBase";
 import { useAudioPreferences } from "@/preferences/hooks/useAudioPreferences";
+import { useReaderNavigation } from "../Reader/ReaderNavigationContext";
 
 import classNames from "classnames";
 
@@ -24,6 +25,7 @@ export const StatefulPlayerHeader = ({
   } = useReaderHeaderBase(actionKeys);
 
   const { preferences } = useAudioPreferences();
+  const { headerActions } = useReaderNavigation();
 
   return (
     <>
@@ -33,14 +35,21 @@ export const StatefulPlayerHeader = ({
       >
         { preferences.theming.header?.backLink && <StatefulBackLink className={ readerHeaderStyles.backlinkWrapper } /> }
 
-        <StatefulCollapsibleActionsBar
-          id="reader-header-overflowMenu"
-          items={ listActionItems() }
-          prefs={{ ...preferences.actions.secondary, displayOrder: actionsOrder }}
-          className={ readerHeaderStyles.actionsWrapper }
-          aria-label={ t("reader.app.header.actions") }
-          overflowMenuClassName={ overflowMenuStyles.hint }
-        />
+        <div className={ readerHeaderStyles.headerActionsArea }>
+          { headerActions ? (
+            <div className={ readerHeaderStyles.headerActions }>
+              { headerActions }
+            </div>
+          ) : null }
+          <StatefulCollapsibleActionsBar
+            id="reader-header-overflowMenu"
+            items={ listActionItems() }
+            prefs={{ ...preferences.actions.secondary, displayOrder: actionsOrder }}
+            className={ readerHeaderStyles.actionsWrapper }
+            aria-label={ t("reader.app.header.actions") }
+            overflowMenuClassName={ overflowMenuStyles.hint }
+          />
+        </div>
       </div>
     </>
   );
