@@ -13,7 +13,7 @@ import { useI18n } from "@/i18n/useI18n";
 import { useNavigator } from "@/core/Navigator";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { setActionOpen } from "@/lib/actionsReducer";
-import { setImmersive, setUserNavigated } from "@/lib/readerReducer";
+import { setImmersive, setPendingSearchQuery, setUserNavigated } from "@/lib/readerReducer";
 import { usePublicationSearch } from "./usePublicationSearch";
 
 const resultKey = (locator: Locator, index: number) =>
@@ -31,12 +31,19 @@ export const StatefulSearchContainer = ({
   const actionState = useAppSelector((state) =>
     profile ? state.actions.keys[profile][ThActionsKeys.search] : undefined,
   );
+  const pendingSearchQuery = useAppSelector(
+    (state) => state.reader.pendingSearchQuery,
+  );
   const dispatch = useAppDispatch();
   const docking = useDocking(ThActionsKeys.search);
   const inputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState("");
   const search = usePublicationSearch(publication);
   const resetSearch = search.reset;
+  const runSearch = search.search;
+  const runSearchRef = useRef(runSearch);
+  runSearchRef.current = runSearch;
+  const wasOpenRef = useRef(false);
 
   const setOpen = useCallback((value: boolean) => {
     if (profile) {
@@ -49,13 +56,26 @@ export const StatefulSearchContainer = ({
   }, [dispatch, profile]);
 
   useEffect(() => {
-    if (actionState?.isOpen) {
+    const isOpen = Boolean(actionState?.isOpen);
+    if (isOpen) {
       requestAnimationFrame(() => inputRef.current?.focus());
-    } else {
+      const query = pendingSearchQuery?.trim();
+      if (query) {
+        setInputValue(query);
+        void runSearchRef.current(query);
+      }
+      wasOpenRef.current = true;
+      return;
+    }
+    if (wasOpenRef.current) {
       setInputValue("");
       resetSearch();
+      if (pendingSearchQuery) {
+        dispatch(setPendingSearchQuery(null));
+      }
+      wasOpenRef.current = false;
     }
-  }, [actionState?.isOpen, resetSearch]);
+  }, [actionState?.isOpen, dispatch, pendingSearchQuery, resetSearch]);
 
   if (!publication?.linkWithRel("search")) return null;
 

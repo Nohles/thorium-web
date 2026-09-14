@@ -13,7 +13,15 @@ export interface ThemeStateObject {
 
 export interface SavedCustomTheme {
   id: string;
+  name?: string;
   tokens: ThemeTokens;
+  source?: {
+    publisher: string;
+    extension: string;
+    version: string;
+    license: string;
+    url: string;
+  };
   updatedAt: number;
 }
 

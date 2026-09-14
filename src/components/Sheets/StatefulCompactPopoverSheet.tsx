@@ -30,7 +30,9 @@ export const StatefulCompactPopoverSheet = ({
     focusWithinRef,
     focusSelector,
     scrollTopOnFocus,
-    dismissEscapeKeyClose
+    dismissEscapeKeyClose,
+    isNonModal,
+    shouldCloseOnInteractOutside
   }: StatefulCompactPopoverSheetProps) => {
   const popoverRef = useRef<HTMLDivElement | null>(null);
   const popoverBodyRef = useRef<HTMLDivElement | null>(null);
@@ -62,6 +64,8 @@ export const StatefulCompactPopoverSheet = ({
         isOpen={ isOpen }
         onOpenChange={ onOpenChange }
         isKeyboardDismissDisabled={ dismissEscapeKeyClose }
+        isNonModal={ isNonModal }
+        shouldCloseOnInteractOutside={ shouldCloseOnInteractOutside }
         className={ classNames(sheetStyles.compactPopover, className) }
       >
         <Dialog

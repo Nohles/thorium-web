@@ -4,6 +4,7 @@ import type {
   FrameClickEvent,
 } from "@readium/navigator-html-injectables";
 import { Locator, LocatorText } from "@readium/shared";
+import { pickDecorationQuoteHit } from "./decorationQuoteActivation";
 
 export interface ReaderDecorationStyle {
   type?: string;
@@ -62,6 +63,16 @@ export interface ReaderDecorationActivatedEvent {
   frameRect?: { top: number; left: number; width: number; height: number };
 }
 
+export interface ReadiumDecorationActivatedEvent {
+  decoration: {
+    id: string;
+    locator: unknown;
+    extras?: Record<string, unknown>;
+  };
+  point: { x: number; y: number };
+  rect: { top: number; left: number; width: number; height: number };
+}
+
 export interface ReaderInteractionProps {
   decorations?: readonly ReaderDecorationInput[];
   onTextSelected?: (event: ReaderTextSelectedEvent) => void;
@@ -69,9 +80,15 @@ export interface ReaderInteractionProps {
   onDecorationActivated?: (event: ReaderDecorationActivatedEvent) => void;
 }
 
+interface NavigatorFrameMessage {
+  send: (key: string, data: unknown, ack?: (ok: boolean) => void) => void;
+  listener?: (key: string, data: unknown) => void;
+  _listener?: unknown;
+}
+
 interface NavigatorFrameLike {
   source?: string;
-  msg?: { send: (key: string, data: unknown, ack?: (ok: boolean) => void) => void };
+  msg?: NavigatorFrameMessage;
 }
 
 /**
@@ -83,6 +100,7 @@ interface NavigatorFrameLike {
 export interface DecorationFrameTarget {
   href: string | null;
   msg?: NavigatorFrameLike["msg"];
+  frame?: object;
 }
 
 export const decorationFrameTargetsFromNavigator = (
@@ -107,6 +125,7 @@ export const decorationFrameTargetsFromNavigator = (
         targets.push({
           href: typeof href === "string" ? href : null,
           msg: fm.msg,
+          frame: fm,
         });
       }
       if (targets.length > 0) return targets;
@@ -119,14 +138,62 @@ export const decorationFrameTargetsFromNavigator = (
       if (!frame) continue;
       const fm = frame as NavigatorFrameLike & { isDestroyed?: boolean };
       if (fm.isDestroyed || !fm.msg) continue;
-      targets.push({ href: null, msg: fm.msg });
+      targets.push({ href: null, msg: fm.msg, frame: fm });
     }
     if (targets.length > 0) return targets;
   }
   return null;
 };
 
+/**
+ * Pooled frames can become ready before Readium exposes them through its
+ * current viewport. In that state commands work, but frame events are only
+ * buffered because the navigator never attached its listener. Attach the
+ * same forwarding listener Readium uses once a frame enters the viewport.
+ */
+export const ensureNavigatorFrameListeners = (navigator: unknown): boolean => {
+  if (!navigator || typeof navigator !== "object") return false;
+  const candidate = navigator as {
+    eventListener?: (key: string, data: unknown, sourceFrame?: object) => void;
+  };
+  if (typeof candidate.eventListener !== "function") return false;
+  const targets = decorationFrameTargetsFromNavigator(navigator);
+  if (!targets) return false;
+  let attached = false;
+  for (const target of targets) {
+    const message = target.msg;
+    if (!message || typeof message._listener === "function") continue;
+    message.listener = (key, data) => {
+      candidate.eventListener?.(key, data, target.frame);
+    };
+    attached = true;
+  }
+  return attached;
+};
+
+/** Sets native hit-testing for a decoration group in every live frame. */
+export const setDecorationGroupActivatable = (
+  navigator: unknown,
+  group: string,
+  activatable: boolean,
+): boolean => {
+  const targets = decorationFrameTargetsFromNavigator(navigator);
+  if (!targets) return false;
+  let sent = false;
+  for (const target of targets) {
+    if (!target.msg) continue;
+    target.msg.send("decoration_activatable", { group, activatable });
+    sent = true;
+  }
+  return sent;
+};
+
 const DECORATION_GROUP = "reader-decorations";
+
+export interface ReaderDecorationPushOptions {
+  group?: string;
+  activationOnly?: boolean;
+}
 
 const frameElements = (container?: HTMLElement | null): HTMLIFrameElement[] => {
   const root: ParentNode = container ?? document;
@@ -500,69 +567,24 @@ export function resolveDecorationActivation(
       : undefined,
   });
 
-  let best: { decoration: ReaderDecorationInput; start: number; end: number; distance: number } | null = null;
-  for (const decoration of candidates) {
-    const quote =
-      decoration.text ??
-      ((decoration.locator as { text?: { highlight?: string } } | null)?.text?.highlight ?? "");
-    const locatorText = (decoration.locator as {
-      text?: { before?: string; after?: string };
-    } | null)?.text;
-    if (!quote) continue;
-    let searchFrom = 0;
-    while (true) {
-      const start = blockText.indexOf(quote, searchFrom);
-      if (start === -1) break;
-      const end = start + quote.length;
-      const hasBefore =
-        !locatorText?.before ||
-        blockText.slice(Math.max(0, start - locatorText.before.length), start).endsWith(locatorText.before);
-      const hasAfter =
-        !locatorText?.after ||
-        blockText.slice(end, end + locatorText.after.length).startsWith(locatorText.after);
-      if (!hasBefore || !hasAfter) {
-        searchFrom = start + 1;
-        continue;
-      }
-      const distance = caretOffset < start ? start - caretOffset : caretOffset > end ? caretOffset - end : 0;
-      if (distance === 0) {
-        const point = toHostRect(frameX, frameY);
-        return toActivation(
-          decoration,
-          point,
-          quoteHostRect(toHostRect, point, block, start, end, caret),
-        );
-      }
-      if (!best || distance < best.distance) {
-        best = { decoration, start, end, distance };
-      }
-      searchFrom = start + 1;
-    }
-  }
+  const paintedIds = highlightIdsFromPoint(doc, frameX, frameY);
+  const hit = pickDecorationQuoteHit(
+    candidates.map(decorationQuoteCandidate),
+    blockText,
+    caretOffset,
+    { paintedIds },
+  );
+  if (!hit) return null;
+  const decoration = candidates.find((candidate) => candidate.id === hit.id);
+  if (!decoration) return null;
 
-  const tolerance = Math.max(24, quoteTolerance(candidates));
-  if (best && best.distance <= tolerance) {
-    const point = toHostRect(frameX, frameY);
-    return toActivation(
-      best.decoration,
-      point,
-      quoteHostRect(toHostRect, point, block, best.start, best.end, caret),
-    );
-  }
-
+  const point = toHostRect(frameX, frameY);
   const clickedElement = doc.elementFromPoint(frameX, frameY);
-  const highlighted = clickedElement?.closest("[data-highlight-id]");
-  const highlightedId = highlighted?.getAttribute("data-highlight-id");
-  const highlightedDecoration = candidates.find((decoration) => decoration.id === highlightedId);
-  if (highlightedDecoration) {
-    const point = toHostRect(frameX, frameY);
-    return toActivation(
-      highlightedDecoration,
-      point,
-      elementHostRect(toHostRect, point, clickedElement),
-    );
-  }
-  return null;
+  const rect =
+    hit.source === "painted" && hit.start === hit.end
+      ? elementHostRect(toHostRect, point, clickedElement)
+      : quoteHostRect(toHostRect, point, block, hit.start, hit.end, caret);
+  return toActivation(decoration, point, rect);
 };
 
 type HostRect = { x: number; y: number; width: number; height: number };
@@ -600,6 +622,115 @@ const frameOffsetForWindow = (
     // fall through to the reader container
   }
   return container?.getBoundingClientRect() ?? null;
+};
+
+/**
+ * Converts Readium's exact decoration activation (device pixels inside the
+ * publication frame) to the host-viewport coordinates used by reader UI.
+ */
+export const readiumDecorationActivationToEvent = (
+  event: ReadiumDecorationActivatedEvent,
+  container: HTMLElement | null | undefined,
+  navigatorFrames?: readonly unknown[],
+  navigator?: unknown,
+): ReaderDecorationActivatedEvent => {
+  const liveFrames = (navigatorFrames ?? []).filter(isInteractionFrame);
+  const locatorHref = (event.decoration.locator as { href?: unknown } | null)
+    ?.href;
+  let navigatorWindow: Window | undefined;
+  if (
+    navigator &&
+    typeof navigator === "object" &&
+    typeof locatorHref === "string"
+  ) {
+    const candidate = navigator as {
+      pool?: { pool?: Map<unknown, unknown> };
+      framePool?: { pool?: Map<unknown, unknown> };
+    };
+    for (const pool of [candidate.pool?.pool, candidate.framePool?.pool]) {
+      if (!(pool instanceof Map)) continue;
+      for (const [href, value] of pool.entries()) {
+        if (!hrefsRelated(href, locatorHref)) continue;
+        try {
+          const wnd = (value as { window?: unknown } | null)?.window;
+          if (wnd instanceof Window) navigatorWindow = wnd;
+        } catch {
+          // A destroyed frame can throw from its window getter.
+        }
+        if (navigatorWindow) break;
+      }
+      if (navigatorWindow) break;
+    }
+  }
+  const frame =
+    liveFrames.find(
+      (candidate) =>
+        typeof locatorHref === "string" &&
+        hrefsRelated(candidate.source, locatorHref),
+    ) ?? (liveFrames.length === 1 ? liveFrames[0] : undefined);
+  const wnd = navigatorWindow ?? frame?.window;
+  const dpr = wnd?.devicePixelRatio || window.devicePixelRatio || 1;
+  const offset = wnd ? frameOffsetForWindow(container, wnd) : null;
+  const framePoint = {
+    x: event.point.x / dpr,
+    y: event.point.y / dpr,
+  };
+  const frameRect = {
+    top: event.rect.top / dpr,
+    left: event.rect.left / dpr,
+    width: event.rect.width / dpr,
+    height: event.rect.height / dpr,
+  };
+  return {
+    id: event.decoration.id,
+    locator: locatorFromUnknown(event.decoration.locator),
+    extras: event.decoration.extras,
+    point: {
+      x: framePoint.x + (offset?.left ?? 0),
+      y: framePoint.y + (offset?.top ?? 0),
+    },
+    framePoint: event.point,
+    rect: {
+      x: frameRect.left + (offset?.left ?? 0),
+      y: frameRect.top + (offset?.top ?? 0),
+      width: frameRect.width,
+      height: frameRect.height,
+    },
+    frameRect,
+  };
+};
+
+const decorationQuoteCandidate = (decoration: ReaderDecorationInput) => {
+  const locatorText = (
+    decoration.locator as {
+      text?: { highlight?: string; before?: string; after?: string };
+    } | null
+  )?.text;
+  return {
+    id: decoration.id,
+    quote: decoration.text ?? locatorText?.highlight ?? "",
+    before: locatorText?.before,
+    after: locatorText?.after,
+  };
+};
+
+const highlightIdsFromPoint = (doc: Document, x: number, y: number): string[] => {
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  const stack =
+    typeof doc.elementsFromPoint === "function"
+      ? doc.elementsFromPoint(x, y)
+      : [doc.elementFromPoint(x, y)];
+  for (const element of stack) {
+    if (!element) continue;
+    const highlighted = element.closest("[data-highlight-id]");
+    const id = highlighted?.getAttribute("data-highlight-id");
+    if (id && !seen.has(id)) {
+      seen.add(id);
+      ids.push(id);
+    }
+  }
+  return ids;
 };
 
 const locatorFromUnknown = (value: unknown): Locator | undefined => {
@@ -712,16 +843,6 @@ const unionHostRect = (
   };
 };
 
-const quoteTolerance = (decorations: readonly ReaderDecorationInput[]): number => {
-  const longest = decorations.reduce((max, decoration) => {
-    const quote =
-      decoration.text ??
-      ((decoration.locator as { text?: { highlight?: string } } | null)?.text?.highlight ?? "");
-    return Math.max(max, quote.length);
-  }, 0);
-  return Math.min(48, longest);
-};
-
 /**
  * Per-frame record of what was last synced, keyed by the frame's comms
  * channel. Lets repeated pushes diff instead of clear+re-adding everything,
@@ -734,9 +855,16 @@ interface DecorationFrameSync {
   clean: boolean;
 }
 
-const frameSyncStates = new WeakMap<object, DecorationFrameSync>();
+const frameSyncStates = new WeakMap<
+  object,
+  Map<string, DecorationFrameSync>
+>();
 
-const toDecorationPayload = (decoration: ReaderDecorationInput) => {
+const toDecorationPayload = (
+  decoration: ReaderDecorationInput,
+  group: string,
+  activationOnly: boolean,
+) => {
   const resolvedLocator = locatorFromUnknown(decoration.locator);
   const serializedLocator = resolvedLocator?.serialize();
   const sourceLocator =
@@ -746,7 +874,7 @@ const toDecorationPayload = (decoration: ReaderDecorationInput) => {
         ? (decoration.locator as Record<string, unknown>)
         : {};
   return {
-    group: DECORATION_GROUP,
+    group,
     action: "add" as const,
     decoration: {
       id: decoration.id,
@@ -758,10 +886,17 @@ const toDecorationPayload = (decoration: ReaderDecorationInput) => {
       },
       extras: decoration.extras,
       style: {
-        type: decoration.style?.type,
-        tint: decoration.style?.tint ?? "rgba(44, 157, 124, 0.32)",
-        layout: decoration.style?.layout ?? "boxes",
-        width: decoration.style?.width ?? "wrap",
+        type: activationOnly ? "highlight" : decoration.style?.type,
+        tint: activationOnly
+          ? "rgba(0, 0, 0, 0)"
+          : decoration.style?.tint ?? "rgba(44, 157, 124, 0.32)",
+        layout: activationOnly
+          ? "boxes"
+          : decoration.style?.layout ?? "boxes",
+        width: activationOnly
+          ? "wrap"
+          : decoration.style?.width ?? "wrap",
+        ...(activationOnly ? { enforceContrast: false } : {}),
       },
     },
   };
@@ -780,10 +915,14 @@ const toDecorationPayload = (decoration: ReaderDecorationInput) => {
 export function pushDecorationsToFrames(
   navigator: unknown,
   decorations: readonly ReaderDecorationInput[],
+  options: ReaderDecorationPushOptions = {},
 ): Promise<boolean> {
   const targets = decorationFrameTargetsFromNavigator(navigator);
   if (!targets || targets.length === 0) return Promise.resolve(false);
-  const payload = decorations.map(toDecorationPayload);
+  const group = options.group ?? DECORATION_GROUP;
+  const payload = decorations.map((decoration) =>
+    toDecorationPayload(decoration, group, options.activationOnly ?? false),
+  );
 
   type Acked = { ok: boolean };
   const acked: Acked[] = [];
@@ -822,17 +961,22 @@ export function pushDecorationsToFrames(
       );
     }
 
-    let state = frameSyncStates.get(msg);
+    let groupStates = frameSyncStates.get(msg);
+    if (!groupStates) {
+      groupStates = new Map();
+      frameSyncStates.set(msg, groupStates);
+    }
+    let state = groupStates.get(group);
     if (!state) {
       state = { applied: new Map(), clean: true };
-      frameSyncStates.set(msg, state);
+      groupStates.set(group, state);
     }
 
     if (!state.clean) {
       // Frame state is unknown (a previous sync failed): full resync.
       msg.send(
         "decorate",
-        { group: DECORATION_GROUP, action: "clear", decoration: undefined },
+        { group, action: "clear", decoration: undefined },
         track(),
       );
       for (const item of matching) {
@@ -844,7 +988,7 @@ export function pushDecorationsToFrames(
           msg.send(
             "decorate",
             {
-              group: DECORATION_GROUP,
+              group,
               action: "remove",
               decoration: { id },
             },

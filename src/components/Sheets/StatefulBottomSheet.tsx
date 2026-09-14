@@ -2,24 +2,21 @@
 
 import React, { CSSProperties, KeyboardEvent, useCallback, useMemo, useRef } from "react";
 
-import { ThBottomSheetDetent, ThSheetHeaderVariant } from "@/preferences";
+import { ThBottomSheetDetent } from "@/preferences";
 
 import { StatefulSheet } from "./models/sheets";
 
 import sheetStyles from "./assets/styles/thorium-web.sheets.module.css";
-import readerSharedUI from "../assets/styles/thorium-web.button.module.css";
 
 import { SheetRef, SheetDetent } from "react-modal-sheet";
 
 import { ThBottomSheet } from "@/core/Components/Containers/ThBottomSheet";
 import { ThContainerHeader } from "@/core/Components/Containers/ThContainerHeader";
 import { ThContainerBody } from "@/core/Components/Containers/ThContainerBody";
-import { ThNavigationButton } from "@/core/Components/Buttons/ThNavigationButton";
-import { ThCloseButton } from "@/core/Components/Buttons/ThCloseButton";
+import { StatefulSheetHeaderControls } from "./StatefulSheetHeaderControls";
 
 import { useActionsPreferences } from "@/preferences/hooks/useActionsPreferences";
 import { useSharedPreferences } from "@/preferences/hooks/useSharedPreferences";
-import { useI18n } from "@/i18n";
 
 import { useAppSelector } from "@/lib/hooks";
 
@@ -46,8 +43,9 @@ export const StatefulBottomSheet = ({
   className, 
   isOpen,
   onOpenChange, 
-  onClosePress,
-  children,
+    onClosePress,
+    onBackPress,
+    children,
   resetFocus,
   focusWithinRef,
   focusSelector,
@@ -56,8 +54,6 @@ export const StatefulBottomSheet = ({
 }: StatefulBottomSheetProps) => {
   const preferences = useActionsPreferences();
   const sharedPreferences = useSharedPreferences();
-  const { t } = useI18n()
-  const direction = useAppSelector((state) => state.reader.direction);
   const prefersReducedMotion = useAppSelector(state => state.theming.prefersReducedMotion);
 
   const sheetRef = useRef<SheetRef | null>(null);
@@ -333,22 +329,15 @@ export const StatefulBottomSheet = ({
             }
           }}
         >
-        { headerVariant === ThSheetHeaderVariant.previous 
-            ? <ThNavigationButton 
-              direction={ direction === "ltr" ? "left" : "right" }
-              label={ t("reader.app.back.trigger") }
-              ref={ bottomSheetCloseRef }
-              className={ classNames(className, readerSharedUI.backButton) } 
-              aria-label={ t("reader.app.back.trigger") }
-              onPress={ onClosePress }
-            /> 
-            : <ThCloseButton
-              ref={ bottomSheetCloseRef }
-              className={ readerSharedUI.closeButton } 
-              aria-label={ t("common.actions.close") } 
-              onPress={ onClosePress }
-            />
-          }
+          <StatefulSheetHeaderControls
+            id={ id }
+            headerVariant={ headerVariant }
+            className={ className }
+            closeRef={ bottomSheetCloseRef }
+            onClosePress={ onClosePress }
+            onBackPress={ onBackPress }
+            trailing="close"
+          />
         </ThContainerHeader>
         <ThContainerBody 
           ref={ bottomSheetBodyRef }

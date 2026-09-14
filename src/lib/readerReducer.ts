@@ -18,6 +18,8 @@ export interface ReaderReducerState {
   isFullscreen: boolean;
   settingsContainer: ThSettingsContainerKeys;
   platformModifier: UnstablePlatformModifier;
+  /** Filled by selection-menu search; applied while the panel is open and cleared when it closes. */
+  pendingSearchQuery: string | null;
 }
 
 const initialState: ReaderReducerState = {
@@ -31,7 +33,8 @@ const initialState: ReaderReducerState = {
   hasUserNavigated: false,
   isFullscreen: false,
   settingsContainer: ThSettingsContainerKeys.initial,
-  platformModifier: defaultPlatformModifier
+  platformModifier: defaultPlatformModifier,
+  pendingSearchQuery: null,
 }
 
 export const readerSlice = createSlice({
@@ -85,6 +88,10 @@ export const readerSlice = createSlice({
     },
     setSettingsContainer: (state, action) => {
       state.settingsContainer = action.payload
+    },
+    setPendingSearchQuery: (state, action: { payload: string | null }) => {
+      const query = typeof action.payload === "string" ? action.payload.trim() : "";
+      state.pendingSearchQuery = query.length > 0 ? query : null;
     }
   }
 })
@@ -102,7 +109,8 @@ export const {
   setHasArrows,  
   setUserNavigated,
   setFullscreen,
-  setSettingsContainer
+  setSettingsContainer,
+  setPendingSearchQuery,
 } = readerSlice.actions;
 
 export default readerSlice.reducer;

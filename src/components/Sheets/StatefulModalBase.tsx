@@ -3,21 +3,15 @@
 import React, { useRef, useEffect } from "react";
 
 import { StatefulSheet } from "./models/sheets";
-import { ThSheetHeaderVariant } from "@/preferences/models";
 
 import sheetStyles from "./assets/styles/thorium-web.sheets.module.css";
-import readerSharedUI from "../assets/styles/thorium-web.button.module.css";
 
 import { ThModal } from "@/core/Components/Containers/ThModal";
 import { ThContainerHeader } from "@/core/Components/Containers/ThContainerHeader";
 import { ThContainerBody } from "@/core/Components/Containers/ThContainerBody";
-import { ThNavigationButton } from "@/core/Components/Buttons/ThNavigationButton";
-import { StatefulDocker } from "../Docking/StatefulDocker";
+import { StatefulSheetHeaderControls } from "./StatefulSheetHeaderControls";
 
-import { useI18n } from "@/i18n";
 import { useWebkitPatch } from "./hooks/useWebkitPatch";
-
-import { useAppSelector } from "@/lib/hooks";
 
 import classNames from "classnames";
 import { prefixString } from "@/core/Helpers/prefixString";
@@ -37,6 +31,7 @@ export const StatefulModalBase = ({
     isOpen,
     onOpenChange,
     onClosePress,
+    onBackPress,
     docker,
     children,
     resetFocus,
@@ -45,8 +40,6 @@ export const StatefulModalBase = ({
     scrollTopOnFocus,
     dismissEscapeKeyClose
   }: StatefulModalBaseProps) => {
-  const { t } = useI18n()
-  const direction = useAppSelector(state => state.reader.direction);
   const sheetRef = useRef<HTMLDivElement | null>(null);
   const sheetHeaderRef = useRef<HTMLDivElement | null>(null);
   const sheetBodyRef = useRef<HTMLDivElement | null>(null);
@@ -105,22 +98,15 @@ export const StatefulModalBase = ({
             }
           }}
         >
-          { headerVariant === ThSheetHeaderVariant.previous
-              ? <ThNavigationButton
-                direction={ direction === "ltr" ? "left" : "right" }
-                label={ t("reader.app.back.trigger") }
-                ref={ sheetCloseRef }
-                className={ classNames(className, readerSharedUI.backButton) }
-                aria-label={ t("reader.app.back.trigger") }
-                onPress={ onClosePress }
-              />
-              : <StatefulDocker
-                id={ id }
-                keys={ docker || [] }
-                ref={ sheetCloseRef }
-                onClose={ onClosePress }
-              />
-            }
+          <StatefulSheetHeaderControls
+            id={ id }
+            headerVariant={ headerVariant }
+            docker={ docker }
+            className={ className }
+            closeRef={ sheetCloseRef }
+            onClosePress={ onClosePress }
+            onBackPress={ onBackPress }
+          />
         </ThContainerHeader>
         <ThContainerBody
           ref={ sheetBodyRef }

@@ -13,6 +13,7 @@ export interface StatefulSheet {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onClosePress: () => void;
+  onBackPress?: () => void;
   docker?: ThDockingKeys[];
   children?: ReactNode;
   resetFocus?: unknown;
@@ -20,4 +21,6 @@ export interface StatefulSheet {
   focusSelector?: string;
   scrollTopOnFocus?: boolean;
   dismissEscapeKeyClose?: boolean;
+  isNonModal?: boolean;
+  shouldCloseOnInteractOutside?: (element: Element) => boolean;
 }

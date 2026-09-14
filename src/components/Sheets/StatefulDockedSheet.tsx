@@ -3,18 +3,14 @@
 import React, { useCallback, useRef, useEffect } from "react";
 
 import { StatefulSheet } from "./models/sheets";
-import { ThDockingKeys, ThSheetHeaderVariant, ThLayoutDirection } from "@/preferences/models";
+import { ThDockingKeys, ThLayoutDirection } from "@/preferences/models";
 
 import sheetStyles from "./assets/styles/thorium-web.sheets.module.css";
-import readerSharedUI from "../assets/styles/thorium-web.button.module.css";
 
 import { ThDockedPanel } from "@/core/Components/Containers/ThDockedPanel";
 import { ThContainerHeader } from "@/core/Components/Containers/ThContainerHeader";
 import { ThContainerBody } from "@/core/Components/Containers/ThContainerBody";
-import { StatefulDocker } from "../Docking/StatefulDocker";
-import { ThNavigationButton } from "@/core/Components/Buttons/ThNavigationButton";
-
-import { useI18n } from "@/i18n";
+import { StatefulSheetHeaderControls } from "./StatefulSheetHeaderControls";
 
 import { useAppSelector } from "@/lib/hooks";
 
@@ -32,6 +28,7 @@ export const StatefulDockedSheet = ({
     className, 
     isOpen,
     onClosePress,
+    onBackPress,
     docker, 
     flow,
     children,
@@ -39,7 +36,6 @@ export const StatefulDockedSheet = ({
     focusSelector,
     focusWithinRef
   }: StatefulDockedSheetProps) => {
-  const { t } = useI18n()
   const dockPortal = flow && document.getElementById(flow);
   const dockedSheetRef = useRef<HTMLDivElement | null>(null);
   const dockedSheetHeaderRef = useRef<HTMLDivElement | null>(null);
@@ -101,22 +97,15 @@ export const StatefulDockedSheet = ({
             }
           }}
         >
-          { headerVariant === ThSheetHeaderVariant.previous 
-            ? <ThNavigationButton
-              direction={ direction === "ltr" ? "left" : "right" } 
-              label={ t("reader.app.back.trigger") }
-              ref={ dockedSheetCloseRef }
-              className={ classNames(className, readerSharedUI.backButton) } 
-              aria-label={ t("reader.app.back.trigger") }
-              onPress={ onClosePress }
-            /> 
-            : <StatefulDocker 
-              id={ id }
-              keys={ docker || [] }
-              ref={ dockedSheetCloseRef }
-              onClose={ onClosePress }
-            />
-          } 
+          <StatefulSheetHeaderControls
+            id={ id }
+            headerVariant={ headerVariant }
+            docker={ docker }
+            className={ className }
+            closeRef={ dockedSheetCloseRef }
+            onClosePress={ onClosePress }
+            onBackPress={ onBackPress }
+          /> 
         </ThContainerHeader>
         <ThContainerBody 
           ref={ dockedSheetBodyRef }

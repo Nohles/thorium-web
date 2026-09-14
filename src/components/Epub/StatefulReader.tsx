@@ -100,6 +100,7 @@ import { getReaderClassNames } from "../Helpers/getReaderClassNames";
 import { resolveContentProtectionConfig } from "@/preferences/models/protection";
 import {
   contextMenuToEvent,
+  readiumDecorationActivationToEvent,
   resolveDecorationActivation,
   textSelectionToEvent,
   type ReaderInteractionProps,
@@ -633,6 +634,18 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
   useReaderDecorations({
     getNavigator: getNavigatorInstance,
     decorations,
+    onDecorationActivated: interactions.onDecorationActivated
+      ? (event) => {
+          interactions.onDecorationActivated?.(
+            readiumDecorationActivationToEvent(
+              event,
+              container.current,
+              getCframes(),
+              getNavigatorInstance(),
+            ),
+          );
+        }
+      : undefined,
   });
 
   useEffect(() => {

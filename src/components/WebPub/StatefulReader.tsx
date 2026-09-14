@@ -79,6 +79,7 @@ import { resolveContentProtectionConfig } from "@/preferences/models/protection"
 import { NavPeripheralType, fromActionPeripheralType, fromDockingPeripheralType } from "@/helpers/peripherals";
 import {
   contextMenuToEvent,
+  readiumDecorationActivationToEvent,
   resolveDecorationActivation,
   textSelectionToEvent,
   type ReaderInteractionProps,
@@ -439,6 +440,18 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
   useReaderDecorations({
     getNavigator: getNavigatorInstance,
     decorations,
+    onDecorationActivated: interactions.onDecorationActivated
+      ? (event) => {
+          interactions.onDecorationActivated?.(
+            readiumDecorationActivationToEvent(
+              event,
+              container.current,
+              getCframes(),
+              getNavigatorInstance(),
+            ),
+          );
+        }
+      : undefined,
   });
 
   useTocTreeBuilder(publication, navigatorReady, getNavigatorTimeline);

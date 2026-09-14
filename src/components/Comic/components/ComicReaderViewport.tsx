@@ -31,6 +31,7 @@ import {
 } from "@/components/Comic/lib/comicReaderLayout";
 import { ComicPage } from "../hooks/useComicReaderController";
 import { ComicPageLoadState } from "../lib/comicProgress";
+import { getComicPageLoadSet } from "../lib/comicPageLoadWindow";
 import {
   acquireComicImageMount,
   recordComicImageDecode,
@@ -56,7 +57,12 @@ type QueuedImageRead = {
 };
 
 const comicImageBlobCache = new WeakMap<Publication, Map<string, Blob>>();
-const comicImageAspectRatioCache = new WeakMap<Publication, Map<string, number>>();
+type ComicImageDimensions = {
+  width: number;
+  height: number;
+};
+
+const comicImageDimensionsCache = new WeakMap<Publication, Map<string, ComicImageDimensions>>();
 const comicImageInFlightReads = new WeakMap<Publication, Map<string, Promise<Blob>>>();
 const comicImageReadQueue: QueuedImageRead[] = [];
 let activeComicImageReads = 0;
@@ -234,44 +240,43 @@ const invalidateComicImageBlob = (publication: Publication, href: string) => {
   comicImageBlobCache.get(publication)?.delete(href);
 };
 
-const getComicImageAspectRatio = (publication: Publication, link: Link): number | undefined => {
-  if (link.width && link.height) return link.width / link.height;
-  return comicImageAspectRatioCache.get(publication)?.get(link.href);
+const getComicImageDimensions = (
+  publication: Publication,
+  link: Link
+): ComicImageDimensions | undefined => {
+  if (
+    typeof link.width === "number" &&
+    link.width > 0 &&
+    typeof link.height === "number" &&
+    link.height > 0
+  ) {
+    return { width: link.width, height: link.height };
+  }
+  return comicImageDimensionsCache.get(publication)?.get(link.href);
 };
 
-const rememberComicImageAspectRatio = (publication: Publication, link: Link, ratio: number) => {
-  if (!Number.isFinite(ratio) || ratio <= 0) return;
-  let publicationCache = comicImageAspectRatioCache.get(publication);
+const rememberComicImageDimensions = (
+  publication: Publication,
+  link: Link,
+  dimensions: ComicImageDimensions
+) => {
+  if (
+    !Number.isFinite(dimensions.width) ||
+    dimensions.width <= 0 ||
+    !Number.isFinite(dimensions.height) ||
+    dimensions.height <= 0
+  ) {
+    return;
+  }
+  let publicationCache = comicImageDimensionsCache.get(publication);
   if (!publicationCache) {
     publicationCache = new Map();
-    comicImageAspectRatioCache.set(publication, publicationCache);
+    comicImageDimensionsCache.set(publication, publicationCache);
   }
-  publicationCache.set(link.href, ratio);
+  publicationCache.set(link.href, dimensions);
 };
 
-const getDirectionalLoadSet = (
-  pages: readonly ComicPage[],
-  cursorIndex: number,
-  previousCursorIndex: number,
-  imagePreloadAmount: number
-): Set<number> => {
-  if (pages.length === 0) return new Set();
-
-  const positionByIndex = new Map(pages.map((page, position) => [page.index, position]));
-  const cursorPosition = positionByIndex.get(cursorIndex) ?? 0;
-  const direction = previousCursorIndex <= cursorIndex ? 1 : -1;
-  const selected = new Set<number>();
-  const preloadAmount = Math.max(0, imagePreloadAmount);
-  for (let offset = 0; offset <= preloadAmount; offset += 1) {
-    const position = cursorPosition + offset * direction;
-    const page = pages[position];
-    if (!page) continue;
-    selected.add(page.index);
-  }
-  return selected;
-};
-
-/** Match Suwayomi's continuous reader: load the current page plus a directional preload batch. */
+/** Load ahead in the scroll direction while retaining a small buffer behind the cursor. */
 const useDirectionalLoadSet = (
   enabled: boolean,
   pages: readonly ComicPage[],
@@ -282,12 +287,7 @@ const useDirectionalLoadSet = (
   const allowed = useMemo(
     () =>
       enabled
-        ? getDirectionalLoadSet(
-            pages,
-            cursorIndex,
-            cursorIndex - loadDirection,
-            imagePreloadAmount
-          )
+        ? getComicPageLoadSet(pages, cursorIndex, imagePreloadAmount, loadDirection)
         : new Set([cursorIndex]),
     [cursorIndex, enabled, imagePreloadAmount, loadDirection, pages]
   );
@@ -581,6 +581,42 @@ const getImageAreaStyle = (
         justifyContent: comicPageJustifyContent[horizontalAlignment],
       };
 
+const getComicImagePlaceholderHeight = ({
+  dimensions,
+  frameWidth,
+  scaleType,
+  layoutMode,
+  stretchSmallPages,
+}: {
+  dimensions: ComicImageDimensions | undefined;
+  frameWidth: number;
+  scaleType: ComicScaleType;
+  layoutMode: ComicPageLayoutMode;
+  stretchSmallPages: boolean;
+}): number | undefined => {
+  if (layoutMode !== "verticalStack" || !dimensions || frameWidth <= 0) return undefined;
+
+  const ratio = dimensions.width / dimensions.height;
+  if (!Number.isFinite(ratio) || ratio <= 0) return undefined;
+
+  const isWidthDriven = isWidthDrivenScaleMode(scaleType);
+  const shouldStretch =
+    !isWidthDriven &&
+    stretchSmallPages &&
+    stretchAllowedForScale(scaleType) &&
+    dimensions.width < frameWidth;
+  const renderedWidth = isWidthDriven || shouldStretch
+    ? frameWidth
+    : Math.min(dimensions.width, frameWidth);
+  let renderedHeight = renderedWidth / ratio;
+
+  if (scaleType === ComicScaleType.fitHeight && typeof window !== "undefined") {
+    renderedHeight = Math.min(renderedHeight, window.innerHeight);
+  }
+
+  return Number.isFinite(renderedHeight) && renderedHeight > 0 ? renderedHeight : undefined;
+};
+
 const ComicImage = memo(function ComicImage({
   pageIndex,
   publication,
@@ -624,9 +660,10 @@ const ComicImage = memo(function ComicImage({
   const [isImageReady, setIsImageReady] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
   const [isPlaceholderVisible, setIsPlaceholderVisible] = useState(false);
-  const [aspectRatio, setAspectRatio] = useState<number | undefined>(() =>
-    getComicImageAspectRatio(publication, link)
+  const [imageDimensions, setImageDimensions] = useState<ComicImageDimensions | undefined>(() =>
+    getComicImageDimensions(publication, link)
   );
+  const [placeholderHeight, setPlaceholderHeight] = useState<number | undefined>();
   const failedMessage = t("reader.comic.imageLoad.failed");
 
   const stretchOk = stretchSmallPages && stretchAllowedForScale(scaleType);
@@ -639,7 +676,7 @@ const ComicImage = memo(function ComicImage({
   }, [link.href, reloadKey]);
 
   // When a page leaves the load window its src is released; drop ready/stretch
-  // state so the placeholder (with the retained aspect ratio) takes over again.
+  // state so the placeholder (with the retained geometry) takes over again.
   useEffect(() => {
     if (!objectUrl) {
       shouldStretchRef.current = false;
@@ -653,8 +690,34 @@ const ComicImage = memo(function ComicImage({
   }, [objectUrl]);
 
   useEffect(() => {
-    setAspectRatio(getComicImageAspectRatio(publication, link));
+    setImageDimensions(getComicImageDimensions(publication, link));
+    setPlaceholderHeight(undefined);
   }, [link, publication]);
+
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!frame || !imageDimensions) return;
+
+    const updatePlaceholderHeight = () => {
+      const nextHeight = getComicImagePlaceholderHeight({
+        dimensions: imageDimensions,
+        frameWidth: frame.clientWidth,
+        scaleType,
+        layoutMode,
+        stretchSmallPages,
+      });
+      if (nextHeight === undefined) return;
+      setPlaceholderHeight((previous) =>
+        previous !== undefined && Math.abs(previous - nextHeight) < 0.5 ? previous : nextHeight
+      );
+    };
+
+    updatePlaceholderHeight();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(updatePlaceholderHeight);
+    observer.observe(frame);
+    return () => observer.disconnect();
+  }, [imageDimensions, layoutMode, scaleType, stretchSmallPages]);
 
   useEffect(() => {
     const element = frameRef.current;
@@ -687,9 +750,20 @@ const ComicImage = memo(function ComicImage({
         stretch = nw > 0 && fw > 0 && nw < fw;
       }
       if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-        const nextAspectRatio = img.naturalWidth / img.naturalHeight;
-        rememberComicImageAspectRatio(publication, link, nextAspectRatio);
-        setAspectRatio(nextAspectRatio);
+        const nextDimensions = {
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+        };
+        rememberComicImageDimensions(publication, link, nextDimensions);
+        setImageDimensions(nextDimensions);
+        const nextPlaceholderHeight = getComicImagePlaceholderHeight({
+          dimensions: nextDimensions,
+          frameWidth: frameRef.current?.clientWidth ?? 0,
+          scaleType,
+          layoutMode,
+          stretchSmallPages,
+        });
+        if (nextPlaceholderHeight !== undefined) setPlaceholderHeight(nextPlaceholderHeight);
       }
       if (decodeStartRef.current !== undefined) {
         recordComicImageDecode(performance.now() - decodeStartRef.current, link.href);
@@ -698,7 +772,7 @@ const ComicImage = memo(function ComicImage({
       shouldStretchRef.current = stretch;
       setIsImageReady(true);
     },
-    [link, publication, scaleType, stretchOk]
+    [layoutMode, link, publication, scaleType, stretchOk, stretchSmallPages]
   );
 
   const onImgError = useCallback(() => {
@@ -722,8 +796,13 @@ const ComicImage = memo(function ComicImage({
   );
 
   const placeholderStyle = useMemo(
-    () => getImagePlaceholderStyling(scaleType, shouldStretch, layoutMode, aspectRatio),
-    [aspectRatio, scaleType, shouldStretch, layoutMode]
+    () => ({
+      ...getImagePlaceholderStyling(scaleType, shouldStretch, layoutMode),
+      ...(placeholderHeight !== undefined
+        ? { height: `${placeholderHeight}px`, minHeight: 0 }
+        : {}),
+    }),
+    [layoutMode, placeholderHeight, scaleType, shouldStretch]
   );
 
   const loadState = useMemo<ComicPageLoadState>(() => {
@@ -754,8 +833,8 @@ const ComicImage = memo(function ComicImage({
       isDoublePageCell,
       horizontalAlignment
     ),
-    ...(layoutMode === "verticalStack" && isWidthDrivenScaleMode(scaleType) && aspectRatio
-      ? { aspectRatio }
+    ...(layoutMode === "verticalStack" && isWidthDrivenScaleMode(scaleType) && imageDimensions
+      ? { aspectRatio: imageDimensions.width / imageDimensions.height }
       : {}),
   };
   const areaStyle: CSSProperties = {

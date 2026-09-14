@@ -220,7 +220,7 @@ type EditableThemeToken = keyof Pick<
   "background" | "text" | "subdue" | "link" | "visited" | "highlight" | "dictionary"
 >;
 
-const maxSavedCustomThemes = 12;
+const maxSavedCustomThemes = 40;
 
 const customThemeFingerprint = (theme: ThemeTokens) => [
   theme.background,
@@ -282,8 +282,15 @@ export const StatefulCustomTheme = () => {
     const id = editingSavedThemeId.current ?? createSavedCustomThemeId();
     editingSavedThemeId.current = id;
     const fingerprint = customThemeFingerprint(tokens);
+    const existing = savedThemesRef.current.find(savedTheme => savedTheme.id === id);
     const nextThemes = [
-      { id, tokens, updatedAt: Date.now() },
+      {
+        id,
+        name: existing?.name,
+        source: existing?.source,
+        tokens,
+        updatedAt: Date.now()
+      },
       ...savedThemesRef.current.filter(savedTheme =>
         savedTheme.id !== id &&
         customThemeFingerprint(savedTheme.tokens) !== fingerprint
@@ -414,7 +421,7 @@ const CustomThemeEditor = ({
                 key={ savedTheme.id }
                 data-selected={ isSelected }
                 aria-pressed={ isSelected }
-                aria-label={ `Apply saved theme ${ index + 1 }` }
+                aria-label={ savedTheme.name ?? `Apply saved theme ${ index + 1 }` }
                 onClick={ () => onSelectSavedTheme(savedTheme) }
               >
                 <span
@@ -442,7 +449,7 @@ const CustomThemeEditor = ({
                   ) }
                 </span>
                 <span className={ settingsStyles.savedCustomThemeLabel }>
-                  Saved theme { index + 1 }
+                  { savedTheme.name ?? `Saved theme ${ index + 1 }` }
                   { isSelected && <CheckIcon aria-hidden="true" focusable="false" /> }
                 </span>
               </button>

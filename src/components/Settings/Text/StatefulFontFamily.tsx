@@ -1,6 +1,6 @@
 "use client";
 
-import { CSSProperties, Key, useCallback, useRef } from "react";
+import { CSSProperties, Key, useCallback, useMemo } from "react";
 
 import { ThSettingsKeys } from "@/preferences/models";
 import { SETTINGS_KEY_TO_PREFERENCE } from "../helpers/settingsKeyMapping";
@@ -60,7 +60,7 @@ export const StatefulFontFamily = ({ standalone = true }: StatefulSettingsItemPr
   ]);
   const currentFontFamily = availableFontIds.has(fontFamily) ? fontFamily : "publisher";
 
-  const fontFamilyOptions = useRef([
+  const fontFamilyOptions = useMemo(() => [
     {
       id: "publisher",
       label: t("reader.preferences.fontFamily.publisher"),
@@ -74,7 +74,7 @@ export const StatefulFontFamily = ({ standalone = true }: StatefulSettingsItemPr
         value: metadata.fontStack || metadata.fontFamily
       };
     })
-  ]);
+  ], [fontPreferences, getFontFamilyLabel, getFontMetadata, t]);
 
   const dispatch = useAppDispatch();
 
@@ -85,7 +85,7 @@ export const StatefulFontFamily = ({ standalone = true }: StatefulSettingsItemPr
   const updatePreference = useCallback(async (key: Key | null) => {
     if (!key || key === fontFamily) return;
 
-    const selectedOption = fontFamilyOptions.current.find((option) => option.id === key) as {
+    const selectedOption = fontFamilyOptions.find((option) => option.id === key) as {
       id: keyof ReturnType<typeof getFontsList> | "publisher";
       label: string;
       value: string | null;
@@ -122,7 +122,7 @@ export const StatefulFontFamily = ({ standalone = true }: StatefulSettingsItemPr
         }
       }
     }
-  }, [prefKey, isWebPub, fontLanguage, fontFamily, submitPreferences, getSetting, fontPreferences, getFontMetadata, dispatch]);
+  }, [prefKey, isWebPub, fontLanguage, fontFamily, submitPreferences, getSetting, fontPreferences, getFontMetadata, dispatch, fontFamilyOptions]);
 
   return (
     <StatefulDropdown
@@ -134,7 +134,7 @@ export const StatefulFontFamily = ({ standalone = true }: StatefulSettingsItemPr
         listbox: (
           <ListBox
             className={ settingsStyles.dropdownListbox }
-            items={ fontFamilyOptions.current }
+            items={ fontFamilyOptions }
           >
             { (item) => (
               <ListBoxItem

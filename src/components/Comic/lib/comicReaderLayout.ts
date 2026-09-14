@@ -137,21 +137,14 @@ export const getReaderImageStyling = (
 export const getImagePlaceholderStyling = (
   scale: ComicScaleType,
   shouldStretch: boolean,
-  layoutMode: ComicPageLayoutMode,
-  aspectRatio?: number
+  layoutMode: ComicPageLayoutMode
 ): CSSProperties => {
   const img = getReaderImageStyling(scale, shouldStretch, layoutMode);
   const inScrollStack = layoutMode === "verticalStack";
-  /** With a known aspect ratio the frame reserves the eventual page height — don't force a viewport-height minimum. */
-  const hasKnownGeometry = inScrollStack && Number.isFinite(aspectRatio) && (aspectRatio ?? 0) > 0;
   const minH = inScrollStack ? "100dvh" : "50%";
   return {
     ...img,
-    minHeight: hasKnownGeometry
-      ? undefined
-      : inScrollStack || scale !== ComicScaleType.originalSize
-        ? minH
-        : "4rem",
+    minHeight: inScrollStack || scale !== ComicScaleType.originalSize ? minH : "4rem",
     minWidth: scale === ComicScaleType.fitHeight ? "4rem" : undefined,
     background: "color-mix(in srgb, var(--th-theme-text, #fff) 8%, transparent)",
   };

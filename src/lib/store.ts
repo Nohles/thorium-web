@@ -46,7 +46,7 @@ export type RootState = {
 
 const DEFAULT_STORAGE_KEY = "thorium-web-state";
 const LEGACY_SAVED_CUSTOM_THEMES_KEY = "thorium-web.saved-custom-themes.v1";
-const MAX_SAVED_CUSTOM_THEMES = 12;
+const MAX_SAVED_CUSTOM_THEMES = 40;
 const SAVED_THEME_TOKEN_KEYS = [
   "background",
   "text",

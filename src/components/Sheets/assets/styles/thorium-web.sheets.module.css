@@ -250,6 +250,17 @@
   transition: border-radius 500ms;
 }
 
+.headerActions {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.headerActions > * {
+  margin-inline-start: 0;
+}
+
 .heading {
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 1rem;
