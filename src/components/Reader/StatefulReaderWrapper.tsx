@@ -117,12 +117,6 @@ export interface ReaderComponentProps<
 
 export const StatefulReaderWrapper = ({ profile, plugins, isLoading, loader, preferences, navigation, sources, headerActions, i18n: i18nOptions, coverUrl: readerCoverUrl, ...props }: ReaderComponentProps<any, any>) => {
   const [resolvedPlugins, setResolvedPlugins] = useState<ThPlugin[] | undefined>(undefined);
-  // Every reader dispatches `setLoading(false)` once its Readium navigator is
-  // ready (Epub/WebPub/Comic on ready-or-error, Audio on navigator loaded). It
-  // starts `true`, so it also covers the first paint. Without folding this into
-  // the loader the publication-open spinner lifts as soon as the manifest is
-  // parsed, leaving the whole navigator boot with no loading UI.
-  const navigatorPending = useAppSelector(state => state.reader?.isLoading ?? false);
   const navigationContext = useMemo(
     () => ({
       ...navigation,
@@ -172,7 +166,7 @@ export const StatefulReaderWrapper = ({ profile, plugins, isLoading, loader, pre
           adapter={ preferences?.adapter as ThAudioPreferencesAdapter<any> | undefined }
         >
           <ThI18nProvider { ...i18nOptions }>
-            <StatefulAudioContent { ...props } coverUrl={ coverUrl } externalLoading={ isLoading ?? false } loader={ loader } navigatorPending={ navigatorPending } />
+            <StatefulAudioContent { ...props } coverUrl={ coverUrl } externalLoading={ isLoading ?? false } loader={ loader } />
           </ThI18nProvider>
         </ThAudioPreferencesProvider>
       </ReaderNavigationProvider>
@@ -187,7 +181,7 @@ export const StatefulReaderWrapper = ({ profile, plugins, isLoading, loader, pre
         adapter={ preferences?.adapter as ThPreferencesAdapter<any> | undefined }
       >
         <ThI18nProvider { ...i18nOptions }>
-          <StatefulLoader isLoading={ (isLoading ?? false) || navigatorPending } loader={ loader }>
+          <StatefulLoader isLoading={ isLoading ?? false } loader={ loader }>
             <StatefulReaderContent profile={ profile } { ...props } coverUrl={ coverUrl } plugins={ resolvedPlugins } loader={ loader } />
           </StatefulLoader>
         </ThI18nProvider>
@@ -206,11 +200,9 @@ interface AudioContentProps {
   externalLoading: boolean;
   /** Host-owned loading surface, threaded through to the built-in one by default. */
   loader?: ReactNode;
-  /** Whether the Readium audio navigator has reported that it is ready. */
-  navigatorPending: boolean;
 }
 
-const StatefulAudioContent = ({ publication, localDataKey, positionStorage, coverUrl, externalLoading, loader, navigatorPending }: AudioContentProps) => {
+const StatefulAudioContent = ({ publication, localDataKey, positionStorage, coverUrl, externalLoading, loader }: AudioContentProps) => {
   const { preferences } = useAudioPreferences();
   const themeObject = useAppSelector(state => state.theming?.theme ?? {});
   const dispatch = useAppDispatch();
@@ -243,9 +235,9 @@ const StatefulAudioContent = ({ publication, localDataKey, positionStorage, cove
   });
 
   return (
-    <StatefulLoader isLoading={ externalLoading || navigatorPending || !themeResolved || !coverReady } loader={ loader }>
-      {/* The player chunk is lazy. Without a fallback a cold open blanks the
-          whole viewport mid-load. */}
+    <StatefulLoader isLoading={ externalLoading || !themeResolved || !coverReady } loader={ loader }>
+      {/* The player chunk is lazy. A cold open would otherwise blank the
+          whole viewport while it arrives. */}
       <Suspense fallback={ loader ?? <DefaultLoaderScreen /> }>
         <StatefulPlayer publication={ publication } localDataKey={ localDataKey } positionStorage={ positionStorage } coverUrl={ coverBlobUrl } containerRefSetter={ setContainerRef } />
       </Suspense>
@@ -321,8 +313,9 @@ const StatefulReaderContent = ({ profile, publication, plugins, coverUrl, dictio
     onReducedTransparencyChange: (reducedTransparency) => dispatch(setReducedTransparency(reducedTransparency))
   });
 
-  // Every reader chunk is lazy. Without a fallback a cold open blanks the whole
-  // viewport while the chunk arrives.
+  // Every reader chunk is lazy, and the loader is not holding for this phase,
+  // so this fallback is the surface the user actually sees. It has to be the
+  // host's screen, or the open would show two different ones back to back.
   const suspenseFallback = loader ?? <DefaultLoaderScreen />;
 
   switch (profile) {
