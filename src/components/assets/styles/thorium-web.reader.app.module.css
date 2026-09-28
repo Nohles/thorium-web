@@ -227,20 +227,10 @@
   visibility: visible;
 }
 
-.iframeContainer :global(div:has(> .readium-navigator-iframe.blank))::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  margin-top: -14px;
-  margin-left: -14px;
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  border: 3px solid color-mix(in srgb, var(--th-theme-text) 18%, transparent);
-  border-top-color: var(--th-theme-text);
-  animation: loading 700ms linear infinite;
-}
+/* The Readium navigator marks each iframe `.blank` until its content paints.
+   That used to draw a spinner here, but the navigator boot is now covered by
+   StatefulLoader, which holds the loading surface until `reader.isLoading`
+   clears. A second spinner over the top of it read as a restart. */
 
 /* Utils */
 
@@ -471,8 +461,7 @@
     transition: none;
   }
 
-  .comicImageSpinner,
-  .iframeContainer :global(div:has(> .readium-navigator-iframe.blank))::after {
+  .comicImageSpinner {
     animation: none;
     border-top-color: color-mix(in srgb, var(--th-theme-text, #fff) 58%, transparent);
   }

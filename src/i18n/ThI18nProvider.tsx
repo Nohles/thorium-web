@@ -38,10 +38,11 @@ export const ThI18nProvider = ({
     document.documentElement.lang = lang;
   }, [locale, isInitialized]);
 
-  if (!isInitialized) {
-    return null;
-  }
-
+  // Render children even before i18n initialises. Returning null here blanks
+  // the whole reader — including any loading surface — on a cold first open,
+  // which is exactly when a loading surface is needed most. `useI18n` tolerates
+  // an uninitialised instance and echoes keys back, so the only cost is that
+  // untranslated text may briefly render untranslated instead of not at all.
   return <I18nextProvider i18n={ i18n }>{ children }</I18nextProvider>;
 };
 
