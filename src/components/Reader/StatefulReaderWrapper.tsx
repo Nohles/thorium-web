@@ -26,7 +26,7 @@ import { propsToCSSVars } from "@/core/Helpers/propsToCSSVars";
 import { prefixString } from "@/core/Helpers/prefixString";
 import { useCoverBlobUrl } from "@/hooks/useCoverBlobUrl";
 import { ThPlugin } from "../Plugins";
-import { StatefulLoader } from "@/components/Misc";
+import { StatefulLoader, DefaultLoaderScreen, UnlabelledLoaderScreen } from "@/components/Misc";
 import { ThPreferences, CustomizableKeys } from "@/preferences/preferences";
 import { ThAudioPreferences } from "@/preferences/audioPreferences";
 import { ThPreferencesAdapter } from "@/preferences/adapters/ThPreferencesAdapter";
@@ -88,6 +88,15 @@ export interface ReaderComponentProps<
   isLoading?: boolean;
   positionStorage?: PositionStorage;
   coverUrl?: string;
+  /**
+   * Replaces the built-in loading surface shown while the publication opens and
+   * the Readium navigator boots. Host applications own the surrounding chrome,
+   * so they usually supply a screen that matches the app they are embedding the
+   * reader in. Omit to keep the built-in spinner.
+   *
+   * Must cover its own area: it replaces the loader overlay, not the reader.
+   */
+  loader?: ReactNode;
   plugins?: ReaderPlugins;
   i18n?: Partial<InitOptions>;
   navigation?: ReaderNavigation;
@@ -106,7 +115,7 @@ export interface ReaderComponentProps<
 
 // ─── Outer wrapper — selects provider based on profile ────────────────────────
 
-export const StatefulReaderWrapper = ({ profile, plugins, isLoading, preferences, navigation, sources, headerActions, i18n: i18nOptions, coverUrl: readerCoverUrl, ...props }: ReaderComponentProps<any, any>) => {
+export const StatefulReaderWrapper = ({ profile, plugins, isLoading, loader, preferences, navigation, sources, headerActions, i18n: i18nOptions, coverUrl: readerCoverUrl, ...props }: ReaderComponentProps<any, any>) => {
   const [resolvedPlugins, setResolvedPlugins] = useState<ThPlugin[] | undefined>(undefined);
   const navigationContext = useMemo(
     () => ({
@@ -114,7 +123,7 @@ export const StatefulReaderWrapper = ({ profile, plugins, isLoading, preferences
       sources: sources ?? navigation?.sources,
       headerActions: headerActions ?? navigation?.headerActions,
     }),
-    [headerActions, navigation, sources],
+    [navigation, sources, headerActions],
   );
 
   const pendingFactory = profile === "epub" ? plugins?.epub
@@ -133,7 +142,17 @@ export const StatefulReaderWrapper = ({ profile, plugins, isLoading, preferences
     }
   }, [pendingFactory]);
 
-  if (pendingFactory && resolvedPlugins === undefined) return null;
+  // Show the loading surface rather than nothing while an async plugin factory
+  // resolves. This sits above every provider, so it must not assume any of them
+  // — in particular it cannot use `useI18n`, which needs `ThI18nProvider` to
+  // have run first.
+  if (pendingFactory && resolvedPlugins === undefined) {
+    return (
+      <StatefulLoader isLoading loader={ loader ?? <UnlabelledLoaderScreen /> }>
+        { null }
+      </StatefulLoader>
+    );
+  }
 
   const manifestCoverUrl = props.publication?.getCover()?.toURL(props.publication.baseURL);
   const coverUrl = readerCoverUrl ?? manifestCoverUrl;
@@ -147,7 +166,7 @@ export const StatefulReaderWrapper = ({ profile, plugins, isLoading, preferences
           adapter={ preferences?.adapter as ThAudioPreferencesAdapter<any> | undefined }
         >
           <ThI18nProvider { ...i18nOptions }>
-            <StatefulAudioContent { ...props } coverUrl={ coverUrl } externalLoading={ isLoading ?? false } />
+            <StatefulAudioContent { ...props } coverUrl={ coverUrl } externalLoading={ isLoading ?? false } loader={ loader } />
           </ThI18nProvider>
         </ThAudioPreferencesProvider>
       </ReaderNavigationProvider>
@@ -162,8 +181,8 @@ export const StatefulReaderWrapper = ({ profile, plugins, isLoading, preferences
         adapter={ preferences?.adapter as ThPreferencesAdapter<any> | undefined }
       >
         <ThI18nProvider { ...i18nOptions }>
-          <StatefulLoader isLoading={ isLoading ?? false }>
-            <StatefulReaderContent profile={ profile } { ...props } coverUrl={ coverUrl } plugins={ resolvedPlugins } />
+          <StatefulLoader isLoading={ isLoading ?? false } loader={ loader }>
+            <StatefulReaderContent profile={ profile } { ...props } coverUrl={ coverUrl } plugins={ resolvedPlugins } loader={ loader } />
           </StatefulLoader>
         </ThI18nProvider>
       </ThPreferencesProvider>
@@ -179,9 +198,11 @@ interface AudioContentProps {
   positionStorage?: PositionStorage;
   coverUrl?: string;
   externalLoading: boolean;
+  /** Host-owned loading surface, threaded through to the built-in one by default. */
+  loader?: ReactNode;
 }
 
-const StatefulAudioContent = ({ publication, localDataKey, positionStorage, coverUrl, externalLoading }: AudioContentProps) => {
+const StatefulAudioContent = ({ publication, localDataKey, positionStorage, coverUrl, externalLoading, loader }: AudioContentProps) => {
   const { preferences } = useAudioPreferences();
   const themeObject = useAppSelector(state => state.theming?.theme ?? {});
   const dispatch = useAppDispatch();
@@ -214,8 +235,10 @@ const StatefulAudioContent = ({ publication, localDataKey, positionStorage, cove
   });
 
   return (
-    <StatefulLoader isLoading={ externalLoading || !themeResolved || !coverReady }>
-      <Suspense>
+    <StatefulLoader isLoading={ externalLoading || !themeResolved || !coverReady } loader={ loader }>
+      {/* The player chunk is lazy. A cold open would otherwise blank the
+          whole viewport while it arrives. */}
+      <Suspense fallback={ loader ?? <DefaultLoaderScreen /> }>
         <StatefulPlayer publication={ publication } localDataKey={ localDataKey } positionStorage={ positionStorage } coverUrl={ coverBlobUrl } containerRefSetter={ setContainerRef } />
       </Suspense>
     </StatefulLoader>
@@ -232,9 +255,11 @@ interface ReaderContentProps extends ReaderInteractionProps {
   plugins?: ThPlugin[];
   coverUrl?: string;
   dictionary?: DictionaryReaderCallbacks;
+  /** Host-owned loading surface, reused for the lazy reader chunk's fallback. */
+  loader?: ReactNode;
 }
 
-const StatefulReaderContent = ({ profile, publication, plugins, coverUrl, dictionary, ...props }: ReaderContentProps) => {
+const StatefulReaderContent = ({ profile, publication, plugins, coverUrl, dictionary, loader, ...props }: ReaderContentProps) => {
   const { preferences, resolveFontLanguage } = usePreferences();
   const themeObject = useAppSelector(state => state.theming?.theme ?? {});
   const customThemes = useAppSelector(state => state.theming.customThemes);
@@ -288,13 +313,18 @@ const StatefulReaderContent = ({ profile, publication, plugins, coverUrl, dictio
     onReducedTransparencyChange: (reducedTransparency) => dispatch(setReducedTransparency(reducedTransparency))
   });
 
+  // Every reader chunk is lazy, and the loader is not holding for this phase,
+  // so this fallback is the surface the user actually sees. It has to be the
+  // host's screen, or the open would show two different ones back to back.
+  const suspenseFallback = loader ?? <DefaultLoaderScreen />;
+
   switch (profile) {
     case "epub":
-      return <Suspense><StatefulEpubReader publication={ publication } { ...props } plugins={ plugins } containerRefSetter={ setContainerRef } dictionary={ dictionary } /></Suspense>;
+      return <Suspense fallback={ suspenseFallback }><StatefulEpubReader publication={ publication } { ...props } plugins={ plugins } containerRefSetter={ setContainerRef } dictionary={ dictionary } /></Suspense>;
     case "comic":
-      return <Suspense><StatefulComicReader publication={ publication } { ...props } plugins={ plugins } /></Suspense>;
+      return <Suspense fallback={ suspenseFallback }><StatefulComicReader publication={ publication } { ...props } plugins={ plugins } /></Suspense>;
     case "webPub":
     default:
-      return <Suspense><StatefulWebPubReader publication={ publication } { ...props } plugins={ plugins } containerRefSetter={ setContainerRef } dictionary={ dictionary } /></Suspense>;
+      return <Suspense fallback={ suspenseFallback }><StatefulWebPubReader publication={ publication } { ...props } plugins={ plugins } containerRefSetter={ setContainerRef } dictionary={ dictionary } /></Suspense>;
   }
 };
