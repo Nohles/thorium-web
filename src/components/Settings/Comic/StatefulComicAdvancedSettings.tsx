@@ -2,14 +2,13 @@
 
 import { useMemo } from "react";
 import { useI18n } from "@/i18n/useI18n";
-import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import {
   ComicOverlayMode,
   ComicProgressBarPosition,
   ComicProgressBarType,
   defaultComicSettings,
-  updateComicSettings,
 } from "@/lib/comicSettingsReducer";
+import { useComicSettings } from "@/components/Comic/hooks/useComicSettings";
 import {
   isReaderWidthEditable,
   stretchAllowedForScale,
@@ -19,24 +18,9 @@ import { StatefulRadioGroup } from "../StatefulRadioGroup";
 import { StatefulSlider } from "../StatefulSlider";
 import { StatefulSwitch } from "../StatefulSwitch";
 
-const useComicSetting = () => {
-  const dispatch = useAppDispatch();
-  const activeKey = useAppSelector((s) => s.comicSettings.activeKey);
-  const settings = useAppSelector((s) =>
-    activeKey ? s.comicSettings.byKey[activeKey] : undefined
-  );
-
-  const patch = (values: Record<string, boolean | number | string>) => {
-    if (!activeKey) return;
-    dispatch(updateComicSettings({ key: activeKey, patch: values }));
-  };
-
-  return { settings, patch };
-};
-
 export const StatefulComicOverlayMode = () => {
   const { t } = useI18n();
-  const { settings, patch } = useComicSetting();
+  const { settings, patch } = useComicSettings();
 
   const options = useMemo(
     () => [
@@ -50,8 +34,8 @@ export const StatefulComicOverlayMode = () => {
     <StatefulRadioGroup
       standalone={true}
       label={t("reader.comic.overlayMode.label")}
-      value={settings?.overlayMode ?? ComicOverlayMode.auto}
-      onChange={(value) => patch({ overlayMode: value })}
+      value={settings.overlayMode}
+      onChange={(value) => patch({ overlayMode: value as ComicOverlayMode })}
       items={options}
     />
   );
@@ -60,12 +44,12 @@ export const StatefulComicOverlayMode = () => {
 /** @deprecated The comic reader does not implement this setting yet; it has no effect. */
 export const StatefulComicShowPageNumber = () => {
   const { t } = useI18n();
-  const { settings, patch } = useComicSetting();
+  const { settings, patch } = useComicSettings();
   return (
     <StatefulSwitch
       standalone={true}
       label={t("reader.comic.showPageNumber.label")}
-      isSelected={settings?.showPageNumber ?? true}
+      isSelected={settings.showPageNumber}
       onChange={(value) => patch({ showPageNumber: value })}
     />
   );
@@ -74,12 +58,12 @@ export const StatefulComicShowPageNumber = () => {
 /** @deprecated The comic reader does not implement this setting yet; it has no effect. */
 export const StatefulComicStaticNavigation = () => {
   const { t } = useI18n();
-  const { settings, patch } = useComicSetting();
+  const { settings, patch } = useComicSettings();
   return (
     <StatefulSwitch
       standalone={true}
       label={t("reader.comic.staticNavigation.label")}
-      isSelected={settings?.staticNavigation ?? false}
+      isSelected={settings.staticNavigation}
       onChange={(value) => patch({ staticNavigation: value })}
     />
   );
@@ -87,7 +71,7 @@ export const StatefulComicStaticNavigation = () => {
 
 export const StatefulComicProgressBarType = () => {
   const { t } = useI18n();
-  const { settings, patch } = useComicSetting();
+  const { settings, patch } = useComicSettings();
 
   const options = useMemo(
     () => [
@@ -101,8 +85,8 @@ export const StatefulComicProgressBarType = () => {
     <StatefulRadioGroup
       standalone={true}
       label={t("reader.comic.progressBar.type")}
-      value={settings?.progressBarType ?? ComicProgressBarType.standard}
-      onChange={(value) => patch({ progressBarType: value })}
+      value={settings.progressBarType}
+      onChange={(value) => patch({ progressBarType: value as ComicProgressBarType })}
       items={options}
     />
   );
@@ -110,7 +94,7 @@ export const StatefulComicProgressBarType = () => {
 
 export const StatefulComicProgressBarPosition = () => {
   const { t } = useI18n();
-  const { settings, patch } = useComicSetting();
+  const { settings, patch } = useComicSettings();
   const options = useMemo(
     () => [
       { value: ComicProgressBarPosition.auto, label: t("reader.comic.progressBar.position.auto") },
@@ -124,8 +108,8 @@ export const StatefulComicProgressBarPosition = () => {
     <StatefulRadioGroup
       standalone={true}
       label={t("reader.comic.progressBar.position.label")}
-      value={settings?.progressBarPosition ?? ComicProgressBarPosition.auto}
-      onChange={(value) => patch({ progressBarPosition: value })}
+      value={settings.progressBarPosition}
+      onChange={(value) => patch({ progressBarPosition: value as ComicProgressBarPosition })}
       items={options}
     />
   );
@@ -133,8 +117,8 @@ export const StatefulComicProgressBarPosition = () => {
 
 export const StatefulComicStretchSmallPages = () => {
   const { t } = useI18n();
-  const { settings, patch } = useComicSetting();
-  const scaleType = settings?.scaleType ?? defaultComicSettings.scaleType;
+  const { settings, patch } = useComicSettings();
+  const scaleType = settings.scaleType;
   if (!stretchAllowedForScale(scaleType)) {
     return null;
   }
@@ -142,7 +126,7 @@ export const StatefulComicStretchSmallPages = () => {
     <StatefulSwitch
       standalone={true}
       label={t("reader.comic.stretchSmallPages.label")}
-      isSelected={settings?.stretchSmallPages ?? false}
+      isSelected={settings.stretchSmallPages}
       onChange={(value) => patch({ stretchSmallPages: value })}
     />
   );
@@ -150,8 +134,8 @@ export const StatefulComicStretchSmallPages = () => {
 
 export const StatefulComicWidthLimitEnabled = () => {
   const { t } = useI18n();
-  const { settings, patch } = useComicSetting();
-  const scaleType = settings?.scaleType ?? defaultComicSettings.scaleType;
+  const { settings, patch } = useComicSettings();
+  const scaleType = settings.scaleType;
   if (!isReaderWidthEditable(scaleType)) {
     return null;
   }
@@ -159,7 +143,7 @@ export const StatefulComicWidthLimitEnabled = () => {
     <StatefulSwitch
       standalone={true}
       label={t("reader.comic.widthLimit.enabled")}
-      isSelected={settings?.widthLimitEnabled ?? false}
+      isSelected={settings.widthLimitEnabled}
       onChange={(value) => patch({ widthLimitEnabled: value })}
     />
   );
@@ -169,17 +153,17 @@ const WIDTH_LIMIT_SLIDER_RANGE: [number, number] = [10, 100];
 
 export const StatefulComicWidthLimit = () => {
   const { t } = useI18n();
-  const { settings, patch } = useComicSetting();
-  const scaleType = settings?.scaleType ?? defaultComicSettings.scaleType;
+  const { settings, patch } = useComicSettings();
+  const scaleType = settings.scaleType;
   if (!isReaderWidthEditable(scaleType)) {
     return null;
   }
-  const enabled = settings?.widthLimitEnabled ?? false;
+  const enabled = settings.widthLimitEnabled;
   return (
     <StatefulSlider
       standalone={true}
       label={t("reader.comic.widthLimit.label")}
-      value={settings?.widthLimitPercent ?? defaultComicSettings.widthLimitPercent}
+      value={settings.widthLimitPercent}
       defaultValue={defaultComicSettings.widthLimitPercent}
       range={WIDTH_LIMIT_SLIDER_RANGE}
       step={1}
@@ -191,14 +175,14 @@ export const StatefulComicWidthLimit = () => {
 
 export const StatefulComicScrollAmountPercent = () => {
   const { t } = useI18n();
-  const { settings, patch } = useComicSetting();
+  const { settings, patch } = useComicSettings();
   return (
     <StatefulNumberField
       standalone={true}
       label={t("reader.comic.scrollAmount.label")}
       range={[10, 100]}
       step={5}
-      value={settings?.scrollAmountPercent ?? 95}
+      value={settings.scrollAmountPercent}
       onChange={(value) => patch({ scrollAmountPercent: value })}
     />
   );
@@ -207,12 +191,12 @@ export const StatefulComicScrollAmountPercent = () => {
 /** @deprecated The comic reader does not implement this setting yet; it has no effect. */
 export const StatefulComicAutoScrollEnabled = () => {
   const { t } = useI18n();
-  const { settings, patch } = useComicSetting();
+  const { settings, patch } = useComicSettings();
   return (
     <StatefulSwitch
       standalone={true}
       label={t("reader.comic.autoScroll.enabled")}
-      isSelected={settings?.autoScrollEnabled ?? false}
+      isSelected={settings.autoScrollEnabled}
       onChange={(value) => patch({ autoScrollEnabled: value })}
     />
   );
@@ -221,14 +205,14 @@ export const StatefulComicAutoScrollEnabled = () => {
 /** @deprecated The comic reader does not implement this setting yet; it has no effect. */
 export const StatefulComicAutoScrollSpeedSeconds = () => {
   const { t } = useI18n();
-  const { settings, patch } = useComicSetting();
+  const { settings, patch } = useComicSettings();
   return (
     <StatefulNumberField
       standalone={true}
       label={t("reader.comic.autoScroll.speed")}
       range={[1, 20]}
       step={1}
-      value={settings?.autoScrollSpeedSeconds ?? 5}
+      value={settings.autoScrollSpeedSeconds}
       onChange={(value) => patch({ autoScrollSpeedSeconds: value })}
     />
   );
@@ -237,12 +221,12 @@ export const StatefulComicAutoScrollSpeedSeconds = () => {
 /** @deprecated The comic reader does not implement this setting yet; it has no effect. */
 export const StatefulComicAutoScrollSmooth = () => {
   const { t } = useI18n();
-  const { settings, patch } = useComicSetting();
+  const { settings, patch } = useComicSettings();
   return (
     <StatefulSwitch
       standalone={true}
       label={t("reader.comic.autoScroll.smooth")}
-      isSelected={settings?.autoScrollSmooth ?? true}
+      isSelected={settings.autoScrollSmooth}
       onChange={(value) => patch({ autoScrollSmooth: value })}
     />
   );
@@ -251,12 +235,12 @@ export const StatefulComicAutoScrollSmooth = () => {
 /** @deprecated The comic reader does not implement this setting yet; it has no effect. */
 export const StatefulComicReadingModePreview = () => {
   const { t } = useI18n();
-  const { settings, patch } = useComicSetting();
+  const { settings, patch } = useComicSettings();
   return (
     <StatefulSwitch
       standalone={true}
       label={t("reader.comic.readingModePreview.label")}
-      isSelected={settings?.readingModePreview ?? true}
+      isSelected={settings.readingModePreview}
       onChange={(value) => patch({ readingModePreview: value })}
     />
   );
@@ -264,12 +248,12 @@ export const StatefulComicReadingModePreview = () => {
 
 export const StatefulComicTapZonePreview = () => {
   const { t } = useI18n();
-  const { settings, patch } = useComicSetting();
+  const { settings, patch } = useComicSettings();
   return (
     <StatefulSwitch
       standalone={true}
       label={t("reader.comic.tapZonePreview.label")}
-      isSelected={settings?.tapZonePreview ?? false}
+      isSelected={settings.tapZonePreview}
       onChange={(value) => patch({ tapZonePreview: value })}
     />
   );
@@ -277,14 +261,14 @@ export const StatefulComicTapZonePreview = () => {
 
 export const StatefulComicImagePreloadAmount = () => {
   const { t } = useI18n();
-  const { settings, patch } = useComicSetting();
+  const { settings, patch } = useComicSettings();
   return (
     <StatefulNumberField
       standalone={true}
       label={t("reader.comic.imagePreloadAmount.label")}
       range={[0, 10]}
       step={1}
-      value={settings?.imagePreloadAmount ?? defaultComicSettings.imagePreloadAmount}
+      value={settings.imagePreloadAmount}
       onChange={(value) => patch({ imagePreloadAmount: value })}
     />
   );

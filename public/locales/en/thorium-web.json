@@ -218,8 +218,8 @@
       },
       "progressNavigator": {
         "label": "Page navigator",
-        "goToPage": "Go to page {{ label }}",
-        "goToSpread": "Go to pages {{ label }}"
+        "pageValue": "Page {{ label }} of {{ total }}",
+        "spreadValue": "Pages {{ label }} of {{ total }}"
       },
       "empty": {
         "noPages": "This publication has no pages to display."

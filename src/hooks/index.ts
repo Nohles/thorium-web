@@ -5,4 +5,4 @@ export * from "./usePaginatedArrows";
 export * from "./usePositionStorage";
 export * from "./usePublication";
 export * from "./useIsScroll";
-export * from "./useReaderTransitions";
+export * from "./useReaderTransitions";export * from "./useReaderDocumentTitle";

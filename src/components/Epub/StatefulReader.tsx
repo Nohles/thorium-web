@@ -13,7 +13,6 @@ import arrowStyles from "../assets/styles/thorium-web.reader.paginatedArrow.modu
 import {
   ThLayoutDirection,
   ThLayoutUI,
-  ThDocumentTitleFormat,
   ThSpacingSettingsKeys,
   ThProgressionFormat,
   ThSettingsKeys,
@@ -59,7 +58,7 @@ import { useTimelineAdjacency } from "@/core/Hooks/useTimelineAdjacency";
 import { useTocEntryTracking } from "@/components/Actions/Toc/useTocEntryTracking";
 import { useTocTreeBuilder } from "@/core/Hooks/useTocTreeBuilder";
 import { useIsScroll, usePositionStorage } from "@/hooks";
-import { useDocumentTitle } from "@/core/Hooks/useDocumentTitle";
+import { useReaderDocumentTitle } from "@/hooks/useReaderDocumentTitle";
 import { useSpacingPresets } from "../Settings/Spacing/hooks/useSpacingPresets";
 import { usePaginatedArrows } from "@/hooks/usePaginatedArrows";
 import { useFonts } from "@/core/Hooks/fonts/useFonts";
@@ -308,40 +307,10 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     }
   });
 
-  const documentTitleFormat = preferences.metadata?.documentTitle?.format;
-  
-  let documentTitle: string | undefined;
-  
-  if (documentTitleFormat) {
-    if (typeof documentTitleFormat === "object" && "key" in documentTitleFormat) {
-      const translatedTitle = t(documentTitleFormat.key);
-      documentTitle = translatedTitle !== documentTitleFormat.key 
-        ? translatedTitle 
-        : documentTitleFormat.fallback;
-    } else {
-      switch (documentTitleFormat) {
-        case ThDocumentTitleFormat.title:
-          documentTitle = timeline?.title;
-          break;
-        case ThDocumentTitleFormat.chapter:
-          documentTitle = timeline?.progression?.currentChapter;
-          break;
-        case ThDocumentTitleFormat.titleAndChapter:
-          if (timeline?.title && timeline?.progression?.currentChapter) {
-            documentTitle = `${ timeline.title } – ${ timeline.progression.currentChapter }`;
-          }
-          break;
-        case ThDocumentTitleFormat.none:
-          documentTitle = undefined;
-          break;
-        default: 
-          documentTitle = documentTitleFormat;
-          break;
-      }
-    }
-  }
-
-  useDocumentTitle(documentTitle);
+  useReaderDocumentTitle({
+    title: timeline?.title,
+    chapter: timeline?.progression?.currentChapter,
+  });
 
   const activateImmersiveOnAction = useCallback(() => {
     if (!cache.current.isImmersive) dispatch(setImmersive(true));
