@@ -577,6 +577,8 @@ const ComicImageLoadError = ({
       <div
         style={{
           ...areaStyle,
+          // Padding must stay inside the page cell, or the card overflows and scrolls the reader.
+          boxSizing: "border-box",
           flexDirection: "column",
           gap: 12,
           padding: 16,
@@ -927,7 +929,8 @@ const ComicImage = memo(function ComicImage({
   if (error || imageError) {
     return (
       <ComicImageLoadError
-        message={error || imageError || failedMessage}
+        // Raw fetch/decode messages are browser-specific English; telemetry keeps them.
+        message={failedMessage}
         onRetry={handleRetry}
         frameStyle={frameStyle}
         areaStyle={areaStyle}
@@ -1506,6 +1509,7 @@ export const ComicReaderViewport = ({
             overscrollBehavior: "contain",
             touchAction: "pan-y",
             padding: 8,
+            boxSizing: "border-box",
             display: "flex",
             flexDirection: "column",
             gap: pageGapPx,
@@ -1557,6 +1561,7 @@ export const ComicReaderViewport = ({
             overscrollBehavior: "contain",
             touchAction: "pan-x",
             padding: 8,
+            boxSizing: "border-box",
             display: "flex",
             gap: pageGapPx,
           }}
@@ -1610,6 +1615,7 @@ export const ComicReaderViewport = ({
               alignItems: "center",
               gap: pageGapPx,
               padding: 8,
+              boxSizing: "border-box",
               minHeight: 0,
               overflow: "auto",
               margin: "auto",
@@ -1656,6 +1662,7 @@ export const ComicReaderViewport = ({
               gridAutoColumns: "1fr",
               gap: pageGapPx,
               padding: 8,
+              boxSizing: "border-box",
               minHeight: 0,
             }}
           >
