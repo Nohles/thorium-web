@@ -57,6 +57,7 @@ export const StatefulComicOverlayMode = () => {
   );
 };
 
+/** @deprecated The comic reader does not implement this setting yet; it has no effect. */
 export const StatefulComicShowPageNumber = () => {
   const { t } = useI18n();
   const { settings, patch } = useComicSetting();
@@ -70,6 +71,7 @@ export const StatefulComicShowPageNumber = () => {
   );
 };
 
+/** @deprecated The comic reader does not implement this setting yet; it has no effect. */
 export const StatefulComicStaticNavigation = () => {
   const { t } = useI18n();
   const { settings, patch } = useComicSetting();
@@ -202,6 +204,7 @@ export const StatefulComicScrollAmountPercent = () => {
   );
 };
 
+/** @deprecated The comic reader does not implement this setting yet; it has no effect. */
 export const StatefulComicAutoScrollEnabled = () => {
   const { t } = useI18n();
   const { settings, patch } = useComicSetting();
@@ -215,6 +218,7 @@ export const StatefulComicAutoScrollEnabled = () => {
   );
 };
 
+/** @deprecated The comic reader does not implement this setting yet; it has no effect. */
 export const StatefulComicAutoScrollSpeedSeconds = () => {
   const { t } = useI18n();
   const { settings, patch } = useComicSetting();
@@ -230,6 +234,7 @@ export const StatefulComicAutoScrollSpeedSeconds = () => {
   );
 };
 
+/** @deprecated The comic reader does not implement this setting yet; it has no effect. */
 export const StatefulComicAutoScrollSmooth = () => {
   const { t } = useI18n();
   const { settings, patch } = useComicSetting();
@@ -243,6 +248,7 @@ export const StatefulComicAutoScrollSmooth = () => {
   );
 };
 
+/** @deprecated The comic reader does not implement this setting yet; it has no effect. */
 export const StatefulComicReadingModePreview = () => {
   const { t } = useI18n();
   const { settings, patch } = useComicSetting();
@@ -278,7 +284,7 @@ export const StatefulComicImagePreloadAmount = () => {
       label={t("reader.comic.imagePreloadAmount.label")}
       range={[0, 10]}
       step={1}
-      value={settings?.imagePreloadAmount ?? 5}
+      value={settings?.imagePreloadAmount ?? defaultComicSettings.imagePreloadAmount}
       onChange={(value) => patch({ imagePreloadAmount: value })}
     />
   );

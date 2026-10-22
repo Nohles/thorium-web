@@ -2,7 +2,7 @@
 
 import { useI18n } from "@/i18n/useI18n";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
-import { updateComicSettings } from "@/lib/comicSettingsReducer";
+import { defaultComicSettings, updateComicSettings } from "@/lib/comicSettingsReducer";
 import { StatefulSwitch } from "../StatefulSwitch";
 
 export const StatefulComicChapterBoundaries = () => {
@@ -17,7 +17,7 @@ export const StatefulComicChapterBoundaries = () => {
     <StatefulSwitch
       standalone={true}
       label={t("reader.comic.chapterBoundaries.label")}
-      isSelected={settings?.comicChapterBoundaries ?? false}
+      isSelected={settings?.comicChapterBoundaries ?? defaultComicSettings.comicChapterBoundaries}
       onChange={(value) => {
         if (!activeKey) return;
         dispatch(updateComicSettings({ key: activeKey, patch: { comicChapterBoundaries: value } }));

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import classNames from "classnames";
-import { Link, Manifest, Publication } from "@readium/shared";
+import { Link, Manifest, Publication, ReadingProgression } from "@readium/shared";
 
 import readerStyles from "../assets/styles/thorium-web.reader.app.module.css";
 
@@ -22,6 +22,7 @@ import {
   ComicScaleType,
   ComicTapZones,
   defaultComicSettings,
+  initComicSettings,
   LegacyComicSettings,
   normalizeComicSettings,
   setComicActiveKey,
@@ -74,18 +75,19 @@ import {
   type ComicArchiveChapter,
   type ComicArchivePageIdentity,
 } from "./lib/comicArchiveSeries";
+import { type ComicLabels, useComicLabels } from "./lib/comicLabels";
 
 import { usePreferences } from "@/preferences/hooks/usePreferences";
 import { useI18n } from "@/i18n/useI18n";
 import { usePositionStorage } from "@/hooks/usePositionStorage";
 import { useReaderNavigation } from "../Reader/ReaderNavigationContext";
 
-const getReadingOrderImages = (publication: Publication): ComicPage[] => {
+const getReadingOrderImages = (publication: Publication, labels: ComicLabels): ComicPage[] => {
   const items = publication.readingOrder?.items ?? [];
   return items
     .filter((item) => !item.templated)
     .filter((item) => typeof item.type === "string" && item.type.startsWith("image/"))
-    .map((link, index) => ({ index, link, href: link.href, title: link.title || `Page ${index + 1}` }));
+    .map((link, index) => ({ index, link, href: link.href, title: link.title || labels.page(index + 1) }));
 };
 
 const getManifestSelfHref = (publication: Publication): string | undefined => {
@@ -97,7 +99,8 @@ const getChapterImages = (
   chapter: ComicArchiveChapter,
   manifest: Manifest,
   manifestUrl: string,
-  startIndex: number
+  startIndex: number,
+  labels: ComicLabels
 ): ComicPage[] => {
   const items = manifest.readingOrder?.items ?? [];
   return items
@@ -108,7 +111,7 @@ const getChapterImages = (
       const pageLink = new Link({
         href,
         type: link.type,
-        title: link.title || `${chapter.title} - Page ${pageIndexInChapter + 1}`,
+        title: link.title || labels.chapterPage(chapter.title, pageIndexInChapter + 1),
         // Preserve probed pixel dimensions so placeholders can reserve the
         // eventual page height without decoding the image first.
         ...(link.width && link.width > 0 ? { width: link.width } : null),
@@ -119,7 +122,7 @@ const getChapterImages = (
         index,
         link: pageLink,
         href,
-        title: pageLink.title || `Page ${index + 1}`,
+        title: pageLink.title || labels.page(index + 1),
         archive: {
           chapterIndex: chapter.index,
           chapterHref: chapter.href,
@@ -239,6 +242,7 @@ const findArchivePageInPages = (
 const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }: StatefulReaderProps) => {
   const { preferences } = usePreferences();
   const { t } = useI18n();
+  const labels = useComicLabels();
   const { publicationHref, homeHref, continueElsewhere } = useReaderNavigation();
   const dispatch = useAppDispatch();
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -290,12 +294,18 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   const manifestSelfHref = useMemo(() => getManifestSelfHref(publication), [publication]);
   const isArchiveSeries = useMemo(() => isComicArchiveSeriesManifest(publication.manifest), [publication.manifest]);
   const archiveChapters = useMemo(
-    () => (isArchiveSeries && manifestSelfHref ? buildComicArchiveChapters(publication.manifest, manifestSelfHref) : []),
-    [isArchiveSeries, manifestSelfHref, publication.manifest]
+    () =>
+      isArchiveSeries && manifestSelfHref
+        ? buildComicArchiveChapters(publication.manifest, manifestSelfHref, labels)
+        : [],
+    [isArchiveSeries, labels, manifestSelfHref, publication.manifest]
   );
   const [chapterManifests, setChapterManifests] = useState<Record<number, { manifest: Manifest; manifestUrl: string }>>({});
   const chapterManifestPromisesRef = useRef<Partial<Record<number, Promise<boolean>>>>({});
-  const [chapterLoadError, setChapterLoadError] = useState<string | null>(null);
+  const [chapterLoadError, setChapterLoadError] = useState<{
+    chapterIndex: number;
+    reason: "failed" | "undiscoverable";
+  } | null>(null);
   const { setLocalData, localData } = usePositionStorage(localDataKey, positionStorage);
   const [manifestCurrentChapterIdentity, setManifestCurrentChapterIdentity] = useState<Pick<
     ComicArchivePageIdentity,
@@ -374,7 +384,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
         return chapterManifestPromisesRef.current[chapterIndex]!;
       }
       if (!chapter.manifestUrl) {
-        setChapterLoadError("This comic series server does not expose chapter manifests Thorium Web can discover.");
+        setChapterLoadError({ chapterIndex, reason: "undiscoverable" });
         return false;
       }
 
@@ -387,8 +397,8 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
           setChapterLoadError(null);
           return true;
         })
-        .catch((error) => {
-          setChapterLoadError(error instanceof Error ? error.message : "Failed to load chapter manifest.");
+        .catch(() => {
+          setChapterLoadError({ chapterIndex, reason: "failed" });
           return false;
         })
         .finally(() => {
@@ -413,18 +423,18 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   }, [archiveChapters.length, initialArchiveChapterIndex, isArchiveSeries, loadChapter]);
 
   const allPages = useMemo(() => {
-    if (!isArchiveSeries) return getReadingOrderImages(publication);
+    if (!isArchiveSeries) return getReadingOrderImages(publication, labels);
     let startIndex = 0;
     const pages: ComicPage[] = [];
     for (const chapter of archiveChapters) {
       const loaded = chapterManifests[chapter.index];
       if (!loaded) continue;
-      const chapterPages = getChapterImages(chapter, loaded.manifest, loaded.manifestUrl, startIndex);
+      const chapterPages = getChapterImages(chapter, loaded.manifest, loaded.manifestUrl, startIndex, labels);
       pages.push(...chapterPages);
       startIndex += chapterPages.length;
     }
     return pages;
-  }, [archiveChapters, chapterManifests, isArchiveSeries, publication]);
+  }, [archiveChapters, chapterManifests, isArchiveSeries, labels, publication]);
   const allPagesRef = useRef(allPages);
   const setLocalDataRef = useRef(setLocalData);
   const manifestRef = useRef(publication.manifest);
@@ -448,8 +458,11 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     return index >= 0 ? index : undefined;
   }, [allPages, localData, restoreArchiveIdentity]);
   const chapterSegments = useMemo(
-    () => (isArchiveSeries ? buildSeriesSegments(archiveChapters, allPages) : buildComicChapterSegments(publication, allPages)),
-    [archiveChapters, allPages, isArchiveSeries, publication]
+    () =>
+      isArchiveSeries
+        ? buildSeriesSegments(archiveChapters, allPages)
+        : buildComicChapterSegments(publication, allPages, labels),
+    [archiveChapters, allPages, isArchiveSeries, labels, publication]
   );
   const chapterTocActive =
     merged.comicChapterBoundaries &&
@@ -892,12 +905,23 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     onCycleScaleType: cycleScaleType,
     onCycleReadingMode: cycleReadingMode,
     onCycleDirection: cycleDirection,
-    onToggleAutoScroll: () => updateSettings({ autoScrollEnabled: !merged.autoScrollEnabled }),
   });
 
   useEffect(() => {
+    // First open of a publication follows its declared reading progression (e.g. RTL manga).
+    const direction =
+      publication.metadata.effectiveReadingProgression === ReadingProgression.rtl
+        ? ComicReadingDirection.rtl
+        : ComicReadingDirection.ltr;
+    dispatch(initComicSettings({ key: activeKey, defaults: { direction } }));
     dispatch(setComicActiveKey(activeKey));
-  }, [activeKey, dispatch]);
+  }, [activeKey, dispatch, publication]);
+
+  const retryChapterLoad = useCallback(() => {
+    if (!chapterLoadError) return;
+    setChapterLoadError(null);
+    loadChapter(chapterLoadError.chapterIndex).catch(() => undefined);
+  }, [chapterLoadError, loadChapter]);
 
   useEffect(() => {
     dispatch(setLoading(false));
@@ -1025,25 +1049,37 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
                   onBoundaryPageChange={handleBoundaryPageChange}
                   boundaryScrollControlsRef={boundaryScrollControlsRef}
                 />
+                {!isArchiveSeries && allPages.length === 0 ? (
+                  <p role="status" className={readerStyles.comicStatusMessage}>
+                    {t("reader.comic.empty.noPages")}
+                  </p>
+                ) : null}
                 {chapterLoadError ? (
-                  <div
-                    role="status"
-                    style={{
-                      position: "absolute",
-                      left: "50%",
-                      bottom: 24,
-                      transform: "translateX(-50%)",
-                      maxWidth: "min(520px, calc(100% - 32px))",
-                      padding: "10px 14px",
-                      borderRadius: 6,
-                      background: "rgba(20, 20, 20, 0.88)",
-                      color: "#fff",
-                      fontSize: 14,
-                      lineHeight: 1.4,
-                      zIndex: 30,
-                    }}
-                  >
-                    {chapterLoadError}
+                  <div role="alert" className={readerStyles.comicStatusMessage}>
+                    <p>
+                      {chapterLoadError.reason === "undiscoverable"
+                        ? t("reader.comic.chapterLoad.undiscoverable")
+                        : t("reader.comic.chapterLoad.failed")}
+                    </p>
+                    {chapterLoadError.reason === "failed" ? (
+                      <button
+                        type="button"
+                        className={readerStyles.comicActionButton}
+                        data-size="compact"
+                        onClick={retryChapterLoad}
+                      >
+                        {t("reader.comic.chapterLoad.retry")}
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className={readerStyles.comicActionButton}
+                      data-variant="secondary"
+                      data-size="compact"
+                      onClick={() => setChapterLoadError(null)}
+                    >
+                      {t("reader.comic.chapterLoad.dismiss")}
+                    </button>
                   </div>
                 ) : null}
                 <ComicReaderOverlay

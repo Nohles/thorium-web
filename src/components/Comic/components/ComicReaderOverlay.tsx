@@ -1,5 +1,6 @@
 "use client";
 
+import readerStyles from "@/components/assets/styles/thorium-web.reader.app.module.css";
 import { ThNavigationButton } from "@/core/Components/Buttons/ThNavigationButton";
 import {
   ComicProgressBarPosition,
@@ -31,14 +32,6 @@ const resolveEffectiveProgressPosition = (
 };
 
 const chapterButtonStyle: CSSProperties = {
-  padding: "10px 16px",
-  borderRadius: 8,
-  border: "1px solid rgba(255,255,255,0.2)",
-  background: "rgba(30,30,30,0.92)",
-  color: "var(--th-theme-text, #fff)",
-  fontSize: 14,
-  fontWeight: 600,
-  cursor: "pointer",
   maxWidth: "min(90vw, 360px)",
 };
 
@@ -142,7 +135,7 @@ export const ComicReaderOverlay = ({
           }}
         >
           {showPrevChapterCta && onPrevChapter ? (
-            <button type="button" style={chapterButtonStyle} onClick={onPrevChapter}>
+            <button type="button" className={readerStyles.comicActionButton} style={chapterButtonStyle} onClick={onPrevChapter}>
               {t("reader.comic.chapterBoundaries.previousChapter")}
               {prevChapterTitle ? (
                 <span style={{ display: "block", fontWeight: 400, fontSize: 12, opacity: 0.85, marginTop: 4 }}>
@@ -152,7 +145,7 @@ export const ComicReaderOverlay = ({
             </button>
           ) : null}
           {showNextChapterCta && onNextChapter ? (
-            <button type="button" style={chapterButtonStyle} onClick={onNextChapter}>
+            <button type="button" className={readerStyles.comicActionButton} style={chapterButtonStyle} onClick={onNextChapter}>
               {t("reader.comic.chapterBoundaries.nextChapter")}
               {nextChapterTitle ? (
                 <span style={{ display: "block", fontWeight: 400, fontSize: 12, opacity: 0.85, marginTop: 4 }}>

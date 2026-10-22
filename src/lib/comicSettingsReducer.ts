@@ -143,7 +143,6 @@ export const normalizeComicSettings = (entry?: LegacyComicSettings): ComicSettin
   return {
     ...defaultComicSettings,
     ...(entry as ComicSettings),
-    comicChapterBoundaries: true,
     scaleType,
     widthLimitEnabled,
     widthLimitPercent,
@@ -163,6 +162,15 @@ export const comicSettingsSlice = createSlice({
   name: "comicSettings",
   initialState,
   reducers: {
+    /** Seeds settings for a key seen for the first time (e.g. from manifest metadata); existing settings win. */
+    initComicSettings: (
+      state,
+      action: PayloadAction<{ key: string; defaults: Partial<ComicSettings> }>
+    ) => {
+      const { key, defaults } = action.payload;
+      if (state.byKey[key]) return;
+      state.byKey[key] = normalizeComicSettings({ ...defaultComicSettings, ...defaults });
+    },
     setComicActiveKey: (state, action: PayloadAction<string | null>) => {
       state.activeKey = action.payload;
       if (action.payload) ensureKey(state, action.payload);
@@ -182,7 +190,7 @@ export const comicSettingsSlice = createSlice({
   },
 });
 
-export const { setComicActiveKey, updateComicSettings, resetComicSettings } =
+export const { initComicSettings, setComicActiveKey, updateComicSettings, resetComicSettings } =
   comicSettingsSlice.actions;
 
 export default comicSettingsSlice.reducer;

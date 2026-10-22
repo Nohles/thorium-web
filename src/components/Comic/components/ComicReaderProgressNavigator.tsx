@@ -2,6 +2,7 @@
 
 import readerStyles from "@/components/assets/styles/thorium-web.reader.app.module.css";
 import { ComicProgressBarPosition } from "@/lib/comicSettingsReducer";
+import { useI18n } from "@/i18n/useI18n";
 import { CSSProperties } from "react";
 import { ComicProgressItem } from "../lib/comicProgress";
 
@@ -20,6 +21,7 @@ export const ComicReaderProgressNavigator = ({
   totalPages,
   onJumpTo,
 }: ComicReaderProgressNavigatorProps) => {
+  const { t } = useI18n();
   if (items.length === 0) return null;
 
   const isHorizontal = position === ComicProgressBarPosition.bottom;
@@ -37,7 +39,7 @@ export const ComicReaderProgressNavigator = ({
       className={readerStyles.comicProgressRoot}
       data-position={position}
       tabIndex={0}
-      aria-label="Comic progress navigator"
+      aria-label={t("reader.comic.progressNavigator.label")}
     >
       <div className={readerStyles.comicProgressCompactRail} style={compactStyle} aria-hidden="true">
         {items.map((item) => (
@@ -64,7 +66,11 @@ export const ComicReaderProgressNavigator = ({
               data-loaded={item.isLoaded}
               onClick={() => onJumpTo(item.targetIndex)}
               aria-current={item.isCurrent ? "page" : undefined}
-              aria-label={`Jump to ${item.type === "spread" ? "spread" : "page"} ${item.label}`}
+              aria-label={
+                item.type === "spread"
+                  ? t("reader.comic.progressNavigator.goToSpread", { label: item.label })
+                  : t("reader.comic.progressNavigator.goToPage", { label: item.label })
+              }
             />
           ))}
         </div>

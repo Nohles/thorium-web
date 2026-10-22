@@ -227,6 +227,74 @@
   visibility: visible;
 }
 
+/* Comic actions: retry, chapter boundary and chapter CTA buttons.
+   Derived from the active theme so they stay legible in light, sepia and dark. */
+.comicActionButton {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid var(--th-theme-text, #fff);
+  border-radius: var(--th-layout-radius, 8px);
+  background: var(--th-theme-text, #fff);
+  color: var(--th-theme-background, #111);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  line-height: 1.35;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.comicActionButton[data-variant="secondary"] {
+  border-color: color-mix(in srgb, var(--th-theme-text, #fff) 14%, transparent);
+  background: color-mix(in srgb, var(--th-theme-text, #fff) 4%, transparent);
+  color: var(--th-theme-text, #fff);
+}
+
+.comicActionButton[data-size="compact"] {
+  width: auto;
+  padding: 8px 14px;
+  font-size: 0.8125rem;
+}
+
+.comicActionButton:hover {
+  background: color-mix(in srgb, var(--th-theme-text, #fff) 88%, var(--th-theme-background, #111));
+}
+
+.comicActionButton[data-variant="secondary"]:hover {
+  background: color-mix(in srgb, var(--th-theme-text, #fff) 9%, transparent);
+}
+
+.comicActionButton:focus-visible {
+  outline: 2px solid var(--th-theme-focus, currentColor);
+  outline-offset: 2px;
+}
+
+.comicStatusMessage {
+  position: absolute;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(520px, calc(100% - 32px));
+  padding: 10px 10px 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--th-theme-text, #fff) 14%, transparent);
+  border-radius: var(--th-layout-radius, 8px);
+  background: color-mix(in srgb, var(--th-theme-background, #111) 97%, var(--th-theme-text, #fff));
+  color: var(--th-theme-text, #fff);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  transform: translateX(-50%);
+}
+
+.comicStatusMessage p {
+  margin: 0;
+}
+
 /* The Readium navigator marks each iframe `.blank` until its content paints.
    That used to draw a spinner here, but the navigator boot is now covered by
    StatefulLoader, which holds the loading surface until `reader.isLoading`

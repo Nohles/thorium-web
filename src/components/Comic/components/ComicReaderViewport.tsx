@@ -304,6 +304,91 @@ const isHttpUrl = (href: string | undefined): href is string => {
   }
 };
 
+/** Below every on-screen read so warming never delays the visible page. */
+const COMIC_PREFETCH_PRIORITY = -10;
+
+type ComicPrefetchEntry = { cancel: () => void };
+
+/**
+ * Paged modes mount only the visible page(s), so warm upcoming pages ahead of the
+ * cursor (and a step behind) to make page turns instant. Direct HTTP images warm the
+ * browser cache; publication-read images warm the bounded blob cache.
+ */
+const useComicPagePrefetch = ({
+  enabled,
+  publication,
+  pages,
+  cursorIndex,
+  step,
+  imagePreloadAmount,
+}: {
+  enabled: boolean;
+  publication: Publication;
+  pages: readonly ComicPage[];
+  cursorIndex: number;
+  step: number;
+  imagePreloadAmount: number;
+}) => {
+  const entriesRef = useRef<Map<string, ComicPrefetchEntry>>(new Map());
+
+  useEffect(() => {
+    const entries = entriesRef.current;
+    const wanted = new Map<string, Link>();
+
+    if (enabled) {
+      const behind = step;
+      // Keep the window inside the blob cache so prefetching cannot evict visible pages.
+      const ahead = Math.min(
+        Math.max(1, Math.floor(imagePreloadAmount)) * step,
+        MAX_COMIC_IMAGE_BLOB_CACHE - behind - step
+      );
+      // Visible pages stay in the set: a page turn must not cancel a read the
+      // on-screen image is now sharing (reads are deduplicated per href).
+      const indices = getComicPageLoadSet(pages, cursorIndex, ahead + step - 1, 1, behind);
+      for (const page of pages) {
+        if (indices.has(page.index)) wanted.set(page.href, page.link);
+      }
+    }
+
+    entries.forEach((entry, href) => {
+      if (wanted.has(href)) return;
+      entry.cancel();
+      entries.delete(href);
+    });
+
+    wanted.forEach((link, href) => {
+      if (entries.has(href)) return;
+      if (isHttpUrl(href)) {
+        const img = new Image();
+        img.decoding = "async";
+        img.fetchPriority = "low";
+        img.src = href;
+        entries.set(href, {
+          cancel: () => {
+            if (!img.complete) img.src = "";
+          },
+        });
+        return;
+      }
+      const controller = new AbortController();
+      enqueueComicImageRead(
+        () => getComicImageBlob(publication, link, controller.signal),
+        COMIC_PREFETCH_PRIORITY,
+        controller.signal
+      ).catch(() => undefined);
+      entries.set(href, { cancel: () => controller.abort() });
+    });
+  }, [cursorIndex, enabled, imagePreloadAmount, pages, publication, step]);
+
+  useEffect(() => {
+    const entries = entriesRef.current;
+    return () => {
+      entries.forEach((entry) => entry.cancel());
+      entries.clear();
+    };
+  }, []);
+};
+
 const withComicImageTimeout = <T,>(
   operation: () => Promise<T>,
   abortController: AbortController
@@ -439,17 +524,6 @@ const useObjectUrl = (
   return { objectUrl, error, isLoading };
 };
 
-const comicImageRetryButtonStyle: CSSProperties = {
-  padding: "8px 14px",
-  borderRadius: 6,
-  border: "1px solid rgba(255, 255, 255, 0.25)",
-  background: "rgba(30, 30, 30, 0.9)",
-  color: "var(--th-theme-text, #fff)",
-  fontSize: 13,
-  fontWeight: 600,
-  cursor: "pointer",
-};
-
 const comicImagePlaceholderInnerStyle: CSSProperties = {
   width: "100%",
   height: "100%",
@@ -511,7 +585,13 @@ const ComicImageLoadError = ({
         role="alert"
       >
         <p style={{ margin: 0, opacity: 0.85, fontSize: 13, lineHeight: 1.4 }}>{message}</p>
-        <button type="button" style={comicImageRetryButtonStyle} onClick={onRetry}>
+        <button
+          type="button"
+          className={readerStyles.comicActionButton}
+          data-size="compact"
+          onPointerUp={(event) => event.stopPropagation()}
+          onClick={onRetry}
+        >
           {t("reader.comic.imageLoad.retry")}
         </button>
       </div>
@@ -621,6 +701,7 @@ const ComicImage = memo(function ComicImage({
   pageIndex,
   publication,
   link,
+  alt,
   scaleType,
   stretchSmallPages,
   widthLimitEnabled,
@@ -635,6 +716,7 @@ const ComicImage = memo(function ComicImage({
   pageIndex: number;
   publication: Publication;
   link: Link;
+  alt: string;
   scaleType: ComicScaleType;
   stretchSmallPages: boolean;
   widthLimitEnabled: boolean;
@@ -867,7 +949,7 @@ const ComicImage = memo(function ComicImage({
           <img
             key={reloadKey}
             src={objectUrl}
-            alt={link.title || "Comic page"}
+            alt={alt}
             className={readerStyles.comicImage}
             data-ready={isImageReady}
             draggable={false}
@@ -930,22 +1012,6 @@ export type ComicBoundaryScrollControls = {
   scrollToBoundary: (kind: ComicBoundaryPageKind) => boolean;
 };
 
-const boundaryActionStyle: CSSProperties = {
-  display: "block",
-  width: "100%",
-  boxSizing: "border-box",
-  padding: "12px 18px",
-  borderRadius: 8,
-  border: "1px solid rgba(255,255,255,0.2)",
-  background: "rgba(30,30,30,0.92)",
-  color: "var(--th-theme-text, #fff)",
-  fontSize: 16,
-  fontWeight: 600,
-  cursor: "pointer",
-  textAlign: "center",
-  textDecoration: "none",
-};
-
 const ComicChapterBoundaryPage = ({
   kind,
   currentTitle,
@@ -971,7 +1037,7 @@ const ComicChapterBoundaryPage = ({
       style={{
         flex: isHorizontal ? "0 0 100%" : "0 0 auto",
         width: "100%",
-        height: isHorizontal ? "100%" : "100vh",
+        height: isHorizontal ? "100%" : "100dvh",
         minHeight: "100%",
         boxSizing: "border-box",
         display: "flex",
@@ -991,9 +1057,9 @@ const ComicChapterBoundaryPage = ({
               {continueElsewhere ? (
                 <button
                   type="button"
+                  className={readerStyles.comicActionButton}
                   onPointerUp={(event) => event.stopPropagation()}
                   onClick={continueElsewhere.onContinue}
-                  style={boundaryActionStyle}
                 >
                   {continueElsewhere.label}
                 </button>
@@ -1001,16 +1067,9 @@ const ComicChapterBoundaryPage = ({
               {mediaHref ? (
                 <a
                   href={mediaHref}
+                  className={readerStyles.comicActionButton}
+                  data-variant={continueElsewhere ? "secondary" : undefined}
                   onPointerUp={(event) => event.stopPropagation()}
-                  style={
-                    continueElsewhere
-                      ? {
-                          ...boundaryActionStyle,
-                          background: "transparent",
-                          borderColor: "rgba(255,255,255,0.35)",
-                        }
-                      : boundaryActionStyle
-                  }
                 >
                   {t("reader.comic.chapterBoundaries.returnToMediaPage")}
                 </a>
@@ -1018,12 +1077,9 @@ const ComicChapterBoundaryPage = ({
               {homeHref ? (
                 <a
                   href={homeHref}
+                  className={readerStyles.comicActionButton}
+                  data-variant="secondary"
                   onPointerUp={(event) => event.stopPropagation()}
-                  style={{
-                    ...boundaryActionStyle,
-                    background: "transparent",
-                    borderColor: "rgba(255,255,255,0.35)",
-                  }}
                 >
                   {t("reader.comic.chapterBoundaries.returnHome")}
                 </a>
@@ -1035,9 +1091,9 @@ const ComicChapterBoundaryPage = ({
               {onNavigate ? (
                 <button
                   type="button"
+                  className={readerStyles.comicActionButton}
                   onPointerUp={(event) => event.stopPropagation()}
                   onClick={onNavigate}
-                  style={boundaryActionStyle}
                 >
                   {actionLabel}
                 </button>
@@ -1171,6 +1227,15 @@ export const ComicReaderViewport = ({
     imagePreloadAmount,
     loadDirection
   );
+
+  useComicPagePrefetch({
+    enabled: !isContinuousScrollMode,
+    publication,
+    pages,
+    cursorIndex,
+    step: mode === ComicReadingMode.doublePage ? 2 : 1,
+    imagePreloadAmount,
+  });
 
   const setPageRef = useCallback((pageIndex: number, element: HTMLDivElement | null) => {
     if (element) itemRefs.current.set(pageIndex, element);
@@ -1462,6 +1527,7 @@ export const ComicReaderViewport = ({
                 pageIndex={page.index}
                 publication={publication}
                 link={page.link}
+                alt={page.title}
                 scaleType={scaleType}
                 stretchSmallPages={stretchSmallPages}
                 widthLimitEnabled={widthLimitEnabled}
@@ -1511,6 +1577,7 @@ export const ComicReaderViewport = ({
                 pageIndex={page.index}
                 publication={publication}
                 link={page.link}
+                alt={page.title}
                 scaleType={scaleType}
                 stretchSmallPages={stretchSmallPages}
                 widthLimitEnabled={widthLimitEnabled}
@@ -1566,6 +1633,7 @@ export const ComicReaderViewport = ({
                   pageIndex={page.index}
                   publication={publication}
                   link={page.link}
+                  alt={page.title}
                   scaleType={scaleType}
                   stretchSmallPages={stretchSmallPages}
                   widthLimitEnabled={widthLimitEnabled}
@@ -1597,6 +1665,7 @@ export const ComicReaderViewport = ({
                   pageIndex={page.index}
                   publication={publication}
                   link={page.link}
+                  alt={page.title}
                   scaleType={scaleType}
                   stretchSmallPages={stretchSmallPages}
                   widthLimitEnabled={widthLimitEnabled}
@@ -1629,6 +1698,7 @@ export const ComicReaderViewport = ({
                 pageIndex={current.index}
                 publication={publication}
                 link={current.link}
+                alt={current.title}
                 scaleType={scaleType}
                 stretchSmallPages={stretchSmallPages}
                 widthLimitEnabled={widthLimitEnabled}

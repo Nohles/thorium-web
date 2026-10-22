@@ -11,7 +11,45 @@ export type ComicKeyboardHandlers = {
   onCycleScaleType: () => void;
   onCycleReadingMode: () => void;
   onCycleDirection: () => void;
-  onToggleAutoScroll: () => void;
+};
+
+/** Widgets that consume arrow/letter keys themselves; the reader must not also act on them. */
+const KEY_CONSUMING_ROLES = new Set([
+  "slider",
+  "spinbutton",
+  "radio",
+  "radiogroup",
+  "listbox",
+  "option",
+  "menu",
+  "menuitem",
+  "menuitemradio",
+  "menuitemcheckbox",
+  "tab",
+  "tablist",
+  "tree",
+  "treeitem",
+  "grid",
+  "gridcell",
+  "combobox",
+  "textbox",
+  "searchbox",
+]);
+
+const isKeyConsumingTarget = (target: HTMLElement | null): boolean => {
+  if (!target) return false;
+  if (
+    target.tagName === "INPUT" ||
+    target.tagName === "TEXTAREA" ||
+    target.tagName === "SELECT" ||
+    target.isContentEditable
+  ) {
+    return true;
+  }
+  const role = target.getAttribute("role");
+  if (role && KEY_CONSUMING_ROLES.has(role)) return true;
+  // Sheets, popovers and modals own the keyboard while focus is inside them.
+  return !!target.closest("[role='dialog'], [role='alertdialog']");
 };
 
 export const useComicKeyboardShortcuts = ({
@@ -22,16 +60,13 @@ export const useComicKeyboardShortcuts = ({
   onCycleScaleType,
   onCycleReadingMode,
   onCycleDirection,
-  onToggleAutoScroll,
 }: ComicKeyboardHandlers) => {
   useEffect(() => {
     const isRtl = direction === ComicReadingDirection.rtl;
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
       if (event.metaKey || event.ctrlKey || event.altKey) return;
-      const target = event.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
-        return;
-      }
+      if (isKeyConsumingTarget(event.target as HTMLElement | null)) return;
 
       switch (event.key) {
         case "ArrowLeft":
@@ -68,10 +103,6 @@ export const useComicKeyboardShortcuts = ({
           event.preventDefault();
           onCycleDirection();
           break;
-        case " ":
-          event.preventDefault();
-          onToggleAutoScroll();
-          break;
         default:
       }
     };
@@ -86,6 +117,5 @@ export const useComicKeyboardShortcuts = ({
     onCycleScaleType,
     onCycleReadingMode,
     onCycleDirection,
-    onToggleAutoScroll,
   ]);
 };
