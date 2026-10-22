@@ -14,13 +14,14 @@ import {
   useRef,
   useState,
 } from "react";
-import readerStyles from "@/components/assets/styles/thorium-web.reader.app.module.css";
+import styles from "../assets/styles/thorium-web.comic.module.css";
 import {
   ComicReadingDirection,
   ComicReadingMode,
   ComicScaleType,
 } from "@/lib/comicSettingsReducer";
 import { useI18n } from "@/i18n/useI18n";
+import { useAppSelector } from "@/lib/hooks";
 import {
   ComicPageLayoutMode,
   getImagePlaceholderStyling,
@@ -304,6 +305,91 @@ const isHttpUrl = (href: string | undefined): href is string => {
   }
 };
 
+/** Below every on-screen read so warming never delays the visible page. */
+const COMIC_PREFETCH_PRIORITY = -10;
+
+type ComicPrefetchEntry = { cancel: () => void };
+
+/**
+ * Paged modes mount only the visible page(s), so warm upcoming pages ahead of the
+ * cursor (and a step behind) to make page turns instant. Direct HTTP images warm the
+ * browser cache; publication-read images warm the bounded blob cache.
+ */
+const useComicPagePrefetch = ({
+  enabled,
+  publication,
+  pages,
+  cursorIndex,
+  step,
+  imagePreloadAmount,
+}: {
+  enabled: boolean;
+  publication: Publication;
+  pages: readonly ComicPage[];
+  cursorIndex: number;
+  step: number;
+  imagePreloadAmount: number;
+}) => {
+  const entriesRef = useRef<Map<string, ComicPrefetchEntry>>(new Map());
+
+  useEffect(() => {
+    const entries = entriesRef.current;
+    const wanted = new Map<string, Link>();
+
+    if (enabled) {
+      const behind = step;
+      // Keep the window inside the blob cache so prefetching cannot evict visible pages.
+      const ahead = Math.min(
+        Math.max(1, Math.floor(imagePreloadAmount)) * step,
+        MAX_COMIC_IMAGE_BLOB_CACHE - behind - step
+      );
+      // Visible pages stay in the set: a page turn must not cancel a read the
+      // on-screen image is now sharing (reads are deduplicated per href).
+      const indices = getComicPageLoadSet(pages, cursorIndex, ahead + step - 1, 1, behind);
+      for (const page of pages) {
+        if (indices.has(page.index)) wanted.set(page.href, page.link);
+      }
+    }
+
+    entries.forEach((entry, href) => {
+      if (wanted.has(href)) return;
+      entry.cancel();
+      entries.delete(href);
+    });
+
+    wanted.forEach((link, href) => {
+      if (entries.has(href)) return;
+      if (isHttpUrl(href)) {
+        const img = new Image();
+        img.decoding = "async";
+        img.fetchPriority = "low";
+        img.src = href;
+        entries.set(href, {
+          cancel: () => {
+            if (!img.complete) img.src = "";
+          },
+        });
+        return;
+      }
+      const controller = new AbortController();
+      enqueueComicImageRead(
+        () => getComicImageBlob(publication, link, controller.signal),
+        COMIC_PREFETCH_PRIORITY,
+        controller.signal
+      ).catch(() => undefined);
+      entries.set(href, { cancel: () => controller.abort() });
+    });
+  }, [cursorIndex, enabled, imagePreloadAmount, pages, publication, step]);
+
+  useEffect(() => {
+    const entries = entriesRef.current;
+    return () => {
+      entries.forEach((entry) => entry.cancel());
+      entries.clear();
+    };
+  }, []);
+};
+
 const withComicImageTimeout = <T,>(
   operation: () => Promise<T>,
   abortController: AbortController
@@ -439,26 +525,6 @@ const useObjectUrl = (
   return { objectUrl, error, isLoading };
 };
 
-const comicImageRetryButtonStyle: CSSProperties = {
-  padding: "8px 14px",
-  borderRadius: 6,
-  border: "1px solid rgba(255, 255, 255, 0.25)",
-  background: "rgba(30, 30, 30, 0.9)",
-  color: "var(--th-theme-text, #fff)",
-  fontSize: 13,
-  fontWeight: 600,
-  cursor: "pointer",
-};
-
-const comicImagePlaceholderInnerStyle: CSSProperties = {
-  width: "100%",
-  height: "100%",
-  minHeight: "inherit",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-};
-
 type ComicPageHorizontalAlignment = "start" | "center" | "end";
 
 const comicPageJustifyContent: Record<ComicPageHorizontalAlignment, CSSProperties["justifyContent"]> = {
@@ -478,8 +544,8 @@ const ComicImagePlaceholder = ({
 }) => (
   <div style={style} aria-busy={isBusy}>
     {showSpinner ? (
-      <div style={comicImagePlaceholderInnerStyle}>
-        <span className={readerStyles.comicImageSpinner} aria-hidden />
+      <div className={styles.imagePlaceholderInner}>
+        <span className={styles.imageSpinner} aria-hidden />
       </div>
     ) : null}
   </div>
@@ -500,18 +566,16 @@ const ComicImageLoadError = ({
 
   return (
     <div style={frameStyle}>
-      <div
-        style={{
-          ...areaStyle,
-          flexDirection: "column",
-          gap: 12,
-          padding: 16,
-          textAlign: "center",
-        }}
-        role="alert"
-      >
-        <p style={{ margin: 0, opacity: 0.85, fontSize: 13, lineHeight: 1.4 }}>{message}</p>
-        <button type="button" style={comicImageRetryButtonStyle} onClick={onRetry}>
+      {/* The card's padding stays inside the page cell (border-box), or it overflows and scrolls the reader. */}
+      <div className={styles.imageError} style={areaStyle} role="alert">
+        <p className={styles.imageErrorMessage}>{message}</p>
+        <button
+          type="button"
+          className={styles.actionButton}
+          data-size="compact"
+          onPointerUp={(event) => event.stopPropagation()}
+          onClick={onRetry}
+        >
           {t("reader.comic.imageLoad.retry")}
         </button>
       </div>
@@ -621,6 +685,7 @@ const ComicImage = memo(function ComicImage({
   pageIndex,
   publication,
   link,
+  alt,
   scaleType,
   stretchSmallPages,
   widthLimitEnabled,
@@ -635,6 +700,7 @@ const ComicImage = memo(function ComicImage({
   pageIndex: number;
   publication: Publication;
   link: Link;
+  alt: string;
   scaleType: ComicScaleType;
   stretchSmallPages: boolean;
   widthLimitEnabled: boolean;
@@ -845,7 +911,8 @@ const ComicImage = memo(function ComicImage({
   if (error || imageError) {
     return (
       <ComicImageLoadError
-        message={error || imageError || failedMessage}
+        // Raw fetch/decode messages are browser-specific English; telemetry keeps them.
+        message={failedMessage}
         onRetry={handleRetry}
         frameStyle={frameStyle}
         areaStyle={areaStyle}
@@ -867,8 +934,8 @@ const ComicImage = memo(function ComicImage({
           <img
             key={reloadKey}
             src={objectUrl}
-            alt={link.title || "Comic page"}
-            className={readerStyles.comicImage}
+            alt={alt}
+            className={styles.image}
             data-ready={isImageReady}
             draggable={false}
             decoding="async"
@@ -886,26 +953,6 @@ const ComicImage = memo(function ComicImage({
     </div>
   );
 });
-
-/** Full width of the scroll area so every row shares the same percentage basis (avoid shrink-to-fit per image). */
-const pageCellStyleVertical: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  flexShrink: 0,
-  width: "100%",
-  maxWidth: "100%",
-  boxSizing: "border-box",
-};
-
-const pageCellStyleHorizontal: CSSProperties = {
-  flex: "0 0 100%",
-  height: "100%",
-  minHeight: 0,
-  width: "100%",
-  boxSizing: "border-box",
-  display: "flex",
-  flexDirection: "column",
-};
 
 export type ComicBoundaryPageData = {
   currentTitle?: string;
@@ -930,22 +977,6 @@ export type ComicBoundaryScrollControls = {
   scrollToBoundary: (kind: ComicBoundaryPageKind) => boolean;
 };
 
-const boundaryActionStyle: CSSProperties = {
-  display: "block",
-  width: "100%",
-  boxSizing: "border-box",
-  padding: "12px 18px",
-  borderRadius: 8,
-  border: "1px solid rgba(255,255,255,0.2)",
-  background: "rgba(30,30,30,0.92)",
-  color: "var(--th-theme-text, #fff)",
-  fontSize: 16,
-  fontWeight: 600,
-  cursor: "pointer",
-  textAlign: "center",
-  textDecoration: "none",
-};
-
 const ComicChapterBoundaryPage = ({
   kind,
   currentTitle,
@@ -954,10 +985,8 @@ const ComicChapterBoundaryPage = ({
   mediaHref,
   homeHref,
   continueElsewhere,
-  isHorizontal,
 }: ComicBoundaryPageData & {
   kind: ComicBoundaryPageKind;
-  isHorizontal: boolean;
 }) => {
   const { t } = useI18n();
   const isExitPage = !onNavigate && (!!mediaHref || !!homeHref || !!continueElsewhere);
@@ -967,33 +996,24 @@ const ComicChapterBoundaryPage = ({
       : t("reader.comic.chapterBoundaries.previousChapter");
 
   return (
-    <div
-      style={{
-        flex: isHorizontal ? "0 0 100%" : "0 0 auto",
-        width: "100%",
-        height: isHorizontal ? "100%" : "100vh",
-        minHeight: "100%",
-        boxSizing: "border-box",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 32,
-      }}
-    >
-      <div style={{ width: "min(90vw, 360px)", display: "grid", gap: 48 }}>
-        <section style={{ display: "grid", gap: 6 }}>
-          <strong style={{ fontSize: 18 }}>{t("reader.comic.chapterBoundaries.finished")}</strong>
-          {currentTitle ? <span style={{ fontSize: 22, fontWeight: 700 }}>{currentTitle}</span> : null}
-        </section>
-        <section style={{ display: "grid", gap: 12 }}>
+    <div className={styles.boundaryPage}>
+      <div className={styles.boundaryContent}>
+        {/* Before the first page of a chapter there is nothing finished yet. */}
+        {kind === "next" ? (
+          <section className={styles.boundarySection}>
+            <strong className={styles.boundaryLabel}>{t("reader.comic.chapterBoundaries.finished")}</strong>
+            {currentTitle ? <span className={styles.boundaryTitle}>{currentTitle}</span> : null}
+          </section>
+        ) : null}
+        <section className={styles.boundarySection}>
           {isExitPage ? (
             <>
               {continueElsewhere ? (
                 <button
                   type="button"
+                  className={styles.actionButton}
                   onPointerUp={(event) => event.stopPropagation()}
                   onClick={continueElsewhere.onContinue}
-                  style={boundaryActionStyle}
                 >
                   {continueElsewhere.label}
                 </button>
@@ -1001,16 +1021,9 @@ const ComicChapterBoundaryPage = ({
               {mediaHref ? (
                 <a
                   href={mediaHref}
+                  className={styles.actionButton}
+                  data-variant={continueElsewhere ? "secondary" : undefined}
                   onPointerUp={(event) => event.stopPropagation()}
-                  style={
-                    continueElsewhere
-                      ? {
-                          ...boundaryActionStyle,
-                          background: "transparent",
-                          borderColor: "rgba(255,255,255,0.35)",
-                        }
-                      : boundaryActionStyle
-                  }
                 >
                   {t("reader.comic.chapterBoundaries.returnToMediaPage")}
                 </a>
@@ -1018,12 +1031,9 @@ const ComicChapterBoundaryPage = ({
               {homeHref ? (
                 <a
                   href={homeHref}
+                  className={styles.actionButton}
+                  data-variant="secondary"
                   onPointerUp={(event) => event.stopPropagation()}
-                  style={{
-                    ...boundaryActionStyle,
-                    background: "transparent",
-                    borderColor: "rgba(255,255,255,0.35)",
-                  }}
                 >
                   {t("reader.comic.chapterBoundaries.returnHome")}
                 </a>
@@ -1031,13 +1041,22 @@ const ComicChapterBoundaryPage = ({
             </>
           ) : (
             <>
-              {adjacentTitle ? <span style={{ fontSize: 22, fontWeight: 700 }}>{adjacentTitle}</span> : null}
+              {adjacentTitle ? (
+                <>
+                  <strong className={styles.boundaryLabel}>
+                    {kind === "next"
+                      ? t("reader.comic.chapterBoundaries.next")
+                      : t("reader.comic.chapterBoundaries.previous")}
+                  </strong>
+                  <span className={styles.boundaryTitle}>{adjacentTitle}</span>
+                </>
+              ) : null}
               {onNavigate ? (
                 <button
                   type="button"
+                  className={styles.actionButton}
                   onPointerUp={(event) => event.stopPropagation()}
                   onClick={onNavigate}
-                  style={boundaryActionStyle}
                 >
                   {actionLabel}
                 </button>
@@ -1141,6 +1160,7 @@ export const ComicReaderViewport = ({
   boundaryScrollControlsRef,
 }: ComicReaderViewportProps) => {
   const itemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const reducedMotion = useAppSelector((state) => state.theming.prefersReducedMotion);
   const boundaryRefs = useRef<Map<ComicBoundaryPageKind, HTMLDivElement>>(new Map());
   const activePointersRef = useRef<Set<number>>(new Set());
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -1171,6 +1191,15 @@ export const ComicReaderViewport = ({
     imagePreloadAmount,
     loadDirection
   );
+
+  useComicPagePrefetch({
+    enabled: !isContinuousScrollMode,
+    publication,
+    pages,
+    cursorIndex,
+    step: mode === ComicReadingMode.doublePage ? 2 : 1,
+    imagePreloadAmount,
+  });
 
   const setPageRef = useCallback((pageIndex: number, element: HTMLDivElement | null) => {
     if (element) itemRefs.current.set(pageIndex, element);
@@ -1396,7 +1425,7 @@ export const ComicReaderViewport = ({
         const target = Math.min(maxScrollTop, Math.max(0, root.scrollTop + direction * distance));
         if (Math.abs(target - root.scrollTop) < 1) return false;
 
-        root.scrollTo({ top: target, behavior: "smooth" });
+        root.scrollTo({ top: target, behavior: reducedMotion ? "auto" : "smooth" });
         return true;
       },
       scrollToBoundary: (kind) => {
@@ -1414,221 +1443,94 @@ export const ComicReaderViewport = ({
     return () => {
       boundaryScrollControlsRef.current = null;
     };
-  }, [boundaryScrollControlsRef, mode, updateActivePageFromScroll]);
+  }, [boundaryScrollControlsRef, mode, reducedMotion, updateActivePageFromScroll]);
+
+  const renderScrollPage = (page: ComicPage) => (
+    <div
+      key={page.href}
+      data-page-index={page.index}
+      ref={(element) => setPageRef(page.index, element)}
+      className={styles.scrollCell}
+    >
+      <ComicImage
+        pageIndex={page.index}
+        publication={publication}
+        link={page.link}
+        alt={page.title}
+        scaleType={scaleType}
+        stretchSmallPages={stretchSmallPages}
+        widthLimitEnabled={widthLimitEnabled}
+        widthLimitPercent={widthLimitPercent}
+        layoutMode={isVerticalScrollMode ? "verticalStack" : "viewportBound"}
+        isDoublePageCell={false}
+        shouldLoad={shouldLoadPage(page.index)}
+        loadPriority={page.index === cursorIndex ? 100 : 10 - Math.abs(page.index - cursorIndex)}
+        onPageLoadStateChange={onPageLoadStateChange}
+      />
+    </div>
+  );
 
   return (
     <div
       ref={containerRef}
+      className={styles.viewport}
       onPointerUp={handlePointerUp}
       onPointerCancel={(event) => activePointersRef.current.delete(event.pointerId)}
-      style={{
-        flex: 1,
-        minHeight: 0,
-        height: "100%",
-        width: "100%",
-        position: "relative",
-        overflow: "hidden",
-        touchAction: "manipulation",
-      }}
     >
-      {mode === ComicReadingMode.continuousVertical || mode === ComicReadingMode.webtoon ? (
+      {isContinuousScrollMode ? (
         <div
           ref={setScrollRef}
-          className={readerStyles.hiddenScrollbar}
-          style={{
-            height: "100%",
-            overflowY: "auto",
-            overscrollBehavior: "contain",
-            touchAction: "pan-y",
-            padding: 8,
-            display: "flex",
-            flexDirection: "column",
-            gap: pageGapPx,
-          }}
+          className={styles.scroller}
+          data-orientation={isVerticalScrollMode ? "vertical" : "horizontal"}
+          style={{ gap: pageGapPx }}
         >
           {boundaryPages?.previous ? (
-            <div ref={setBoundaryRef("prev")} style={pageCellStyleVertical}>
-              <ComicChapterBoundaryPage kind="prev" isHorizontal={false} {...boundaryPages.previous} />
+            <div ref={setBoundaryRef("prev")} className={styles.scrollCell}>
+              <ComicChapterBoundaryPage kind="prev" {...boundaryPages.previous} />
             </div>
           ) : null}
-          {pages.map((page) => (
-            <div
-              key={page.href}
-              data-page-index={page.index}
-              ref={(element) => setPageRef(page.index, element)}
-              style={pageCellStyleVertical}
-            >
-              <ComicImage
-                pageIndex={page.index}
-                publication={publication}
-                link={page.link}
-                scaleType={scaleType}
-                stretchSmallPages={stretchSmallPages}
-                widthLimitEnabled={widthLimitEnabled}
-                widthLimitPercent={widthLimitPercent}
-                layoutMode="verticalStack"
-                isDoublePageCell={false}
-                shouldLoad={shouldLoadPage(page.index)}
-                loadPriority={page.index === cursorIndex ? 100 : 10 - Math.abs(page.index - cursorIndex)}
-                onPageLoadStateChange={onPageLoadStateChange}
-              />
-            </div>
-          ))}
+          {pages.map(renderScrollPage)}
           {boundaryPages?.next ? (
-            <div ref={setBoundaryRef("next")} style={pageCellStyleVertical}>
-              <ComicChapterBoundaryPage kind="next" isHorizontal={false} {...boundaryPages.next} />
+            <div ref={setBoundaryRef("next")} className={styles.scrollCell}>
+              <ComicChapterBoundaryPage kind="next" {...boundaryPages.next} />
             </div>
           ) : null}
         </div>
-      ) : mode === ComicReadingMode.continuousHorizontal ? (
+      ) : mode === ComicReadingMode.doublePage ? (
         <div
-          ref={setScrollRef}
-          className={readerStyles.hiddenScrollbar}
-          style={{
-            height: "100%",
-            overflowX: "auto",
-            overflowY: "hidden",
-            overscrollBehavior: "contain",
-            touchAction: "pan-x",
-            padding: 8,
-            display: "flex",
-            gap: pageGapPx,
-          }}
+          className={styles.spread}
+          data-scale={isOriginalDouble ? "original" : undefined}
+          style={{ gap: pageGapPx }}
         >
-          {boundaryPages?.previous ? (
-            <div ref={setBoundaryRef("prev")} style={pageCellStyleHorizontal}>
-              <ComicChapterBoundaryPage kind="prev" isHorizontal {...boundaryPages.previous} />
-            </div>
-          ) : null}
-          {pages.map((page) => (
-            <div
-              key={page.href}
-              data-page-index={page.index}
-              ref={(element) => setPageRef(page.index, element)}
-              style={pageCellStyleHorizontal}
-            >
+          {doublePages.map((page, pagePosition) => (
+            <div key={page.href} className={styles.spreadCell}>
               <ComicImage
                 pageIndex={page.index}
                 publication={publication}
                 link={page.link}
+                alt={page.title}
                 scaleType={scaleType}
                 stretchSmallPages={stretchSmallPages}
                 widthLimitEnabled={widthLimitEnabled}
                 widthLimitPercent={widthLimitPercent}
                 layoutMode="viewportBound"
-                isDoublePageCell={false}
-                shouldLoad={shouldLoadPage(page.index)}
-                loadPriority={page.index === cursorIndex ? 100 : 10 - Math.abs(page.index - cursorIndex)}
+                isDoublePageCell={isOriginalDouble}
+                horizontalAlignment={isOriginalDouble ? undefined : pagePosition === 0 ? "end" : "start"}
+                shouldLoad
                 onPageLoadStateChange={onPageLoadStateChange}
               />
             </div>
           ))}
-          {boundaryPages?.next ? (
-            <div ref={setBoundaryRef("next")} style={pageCellStyleHorizontal}>
-              <ComicChapterBoundaryPage kind="next" isHorizontal {...boundaryPages.next} />
-            </div>
-          ) : null}
         </div>
-      ) : mode === ComicReadingMode.doublePage ? (
-        isOriginalDouble ? (
-          <div
-            className={readerStyles.hiddenScrollbar}
-            style={{
-              height: "100%",
-              width: "100%",
-              display: "flex",
-              flexDirection: "row",
-              flexWrap: "nowrap",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: pageGapPx,
-              padding: 8,
-              minHeight: 0,
-              overflow: "auto",
-              margin: "auto",
-              minWidth: "fit-content",
-            }}
-          >
-            {doublePages.map((page) => (
-              <div
-                key={page.href}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  flex: "0 0 auto",
-                  margin: "auto",
-                  minWidth: "min-content",
-                  minHeight: 0,
-                  maxHeight: "100%",
-                }}
-              >
-                <ComicImage
-                  pageIndex={page.index}
-                  publication={publication}
-                  link={page.link}
-                  scaleType={scaleType}
-                  stretchSmallPages={stretchSmallPages}
-                  widthLimitEnabled={widthLimitEnabled}
-                  widthLimitPercent={widthLimitPercent}
-                  layoutMode="viewportBound"
-                  isDoublePageCell
-                  shouldLoad
-                  onPageLoadStateChange={onPageLoadStateChange}
-                />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div
-            style={{
-              height: "100%",
-              width: "100%",
-              display: "grid",
-              gridAutoFlow: "column",
-              gridAutoColumns: "1fr",
-              gap: pageGapPx,
-              padding: 8,
-              minHeight: 0,
-            }}
-          >
-            {doublePages.map((page, pagePosition) => (
-              <div key={page.href} style={{ display: "flex", flexDirection: "column", minHeight: 0, minWidth: 0, height: "100%" }}>
-                <ComicImage
-                  pageIndex={page.index}
-                  publication={publication}
-                  link={page.link}
-                  scaleType={scaleType}
-                  stretchSmallPages={stretchSmallPages}
-                  widthLimitEnabled={widthLimitEnabled}
-                  widthLimitPercent={widthLimitPercent}
-                  layoutMode="viewportBound"
-                  isDoublePageCell={false}
-                  horizontalAlignment={pagePosition === 0 ? "end" : "start"}
-                  shouldLoad
-                  onPageLoadStateChange={onPageLoadStateChange}
-                />
-              </div>
-            ))}
-          </div>
-        )
       ) : (
-        <div
-          style={{
-            height: "100%",
-            width: "100%",
-            display: "flex",
-            flexDirection: "column",
-            minHeight: 0,
-            padding: 8,
-            boxSizing: "border-box",
-          }}
-        >
+        <div className={styles.paged}>
           {current ? (
-            <div style={{ flex: 1, minHeight: 0, minWidth: 0, display: "flex", flexDirection: "column" }}>
+            <div className={styles.pagedCell}>
               <ComicImage
                 pageIndex={current.index}
                 publication={publication}
                 link={current.link}
+                alt={current.title}
                 scaleType={scaleType}
                 stretchSmallPages={stretchSmallPages}
                 widthLimitEnabled={widthLimitEnabled}

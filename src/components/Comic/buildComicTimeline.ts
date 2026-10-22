@@ -41,7 +41,7 @@ export function buildComicTocTree(publication: Publication, pages: ComicPage[]):
   const idGenerator = () => `toc-${++id}`;
   const title = publication.metadata.title.getTranslation("en");
   return buildComicTocTreeFromLinks(
-    pages.map((p) => p.link),
+    pages.map((p) => (p.link.title ? p.link : new Link({ href: p.link.href, type: p.link.type, title: p.title }))),
     idGenerator,
     title || undefined
   );

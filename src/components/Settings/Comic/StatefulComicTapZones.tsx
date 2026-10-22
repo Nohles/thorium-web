@@ -2,19 +2,13 @@
 
 import { useMemo } from "react";
 import { useI18n } from "@/i18n/useI18n";
-import { useAppDispatch, useAppSelector } from "@/lib/hooks";
-import { ComicTapZones, updateComicSettings } from "@/lib/comicSettingsReducer";
+import { ComicTapZones } from "@/lib/comicSettingsReducer";
+import { useComicSettings } from "@/components/Comic/hooks/useComicSettings";
 import { StatefulRadioGroup } from "../StatefulRadioGroup";
 
 export const StatefulComicTapZones = () => {
   const { t } = useI18n();
-  const dispatch = useAppDispatch();
-  const activeKey = useAppSelector((s) => s.comicSettings.activeKey);
-  const settings = useAppSelector((s) =>
-    activeKey ? s.comicSettings.byKey[activeKey] : undefined
-  );
-
-  const value = settings?.tapZones ?? ComicTapZones.default;
+  const { settings, patch } = useComicSettings();
 
   const items = useMemo(
     () => [
@@ -32,13 +26,9 @@ export const StatefulComicTapZones = () => {
     <StatefulRadioGroup
       standalone={true}
       label={t("reader.comic.tapZones.label")}
-      value={value}
-      onChange={(v) => {
-        if (!activeKey) return;
-        dispatch(updateComicSettings({ key: activeKey, patch: { tapZones: v as ComicTapZones } }));
-      }}
+      value={settings.tapZones}
+      onChange={(v) => patch({ tapZones: v as ComicTapZones })}
       items={items}
     />
   );
 };
-

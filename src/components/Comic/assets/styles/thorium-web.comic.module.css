@@ -1,0 +1,506 @@
+/* Comic reader. Colors derive from the active theme tokens so every surface
+   stays legible in light, sepia, dark and contrast themes. */
+
+.main {
+  background: var(--th-theme-background, #111);
+  color: var(--th-theme-text, #fff);
+}
+
+.publication {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Viewport */
+
+.viewport {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: manipulation;
+}
+
+.scroller {
+  display: flex;
+  box-sizing: border-box;
+  height: 100%;
+  padding: 8px;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scroller::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.scroller[data-orientation="vertical"] {
+  flex-direction: column;
+  overflow-y: auto;
+  touch-action: pan-y;
+}
+
+.scroller[data-orientation="horizontal"] {
+  overflow-x: auto;
+  overflow-y: hidden;
+  touch-action: pan-x;
+}
+
+/* Every row shares the full scroll width so percentages resolve the same way. */
+.scrollCell {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+
+.scroller[data-orientation="horizontal"] > .scrollCell {
+  flex: 0 0 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.paged {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 8px;
+}
+
+.pagedCell {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.spread {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 8px;
+}
+
+.spreadCell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+/* Original-size spreads may overflow the viewport and scroll. */
+.spread[data-scale="original"] {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: center;
+  min-width: fit-content;
+  margin: auto;
+  overflow: auto;
+  scrollbar-width: none;
+}
+
+.spread[data-scale="original"] > .spreadCell {
+  flex: 0 0 auto;
+  height: auto;
+  min-width: min-content;
+  max-height: 100%;
+  margin: auto;
+}
+
+/* Images */
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.imageSpinner {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid color-mix(in srgb, var(--th-theme-text, #fff) 18%, transparent);
+  border-top-color: var(--th-theme-text, #fff);
+  animation: spin 700ms linear infinite;
+}
+
+.imagePlaceholderInner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+}
+
+.image {
+  visibility: hidden;
+  user-select: none;
+}
+
+.image[data-ready="true"] {
+  visibility: visible;
+}
+
+.imageError {
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+  padding: 16px;
+  text-align: center;
+}
+
+.imageErrorMessage {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  opacity: 0.85;
+}
+
+/* Actions: retry, chapter boundary and status buttons */
+
+.actionButton {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid var(--th-theme-text, #fff);
+  border-radius: var(--th-layout-radius, 8px);
+  background: var(--th-theme-text, #fff);
+  color: var(--th-theme-background, #111);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  line-height: 1.35;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.actionButton[data-variant="secondary"] {
+  border-color: color-mix(in srgb, var(--th-theme-text, #fff) 14%, transparent);
+  background: color-mix(in srgb, var(--th-theme-text, #fff) 4%, transparent);
+  color: var(--th-theme-text, #fff);
+}
+
+.actionButton[data-size="compact"] {
+  width: auto;
+  padding: 8px 14px;
+  font-size: 0.8125rem;
+}
+
+.actionButton:hover {
+  background: color-mix(in srgb, var(--th-theme-text, #fff) 88%, var(--th-theme-background, #111));
+}
+
+.actionButton[data-variant="secondary"]:hover {
+  background: color-mix(in srgb, var(--th-theme-text, #fff) 9%, transparent);
+}
+
+.actionButton:focus-visible {
+  outline: 2px solid var(--th-theme-focus, currentColor);
+  outline-offset: 2px;
+}
+
+.statusMessage {
+  position: absolute;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(520px, calc(100% - 32px));
+  padding: 10px 10px 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--th-theme-text, #fff) 14%, transparent);
+  border-radius: var(--th-layout-radius, 8px);
+  background: color-mix(in srgb, var(--th-theme-background, #111) 97%, var(--th-theme-text, #fff));
+  color: var(--th-theme-text, #fff);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  transform: translateX(-50%);
+}
+
+.statusMessage p {
+  margin: 0;
+}
+
+/* Chapter boundary pages (continuous modes) */
+
+.boundaryPage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100%;
+  padding: 32px;
+}
+
+.scroller[data-orientation="horizontal"] > .scrollCell > .boundaryPage {
+  height: 100%;
+}
+
+.boundaryContent {
+  display: grid;
+  gap: 48px;
+  width: min(100%, 360px);
+}
+
+.boundarySection {
+  display: grid;
+  gap: 12px;
+}
+
+.boundaryLabel {
+  font-size: 1.125rem;
+}
+
+.boundaryTitle {
+  font-size: 1.375rem;
+  font-weight: 700;
+}
+
+/* Tap-zone preview */
+
+.tapZonePreview {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-template-rows: repeat(12, 1fr);
+  pointer-events: none;
+}
+
+.tapZoneCell {
+  border: 1px solid color-mix(in srgb, var(--th-theme-text, #fff) 5%, transparent);
+}
+
+.tapZoneCell[data-action="prev"] {
+  background: rgb(255 80 80 / 18%);
+}
+
+.tapZoneCell[data-action="next"] {
+  background: rgb(80 180 255 / 18%);
+}
+
+.tapZoneCell[data-action="toggle"] {
+  background: rgb(90 255 120 / 16%);
+}
+
+/* Progress slider: a thin themed rail that grows on hover and keyboard focus */
+
+.progress {
+  position: absolute;
+  z-index: 13;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  pointer-events: none;
+  transition: inset 200ms ease-in-out;
+}
+
+.progress[data-position="bottom"] {
+  left: 0;
+  right: 0;
+  bottom: var(--th-comic-progress-inset, 0px);
+  height: 40px;
+  padding: 0 12px 4px;
+  align-items: flex-end;
+}
+
+.progress[data-position="left"],
+.progress[data-position="right"] {
+  top: var(--th-comic-progress-inset, 0px);
+  bottom: var(--th-comic-progress-inset, 0px);
+  width: 40px;
+  padding: 12px 4px;
+}
+
+.progress[data-position="left"] {
+  inset-inline-start: 0;
+  justify-content: flex-start;
+}
+
+.progress[data-position="right"] {
+  inset-inline-end: 0;
+  justify-content: flex-end;
+}
+
+.slider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  pointer-events: auto;
+  transition:
+    background-color 160ms ease-out,
+    border-color 160ms ease-out,
+    padding 160ms ease-out;
+}
+
+.slider[data-orientation="horizontal"] {
+  width: 100%;
+  padding: 2px;
+}
+
+.slider[data-orientation="vertical"] {
+  flex-direction: column;
+  height: 100%;
+  padding: 2px;
+}
+
+.slider:hover,
+.slider:focus-within,
+.slider:has([data-dragging]) {
+  border-color: color-mix(in srgb, var(--th-theme-text, #fff) 14%, transparent);
+  background: color-mix(in srgb, var(--th-theme-background, #111) 97%, var(--th-theme-text, #fff));
+}
+
+.slider[data-orientation="horizontal"]:hover,
+.slider[data-orientation="horizontal"]:focus-within,
+.slider[data-orientation="horizontal"]:has([data-dragging]) {
+  padding: 6px 12px;
+}
+
+.slider[data-orientation="vertical"]:hover,
+.slider[data-orientation="vertical"]:focus-within,
+.slider[data-orientation="vertical"]:has([data-dragging]) {
+  padding: 12px 6px;
+}
+
+.sliderLabel {
+  display: none;
+  flex-shrink: 0;
+  color: var(--th-theme-text, #fff);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.slider:hover .sliderLabel,
+.slider:focus-within .sliderLabel,
+.slider:has([data-dragging]) .sliderLabel {
+  display: block;
+}
+
+.sliderTrack {
+  position: relative;
+  display: grid;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  cursor: pointer;
+}
+
+.slider[data-orientation="horizontal"] .sliderTrack {
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  height: 6px;
+}
+
+.slider[data-orientation="vertical"] .sliderTrack {
+  grid-auto-flow: row;
+  grid-auto-rows: minmax(0, 1fr);
+  width: 6px;
+}
+
+.slider:hover .sliderTrack,
+.slider:focus-within .sliderTrack,
+.slider:has([data-dragging]) .sliderTrack {
+  gap: 2px;
+}
+
+.slider[data-orientation="horizontal"]:hover .sliderTrack,
+.slider[data-orientation="horizontal"]:focus-within .sliderTrack,
+.slider[data-orientation="horizontal"]:has([data-dragging]) .sliderTrack {
+  height: 10px;
+}
+
+.slider[data-orientation="vertical"]:hover .sliderTrack,
+.slider[data-orientation="vertical"]:focus-within .sliderTrack,
+.slider[data-orientation="vertical"]:has([data-dragging]) .sliderTrack {
+  width: 10px;
+}
+
+.sliderSegment {
+  min-width: 0;
+  min-height: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--th-theme-text, #fff) 16%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--th-theme-background, #111) 40%, transparent);
+}
+
+.sliderSegment[data-loaded="true"] {
+  background: color-mix(in srgb, var(--th-theme-text, #fff) 36%, transparent);
+}
+
+.sliderSegment[data-completed="true"] {
+  background: color-mix(in srgb, var(--th-theme-text, #fff) 72%, transparent);
+}
+
+.sliderSegment[data-current="true"] {
+  background: var(--th-theme-text, #fff);
+}
+
+/* The thumb only carries focus and drag; the current segment shows position. */
+.sliderThumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.slider[data-orientation="horizontal"] .sliderThumb {
+  top: 50%;
+}
+
+.slider[data-orientation="vertical"] .sliderThumb {
+  left: 50%;
+}
+
+.sliderThumb[data-focus-visible] {
+  background: var(--th-theme-text, #fff);
+  outline: 2px solid var(--th-theme-focus, currentColor);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress,
+  .slider {
+    transition: none;
+  }
+
+  .imageSpinner {
+    animation: none;
+    border-top-color: color-mix(in srgb, var(--th-theme-text, #fff) 58%, transparent);
+  }
+}

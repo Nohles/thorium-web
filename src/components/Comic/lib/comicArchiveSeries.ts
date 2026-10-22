@@ -1,5 +1,7 @@
 import { Link, Locator, Manifest, Publication } from "@readium/shared";
 
+import { defaultComicLabels, type ComicLabels } from "./comicLabels";
+
 export const COMIC_ARCHIVE_MEDIA_TYPES = new Set([
   "application/vnd.comicbook+zip",
   "application/vnd.comicbook-rar",
@@ -109,7 +111,11 @@ export const deriveCliChildManifestUrl = (parentManifestUrl: string, chapterName
   }
 };
 
-export const buildComicArchiveChapters = (manifest: Manifest, parentManifestUrl: string): ComicArchiveChapter[] => {
+export const buildComicArchiveChapters = (
+  manifest: Manifest,
+  parentManifestUrl: string,
+  labels: ComicLabels = defaultComicLabels
+): ComicArchiveChapter[] => {
   const readingOrder = manifest.readingOrder?.items ?? [];
   const readingOrderByHref = new Map(readingOrder.map((link) => [stripHashAndQuery(link.href), link]));
   const chapters: ComicArchiveChapter[] = [];
@@ -122,7 +128,7 @@ export const buildComicArchiveChapters = (manifest: Manifest, parentManifestUrl:
     chapters.push({
       index: chapters.length,
       href: toc.href,
-      title: toc.title || readingOrderLink?.title || chapterName.replace(/\.[^.]+$/, "") || `Chapter ${chapters.length + 1}`,
+      title: toc.title || readingOrderLink?.title || chapterName.replace(/\.[^.]+$/, "") || labels.chapter(chapters.length + 1),
       type: readingOrderLink?.type || toc.type,
       manifestUrl: deriveCliChildManifestUrl(parentManifestUrl, chapterName) ?? undefined,
     });
@@ -134,7 +140,7 @@ export const buildComicArchiveChapters = (manifest: Manifest, parentManifestUrl:
     .filter((link) => !link.templated && isComicArchiveType(link.type))
     .map((link, index) => {
       const chapterName = decodeHrefPath(link.href).replace(/^\/+/, "");
-      const title = link.title || chapterName.replace(/\.[^.]+$/, "") || `Chapter ${index + 1}`;
+      const title = link.title || chapterName.replace(/\.[^.]+$/, "") || labels.chapter(index + 1);
       return {
         index,
         href: link.href,

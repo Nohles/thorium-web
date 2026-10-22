@@ -44,3 +44,10 @@ export const toDockingPeripheralType = (key: string) => `${ DOCKING_PERIPHERAL_P
 
 export const fromDockingPeripheralType = (type: string): string | null =>
   type.startsWith(DOCKING_PERIPHERAL_PREFIX) ? type.slice(DOCKING_PERIPHERAL_PREFIX.length) : null;
+
+export const COMIC_PERIPHERAL_PREFIX = "th_comic_" as const;
+
+export const toComicPeripheralType = (key: string) => `${ COMIC_PERIPHERAL_PREFIX }${ key }`;
+
+export const fromComicPeripheralType = (type: string): string | null =>
+  type.startsWith(COMIC_PERIPHERAL_PREFIX) ? type.slice(COMIC_PERIPHERAL_PREFIX.length) : null;

@@ -32,6 +32,7 @@ import {
 import { ExperimentKey } from "@readium/navigator";
 import { ThCollapsibility } from "@/core/Components/Actions/hooks/useCollapsibility";
 import { ContentProtectionConfig } from "./models/protection";
+import { ThComicShortcutsPref } from "./models/comic";
 import { validateObjectKeys } from "./helpers";
 
 export type CustomizableKeys = {
@@ -142,6 +143,8 @@ export interface ThShortcutsPref {
   representation: ShortcutRepresentation;
   joiner?: string;
   displayIn?: ThShortcutsDisplayIn[];
+  /** Comic reader shortcuts; omitted keys use `defaultComicShortcuts`, `null` disables one. */
+  comic?: ThComicShortcutsPref;
 }
 
 export interface ThIconPref {

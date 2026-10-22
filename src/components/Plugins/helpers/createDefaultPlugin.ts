@@ -38,7 +38,6 @@ import {
   StatefulComicProgressBarType,
   StatefulComicReadingDirection,
   StatefulComicReadingMode,
-  StatefulComicReadingModePreview,
   StatefulComicScaleType,
   StatefulComicScrollAmountPercent,
   StatefulComicStretchSmallPages,
@@ -184,9 +183,6 @@ export const createDefaultPlugin = (): ThPlugin => {
         },
         [ThSettingsKeys.comicScrollAmountPercent]: {
           Comp: StatefulComicScrollAmountPercent
-        },
-        [ThSettingsKeys.comicReadingModePreview]: {
-          Comp: StatefulComicReadingModePreview
         },
         [ThSettingsKeys.comicTapZonePreview]: {
           Comp: StatefulComicTapZonePreview

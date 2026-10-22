@@ -10,7 +10,11 @@ import { DEFAULT_CONFIG } from "./config";
 export const useI18n = (ns?: string | string[]) => {
   // If no namespace provided, use both defaults with fallback
   // If namespace provided, use only that (override behavior)
-  const { t: tRaw, i18n, ready } = useTranslation(ns || DEFAULT_CONFIG.ns as string[]);
+  // Initialization starts in ThI18nProvider's effect. Suspending here prevents
+  // that provider from mounting on a cold open, so initialization never starts.
+  const { t: tRaw, i18n, ready } = useTranslation(ns || DEFAULT_CONFIG.ns as string[], {
+    useSuspense: false
+  });
   
   // Helper function to change language
   const changeLanguage = (lng: string) => {
@@ -21,12 +25,13 @@ export const useI18n = (ns?: string | string[]) => {
   const t = useCallback((key: string, options?: any): string => {
     if (ns) {
       // If custom namespace provided, use it directly (no fallback)
-      return tRaw(key, options) as string;
+      const result = tRaw(key, options);
+      return typeof result === "string" ? result : key;
     } else {
       // If no namespace provided, search all default namespaces
       for (const namespace of DEFAULT_CONFIG.ns as string[]) {
         const result = tRaw(key, { ...options, ns: namespace });
-        if (result !== key) return result as string;
+        if (typeof result === "string" && result !== key) return result;
       }
       return key;
     }

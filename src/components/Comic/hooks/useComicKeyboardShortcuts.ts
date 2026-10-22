@@ -1,91 +1,85 @@
 "use client";
 
-import { ComicReadingDirection } from "@/lib/comicSettingsReducer";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
-export type ComicKeyboardHandlers = {
-  direction: ComicReadingDirection;
-  onPrev: () => void;
-  onNext: () => void;
-  onToggleMenu: () => void;
-  onCycleScaleType: () => void;
-  onCycleReadingMode: () => void;
-  onCycleDirection: () => void;
-  onToggleAutoScroll: () => void;
+import { IKeyboardPeripheralsConfig } from "@readium/navigator";
+import { KeyCombinationManager, KeyCombo } from "@readium/navigator-html-injectables";
+
+/** Widgets that handle keys themselves; the reader must not also act on them. */
+const INTERACTIVE_ROLES = new Set([
+  "button",
+  "link",
+  "checkbox",
+  "switch",
+  "slider",
+  "spinbutton",
+  "radio",
+  "radiogroup",
+  "listbox",
+  "option",
+  "menu",
+  "menuitem",
+  "menuitemradio",
+  "menuitemcheckbox",
+  "tab",
+  "tablist",
+  "tree",
+  "treeitem",
+  "grid",
+  "gridcell",
+  "combobox",
+  "textbox",
+  "searchbox",
+]);
+
+const isInteractiveElement = (element: Element | null): boolean => {
+  if (!element || element === document.body || element === document.documentElement) return false;
+  if (element instanceof HTMLElement && element.isContentEditable) return true;
+  if (element.matches("a[href], button, input, select, textarea, summary")) return true;
+  const role = element.getAttribute("role");
+  if (role && INTERACTIVE_ROLES.has(role)) return true;
+  // Sheets, popovers and modals own the keyboard while focus is inside them.
+  return !!element.closest("[role='dialog'], [role='alertdialog']");
 };
 
-export const useComicKeyboardShortcuts = ({
-  direction,
-  onPrev,
-  onNext,
-  onToggleMenu,
-  onCycleScaleType,
-  onCycleReadingMode,
-  onCycleDirection,
-  onToggleAutoScroll,
-}: ComicKeyboardHandlers) => {
-  useEffect(() => {
-    const isRtl = direction === ComicReadingDirection.rtl;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
-      const target = event.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
-        return;
-      }
+const isSuppressed = (rule: KeyCombo["suppressOnInteractiveElement"], active: Element | null): boolean => {
+  if (!rule) return false;
+  if (Array.isArray(rule)) return !!active && rule.some((selector) => active.matches(selector));
+  return isInteractiveElement(active);
+};
 
-      switch (event.key) {
-        case "ArrowLeft":
-        case "a":
-        case "A":
+const keyCombinations = new KeyCombinationManager();
+
+/**
+ * Listens on the window for the comic peripherals and reports the matched peripheral type,
+ * mirroring how the Readium navigators deliver `peripheral` events to the other readers.
+ */
+export const useComicKeyboardShortcuts = (
+  config: IKeyboardPeripheralsConfig,
+  onPeripheral: (type: string) => void
+) => {
+  const onPeripheralRef = useRef(onPeripheral);
+
+  useEffect(() => {
+    onPeripheralRef.current = onPeripheral;
+  }, [onPeripheral]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+      const active = document.activeElement;
+      for (const peripheral of config) {
+        for (const combo of peripheral.keyCombos) {
+          if (!keyCombinations.match(event, [combo])) continue;
+          if (isSuppressed(combo.suppressOnInteractiveElement, active)) return;
           event.preventDefault();
-          if (isRtl) onNext();
-          else onPrev();
-          break;
-        case "ArrowRight":
-        case "d":
-        case "D":
-          event.preventDefault();
-          if (isRtl) onPrev();
-          else onNext();
-          break;
-        case "m":
-        case "M":
-          event.preventDefault();
-          onToggleMenu();
-          break;
-        case "i":
-        case "I":
-          event.preventDefault();
-          onCycleScaleType();
-          break;
-        case "r":
-        case "R":
-          event.preventDefault();
-          onCycleReadingMode();
-          break;
-        case "t":
-        case "T":
-          event.preventDefault();
-          onCycleDirection();
-          break;
-        case " ":
-          event.preventDefault();
-          onToggleAutoScroll();
-          break;
-        default:
+          onPeripheralRef.current(peripheral.type);
+          return;
+        }
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [
-    direction,
-    onPrev,
-    onNext,
-    onToggleMenu,
-    onCycleScaleType,
-    onCycleReadingMode,
-    onCycleDirection,
-    onToggleAutoScroll,
-  ]);
+  }, [config]);
 };
