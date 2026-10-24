@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, type ComponentType, type ReactNode, type SVGProps } from "react";
+import type { ThCollapsibilityVisibility } from "@/core/Components/Actions/hooks/useCollapsibility";
 
 export type ComicContinueElsewhereAction = {
   /** Fully formed button label, e.g. "Continue on Source 2". */
@@ -26,6 +27,25 @@ export type ReaderSourceSelection = {
   label?: string;
 };
 
+/**
+ * An application-owned action rendered inside the reader header's actions bar,
+ * alongside the built-in actions (settings, TOC, fullscreen…), so it shares
+ * their look and collapses into the overflow menu the same way.
+ */
+export type ReaderHeaderActionItem = {
+  /** Stable id; must not collide with built-in action keys. */
+  id: string;
+  label: string;
+  Icon: ComponentType<SVGProps<SVGElement>>;
+  onPress: () => void;
+  /** Rendered as a pressed toggle when defined (e.g. page already bookmarked). */
+  isActive?: boolean;
+  /** Defaults to `label`. */
+  tooltipLabel?: string;
+  /** Defaults to `always`. */
+  visibility?: ThCollapsibilityVisibility;
+};
+
 export interface ReaderNavigation {
   /** Href for the media item page (e.g. One Piece details). */
   publicationHref?: string;
@@ -38,6 +58,11 @@ export interface ReaderNavigation {
   sources?: ReaderSourceSelection;
   /** Application-owned controls rendered in the reader header. */
   headerActions?: ReactNode;
+  /**
+   * Application-owned actions rendered as icons in the header actions bar,
+   * before the built-in actions.
+   */
+  headerActionItems?: ReaderHeaderActionItem[];
   /**
    * Shown on the last-chapter exit page when another Media source can continue
    * reading past the current source's end.

@@ -185,8 +185,8 @@
         "label": "Stretch small pages"
       },
       "widthLimit": {
-        "enabled": "Limit page width",
-        "label": "Width limit (%)"
+        "enabled": "Limit reader width",
+        "label": "Reader width (%)"
       },
       "scrollAmount": {
         "label": "Scroll amount (%)"

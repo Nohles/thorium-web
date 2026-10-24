@@ -21,7 +21,7 @@ export const StatefulPlayerHeader = ({
   actionsOrder: string[];
 }) => {
   const {
-    headerRef, listActionItems, t,
+    headerRef, listActionItems, withHeaderActionItemPrefs, t,
   } = useReaderHeaderBase(actionKeys);
 
   const { preferences } = useAudioPreferences();
@@ -44,7 +44,7 @@ export const StatefulPlayerHeader = ({
           <StatefulCollapsibleActionsBar
             id="reader-header-overflowMenu"
             items={ listActionItems() }
-            prefs={{ ...preferences.actions.secondary, displayOrder: actionsOrder }}
+            prefs={ withHeaderActionItemPrefs({ ...preferences.actions.secondary, displayOrder: actionsOrder }) }
             className={ readerHeaderStyles.actionsWrapper }
             aria-label={ t("reader.app.header.actions") }
             overflowMenuClassName={ overflowMenuStyles.hint }

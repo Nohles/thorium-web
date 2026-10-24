@@ -158,7 +158,9 @@ export const StatefulComicWidthLimit = () => {
   if (!isReaderWidthEditable(scaleType)) {
     return null;
   }
-  const enabled = settings.widthLimitEnabled;
+  if (!settings.widthLimitEnabled) {
+    return null;
+  }
   return (
     <StatefulSlider
       standalone={true}
@@ -167,7 +169,6 @@ export const StatefulComicWidthLimit = () => {
       defaultValue={defaultComicSettings.widthLimitPercent}
       range={WIDTH_LIMIT_SLIDER_RANGE}
       step={1}
-      isDisabled={!enabled}
       onChange={(v) => patch({ widthLimitPercent: v as number })}
     />
   );

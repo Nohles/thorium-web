@@ -13,8 +13,12 @@ export const clampWidthLimitPercent = (percent: number): number => {
   return Math.min(100, Math.max(10, percent));
 };
 
-export const isReaderWidthEditable = (scaleType: ComicScaleType): boolean =>
-  scaleType === ComicScaleType.fitWidth || scaleType === ComicScaleType.fitScreen;
+/**
+ * The width limit narrows the page frame, and every scale type sizes the image
+ * inside that frame, so the limit applies regardless of scale type. Kept as a
+ * function so callers have one place to gate it if a scale type ever opts out.
+ */
+export const isReaderWidthEditable = (_scaleType: ComicScaleType): boolean => true;
 
 export const shouldApplyReaderWidth = (
   widthLimitEnabled: boolean,

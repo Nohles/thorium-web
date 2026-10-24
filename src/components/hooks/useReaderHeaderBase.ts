@@ -15,6 +15,10 @@ import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { useIsScroll } from "@/hooks";
 import { useNavigator } from "@/core/Navigator";
 
+import { useReaderNavigation } from "../Reader/ReaderNavigationContext";
+import { getHeaderActionItemTrigger } from "../Actions/HeaderActionItem/StatefulHeaderActionItemTrigger";
+import { CollapsiblePref, ThCollapsibilityVisibility } from "@/core/Components/Actions/hooks/useCollapsibility";
+
 import { isPositionsListValid } from "../Actions/JumpToPosition/helpers/utils";
 import { isIOSish } from "@/core/Helpers/getPlatform";
 
@@ -23,6 +27,7 @@ export const useReaderHeaderBase = (actionKeys: string[]) => {
   const { t } = useI18n();
   const { actionsComponentsMap } = usePlugins();
   const { publication } = useNavigator();
+  const { headerActionItems } = useReaderNavigation();
 
   const overflowMap = useAppSelector(state => state.actions.overflow);
   const isScroll = useIsScroll();
@@ -63,6 +68,10 @@ export const useReaderHeaderBase = (actionKeys: string[]) => {
   const listActionItems = useCallback(() => {
     const actionsItems: ThActionEntry<string>[] = [];
 
+    headerActionItems?.forEach((item) => {
+      actionsItems.push({ Trigger: getHeaderActionItemTrigger(item.id), key: item.id });
+    });
+
     if (actionsComponentsMap && Object.keys(actionsComponentsMap).length > 0) {
       actionKeys.forEach((key) => {
         if (actionsComponentsMap[key]) {
@@ -78,6 +87,7 @@ export const useReaderHeaderBase = (actionKeys: string[]) => {
     }
 
     return actionsItems.filter(item => {
+      if (headerActionItems?.some((entry) => entry.id === item.key)) return true;
       if (item.key === ThActionsKeys.jumpToPosition) {
         return isPositionsListValid(positionsList);
       }
@@ -89,7 +99,17 @@ export const useReaderHeaderBase = (actionKeys: string[]) => {
       }
       return true;
     });
-  }, [actionKeys, actionsComponentsMap, positionsList, publication]);
+  }, [actionKeys, actionsComponentsMap, positionsList, publication, headerActionItems]);
+
+  /** Adds collapsibility entries for host header items so the bar can triage them. */
+  const withHeaderActionItemPrefs = useCallback(<T extends CollapsiblePref>(prefs: T): T => {
+    if (!headerActionItems?.length) return prefs;
+    const keys = { ...prefs.keys };
+    headerActionItems.forEach((item) => {
+      keys[item.id] = { visibility: item.visibility ?? ThCollapsibilityVisibility.always };
+    });
+    return { ...prefs, keys };
+  }, [headerActionItems]);
 
   useEffect(() => {
     if (isImmersive) {
@@ -106,6 +126,7 @@ export const useReaderHeaderBase = (actionKeys: string[]) => {
     setHover,
     removeHover,
     listActionItems,
+    withHeaderActionItemPrefs,
     isImmersive,
     isHovering,
     isScroll,
