@@ -1,11 +1,10 @@
 "use client";
 
-import { useLayoutEffect, useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 
 import audioLayoutStyles from "./assets/styles/thorium-web.audio.app.module.css";
 import audioStyles from "./assets/styles/thorium-web.audioPlayer.module.css";
 
-import { ThPluginRegistry } from "../Plugins/PluginRegistry";
 
 import { ThPluginProvider } from "../Plugins/PluginProvider";
 import { NavigatorProvider } from "@/core/Navigator";
@@ -83,25 +82,13 @@ export const StatefulPlayer = ({
   coverUrl,
   containerRefSetter
 }: StatefulPlayerProps) => {
-  const [pluginsRegistered, setPluginsRegistered] = useState(false);
-
-  useLayoutEffect(() => {
-    if (plugins && plugins.length > 0) {
-      plugins.forEach(plugin => {
-        ThPluginRegistry.register(plugin);
-      });
-    } else {
-      ThPluginRegistry.register(createAudioDefaultPlugin());
-    }
-    setPluginsRegistered(true);
-  }, [plugins]);
-
-  if (!pluginsRegistered) {
-    return null;
-  }
+  const readerPlugins = useMemo(
+    () => plugins && plugins.length > 0 ? plugins : [createAudioDefaultPlugin()],
+    [plugins],
+  );
 
   return (
-    <ThPluginProvider>
+    <ThPluginProvider plugins={readerPlugins}>
       <StatefulPlayerInner publication={ publication } localDataKey={ localDataKey } positionStorage={ positionStorage } coverUrl={ coverUrl } containerRefSetter={ containerRefSetter } />
     </ThPluginProvider>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useMemo, useLayoutEffect } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 
 import readerStyles from "../assets/styles/thorium-web.reader.app.module.css";
 
@@ -15,7 +15,6 @@ import {
   ThActionsKeys
 } from "@/preferences/models";
 
-import { ThPluginRegistry } from "../Plugins/PluginRegistry";
 
 import { ThPluginProvider } from "../Plugins/PluginProvider";
 import { NavigatorProvider } from "@/core/Navigator";
@@ -100,18 +99,10 @@ export const ExperimentalWebPubStatefulReader = ({
   onDecorationActivated,
   dictionary,
 }: StatefulReaderProps) => {
-  const [pluginsRegistered, setPluginsRegistered] = useState(false);
-
-  useLayoutEffect(() => {
-    if (plugins && plugins.length > 0) {
-      plugins.forEach(plugin => {
-        ThPluginRegistry.register(plugin);
-      });
-    } else {
-      ThPluginRegistry.register(createDefaultPlugin());
-    }
-    setPluginsRegistered(true);
-  }, [plugins]);
+  const readerPlugins = useMemo(
+    () => plugins && plugins.length > 0 ? plugins : [createDefaultPlugin()],
+    [plugins],
+  );
 
   const interactions = useMemo(
     () => mergeReaderInteractions(
@@ -121,13 +112,9 @@ export const ExperimentalWebPubStatefulReader = ({
     [decorations, dictionary, onContextMenu, onDecorationActivated, onTextSelected],
   );
 
-  if (!pluginsRegistered) {
-    return null;
-  }
-
   return (
     <>
-      <ThPluginProvider>
+      <ThPluginProvider plugins={readerPlugins}>
         <StatefulReaderInner publication={ publication } localDataKey={ localDataKey } positionStorage={ positionStorage } containerRefSetter={ containerRefSetter }
           interactions={ interactions }
         />
