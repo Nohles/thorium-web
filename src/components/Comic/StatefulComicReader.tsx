@@ -55,7 +55,6 @@ import {
   setTocEntry,
   setTocTree,
 } from "@/lib/publicationReducer";
-import { ThPluginRegistry } from "../Plugins/PluginRegistry";
 import { ThPluginProvider } from "../Plugins/PluginProvider";
 import { createDefaultPlugin } from "../Plugins/helpers/createDefaultPlugin";
 import { ComicReaderProgress } from "./components/ComicReaderProgress";
@@ -1246,21 +1245,13 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
 };
 
 export const StatefulComicReader = ({ plugins, ...props }: StatefulReaderProps) => {
-  const [pluginsRegistered, setPluginsRegistered] = useState(false);
-
-  useLayoutEffect(() => {
-    if (plugins && plugins.length > 0) {
-      plugins.forEach((plugin) => ThPluginRegistry.register(plugin));
-    } else {
-      ThPluginRegistry.register(createDefaultPlugin());
-    }
-    setPluginsRegistered(true);
-  }, [plugins]);
-
-  if (!pluginsRegistered) return null;
+  const readerPlugins = useMemo(
+    () => plugins && plugins.length > 0 ? plugins : [createDefaultPlugin()],
+    [plugins],
+  );
 
   return (
-    <ThPluginProvider>
+    <ThPluginProvider plugins={readerPlugins}>
       <StatefulComicReaderInner {...props} plugins={plugins} />
     </ThPluginProvider>
   );

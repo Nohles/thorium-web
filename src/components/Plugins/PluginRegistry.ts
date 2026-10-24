@@ -25,30 +25,28 @@ export interface ThPlugin {
   };
 }
 
-// Store plugins in a module-level variable to ensure persistence
-const pluginsStore: ThPlugin[] = [];
-
-class PluginRegistryClass {
+export class PluginRegistryClass {
+  private pluginsStore: ThPlugin[] = [];
   register(plugin: ThPlugin): void {
-    const existingPluginIndex = pluginsStore.findIndex(p => p.id === plugin.id);
+    const existingPluginIndex = this.pluginsStore.findIndex(p => p.id === plugin.id);
     
     if (existingPluginIndex >= 0) {
-      pluginsStore[existingPluginIndex] = plugin;
+      this.pluginsStore[existingPluginIndex] = plugin;
     } else {
-      pluginsStore.push(plugin);
+      this.pluginsStore.push(plugin);
     }
   }
   
   unregister(pluginId: string): void {
-    const filteredPlugins = pluginsStore.filter(plugin => plugin.id !== pluginId);
+    const filteredPlugins = this.pluginsStore.filter(plugin => plugin.id !== pluginId);
     
     // Clear the array and repopulate it
-    pluginsStore.length = 0;
-    pluginsStore.push(...filteredPlugins);
+    this.pluginsStore.length = 0;
+    this.pluginsStore.push(...filteredPlugins);
   }
   
   getPlugins(): ThPlugin[] {
-    return [...pluginsStore];
+    return [...this.pluginsStore];
   }
   
   getComponentMaps() {
@@ -56,8 +54,8 @@ class PluginRegistryClass {
     const settingsComponentsMap: Record<string, SettingComponent> = {} as Record<string, SettingComponent>;
     const primaryAudioActionsMap: Record<string, ActionComponent> = {} as Record<string, ActionComponent>;
 
-    // Process plugins in reverse order so later plugins override earlier ones
-    [...pluginsStore].reverse().forEach(plugin => {
+    // Later plugins override earlier defaults.
+    this.pluginsStore.forEach(plugin => {
       // Merge actions components
       if (plugin.components.actions) {
         Object.entries(plugin.components.actions).forEach(([key, component]) => {

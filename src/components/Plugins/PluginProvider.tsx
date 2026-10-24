@@ -1,7 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { ThPluginRegistry, ActionComponent, SettingComponent } from "./PluginRegistry";
+import React, { createContext, useContext, useMemo, useReducer } from "react";
+import { ThPluginRegistry, PluginRegistryClass, ThPlugin, ActionComponent, SettingComponent } from "./PluginRegistry";
 
 interface ThPluginContextType {
   actionsComponentsMap: Record<string, ActionComponent>;
@@ -25,71 +25,35 @@ const ThPluginContext = createContext<ThPluginContextType>({
 
 export const usePlugins = () => useContext(ThPluginContext);
 
-export const ThPluginProvider = ({ children }: { children: React.ReactNode }) => {
-  const [componentMaps, setComponentMaps] = useState<{
-    actionsComponentsMap: Record<string, ActionComponent>;
-    settingsComponentsMap: Record<string, SettingComponent>;
-    textSettingsComponentsMap: Record<string, SettingComponent>;
-    spacingSettingsComponentsMap: Record<string, SettingComponent>;
-    primaryAudioActionsMap: Record<string, ActionComponent>;
-  }>(() => {
-    // Force a fresh retrieval of component maps
-    const maps = ThPluginRegistry.getComponentMaps();
+/** Explicit plugins belong to this reader; omitted plugins retain the legacy registry API. */
+export const ThPluginProvider = ({ children, plugins }: { children: React.ReactNode; plugins?: ThPlugin[] }) => {
+  const [revision, refresh] = useReducer((value: number) => value + 1, 0);
+  const registry = useMemo(() => {
+    if (plugins === undefined) return ThPluginRegistry;
+    const scoped = new PluginRegistryClass();
+    plugins.forEach(plugin => scoped.register(plugin));
+    return scoped;
+  }, [plugins]);
+
+  const value = useMemo(() => {
+    const maps = registry.getComponentMaps();
+    const typedSettings = (type: "text" | "spacing") => Object.fromEntries(
+      Object.entries(maps.settingsComponentsMap).filter(([, component]) => component.type === type)
+    );
     return {
       ...maps,
-      textSettingsComponentsMap: getTypedSettingsComponents(maps.settingsComponentsMap, "text"),
-      spacingSettingsComponentsMap: getTypedSettingsComponents(maps.settingsComponentsMap, "spacing")
+      textSettingsComponentsMap: typedSettings("text"),
+      spacingSettingsComponentsMap: typedSettings("spacing"),
+      registerPlugin: (plugin: ThPlugin) => {
+        registry.register(plugin);
+        refresh();
+      },
+      unregisterPlugin: (pluginId: string) => {
+        registry.unregister(pluginId);
+        refresh();
+      },
     };
-  });
-  
-  // Helper function to filter settings components by type
-  function getTypedSettingsComponents(
-    componentsMap: Record<string, SettingComponent>,
-    type: "text" | "spacing"
-  ): Record<string, SettingComponent> {
-    return Object.entries(componentsMap)
-      .filter(([_, component]) => component.type === type)
-      .reduce((acc, [key, component]) => {
-        acc[key] = component;
-        return acc;
-      }, {} as Record<string, SettingComponent>);
-  }
-  
-  // Update component maps when plugins change
-  useEffect(() => {
-    const updateComponentMaps = () => {
-      const maps = ThPluginRegistry.getComponentMaps();
-      setComponentMaps({
-        ...maps,
-        textSettingsComponentsMap: getTypedSettingsComponents(maps.settingsComponentsMap, "text"),
-        spacingSettingsComponentsMap: getTypedSettingsComponents(maps.settingsComponentsMap, "spacing"),
-      });
-    };
-        
-    // Initial update to ensure we have the latest maps
-    updateComponentMaps();
-  }, []);
-  
-  // Wrapper for register that triggers an update
-  const registerPlugin = (plugin: Parameters<typeof ThPluginRegistry.register>[0]) => {
-    ThPluginRegistry.register(plugin);
-  };
-  
-  // Wrapper for unregister that triggers an update
-  const unregisterPlugin = (pluginId: string) => {
-    ThPluginRegistry.unregister(pluginId);
-  };
-  
-  // Provide the component maps and plugin management functions
-  const value = {
-    ...componentMaps,
-    registerPlugin,
-    unregisterPlugin
-  };
-  
-  return (
-    <ThPluginContext.Provider value={ value }>
-      { children }
-    </ThPluginContext.Provider>
-  );
+  }, [registry, revision]);
+
+  return <ThPluginContext.Provider value={value}>{children}</ThPluginContext.Provider>;
 };
