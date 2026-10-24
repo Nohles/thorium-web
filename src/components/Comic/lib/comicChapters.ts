@@ -1,6 +1,7 @@
 import { Link, Publication } from "@readium/shared";
 
 import type { ComicPage } from "../hooks/useComicReaderController";
+import { defaultComicLabels, type ComicLabels } from "./comicLabels";
 
 /** Normalized path for matching reading-order hrefs to TOC hrefs (matches useComicNavigator). */
 export const normalizeHrefPath = (href: string): string => {
@@ -39,7 +40,11 @@ const pageIndexForTocHref = (pages: ComicPage[], tocHref: string): number => {
  * Builds chapter segments from manifest TOC anchors into the flat image reading order.
  * Requires at least two segments to treat the publication as multi-chapter for UI purposes.
  */
-export function buildComicChapterSegments(publication: Publication, pages: ComicPage[]): ComicChapterSegment[] {
+export function buildComicChapterSegments(
+  publication: Publication,
+  pages: ComicPage[],
+  labels: ComicLabels = defaultComicLabels
+): ComicChapterSegment[] {
   if (pages.length === 0) return [];
 
   const flatToc: Link[] = [];
@@ -89,7 +94,7 @@ export function buildComicChapterSegments(publication: Publication, pages: Comic
     const explicitTitle = startTitleByIndex.get(startIndex);
     const title =
       explicitTitle ??
-      (startIndex === 0 && pubTitle ? pubTitle : `Chapter ${i + 1}`);
+      (startIndex === 0 && pubTitle ? pubTitle : labels.chapter(i + 1));
 
     segments.push({ title, startIndex, endIndex });
   }

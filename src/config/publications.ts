@@ -50,6 +50,8 @@ export const PUBLICATION_MANIFESTS = {
     "http://localhost:15080/webpub/Si5LLiBSb3dsaW5nL1RoZSBJY2thYm9n/manifest.json",
   "the-tales-of-beedle-the-bard":
     "http://localhost:15080/webpub/Si5LLiBSb3dsaW5nL1RoZSBUYWxlcyBvZiBCZWVkbGUgdGhlIEJhcmQ/manifest.json",
+  "pepper-and-carrot":
+    "https://readium.org/guided-navigation/examples/comics/manifest.json",
   cbz: "http://127.0.0.1:3002/readium/8c1b475b-4189-4971-8835-87cad200eed3/webpub/ZmlsZTovLy9BIENhZGV0IEJlY29tZXMgYSBQcm9waGV0XyEvQ2hhcHRlciAxLmNieg/manifest.json",
   "art-of-letters": "https://publication-server.readium.org/webpub/Z3M6Ly9yZWFkaXVtLXBsYXlncm91bmQtZmlsZXMvZGVtby9hcnRfbGV0dGVycy56YWI%2Fmanifest.json",
   "around-the-world": "https://publication-server.readium.org/webpub/Z3M6Ly9yZWFkaXVtLXBsYXlncm91bmQtZmlsZXMvZGVtby9Bcm91bmRUaGVXb3JsZEluRWlnaHR5RGF5cy5tNGI%2Fmanifest.json",

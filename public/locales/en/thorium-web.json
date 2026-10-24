@@ -204,6 +204,25 @@
       },
       "imagePreloadAmount": {
         "label": "Image preload amount"
+      },
+      "labels": {
+        "page": "Page {{ number }}",
+        "chapter": "Chapter {{ number }}",
+        "chapterPage": "{{ chapter }} - Page {{ number }}"
+      },
+      "chapterLoad": {
+        "failed": "This chapter couldn’t be loaded.",
+        "undiscoverable": "This series doesn’t expose chapters this reader can open.",
+        "retry": "Try again",
+        "dismiss": "Dismiss"
+      },
+      "progressNavigator": {
+        "label": "Page navigator",
+        "pageValue": "Page {{ label }} of {{ total }}",
+        "spreadValue": "Pages {{ label }} of {{ total }}"
+      },
+      "empty": {
+        "noPages": "This publication has no pages to display."
       }
     }
   },

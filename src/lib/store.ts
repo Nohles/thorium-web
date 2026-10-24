@@ -299,6 +299,12 @@ const loadState = (storageKey: string = DEFAULT_STORAGE_KEY) => {
             ...comicOrder,
           ];
         }
+        // Reading mode preview was never implemented; drop it from persisted orders
+        if (comicOrder.includes(ThSettingsKeys.comicReadingModePreview)) {
+          state.preferences.settings.comicOrder = state.preferences.settings.comicOrder.filter(
+            (key: string) => key !== ThSettingsKeys.comicReadingModePreview
+          );
+        }
       }
 
       // Backfill decoration tints onto persisted saved themes

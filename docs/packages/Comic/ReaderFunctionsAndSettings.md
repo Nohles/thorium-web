@@ -10,7 +10,7 @@ The reader builds its page list from non-templated `readingOrder` links whose me
 
 For comic archive series manifests, the reader loads chapter manifests on demand, flattens their images into a single global page list, and preloads adjacent chapter manifests around the current chapter.
 
-The reader stores settings per `activeKey`, using `localDataKey` when available or a publication-derived fallback. The current reading position is persisted separately in `comicPosition` and, when a Readium locator can be created, through the supplied `positionStorage`.
+Comic settings are shared by every comic, like the EPUB and audio settings. Only the reading direction is stored per publication (under `activeKey`, which is `localDataKey` when available or a publication-derived fallback), because manga and western comics need different directions. A publication opened for the first time takes its direction from the manifest's reading progression. Settings saved before they became shared are migrated: the first publication activated after upgrading supplies the shared settings. The current reading position is persisted separately in `comicPosition` and, when a Readium locator can be created, through the supplied `positionStorage`.
 
 ## Defaults
 
@@ -49,17 +49,16 @@ The default comic settings order is:
 2. Progress bar type
 3. Progress bar position
 4. Reading mode
-5. Reading mode preview
-6. Page gap
-7. Reading direction
-8. Tap zones
-9. Tap zone preview
-10. Scale type
-11. Stretch small pages
-12. Limit page width
-13. Width limit
-14. Scroll amount
-15. Image preload amount
+5. Page gap
+6. Reading direction
+7. Tap zones
+8. Tap zone preview
+9. Scale type
+10. Stretch small pages
+11. Limit page width
+12. Width limit
+13. Scroll amount
+14. Image preload amount
 
 Some settings exist in state and have UI components, but are not included in the default comic settings order. Those are called out in the settings inventory below.
 
@@ -101,26 +100,39 @@ The comic reader cursor is a global zero-based page index.
 
 For single-page and continuous modes, previous and next move by 1 page. For double-page mode, previous and next move by 2 pages. In webtoon mode, previous and next scroll by the configured viewport percentage.
 
-The overlay arrow buttons are mapped through reading direction:
+In paginated modes the reader shows the shared `StatefulReaderArrowButton` edge arrows, following the same `affordances.paginated.fxl` preferences as the EPUB reader. Continuous modes, like scrolled EPUBs, have no edge arrows. The arrows are mapped through reading direction:
 
 | Direction | Left arrow | Right arrow |
 | --- | --- | --- |
 | `ltr` | Previous page/spread | Next page/spread |
 | `rtl` | Next page/spread | Previous page/spread |
 
-Keyboard shortcuts:
+Keyboard shortcuts come from preferences, like the EPUB and audio readers. The shared action and docking shortcuts (settings, table of contents, fullscreen, jump to position) work in the comic reader too.
+
+Navigation keys:
 
 | Key | Behavior |
 | --- | --- |
-| `ArrowLeft`, `A` | Previous in `ltr`, next in `rtl` |
-| `ArrowRight`, `D` | Next in `ltr`, previous in `rtl` |
-| `M` | Toggle the reader menu/immersive state |
-| `I` | Cycle scale type: `fitWidth`, `fitHeight`, `fitScreen`, `originalSize` |
-| `R` | Cycle reading mode: `singlePage`, `doublePage`, `continuousVertical`, `continuousHorizontal`, `webtoon` |
-| `T` | Toggle reading direction between `ltr` and `rtl` |
-| Space | Toggle `autoScrollEnabled` in settings |
+| `ArrowLeft` | Previous in `ltr`, next in `rtl` |
+| `ArrowRight` | Next in `ltr`, previous in `rtl` |
+| Space / Shift+Space | Next / previous (paginated modes) |
+| `ArrowDown`, `PageDown` / `ArrowUp`, `PageUp` | Next / previous (paginated modes) |
+| `Home` / `End` | First / last page of the current chapter (paginated modes) |
 
-Keyboard shortcuts are ignored when focus is in an input, textarea, contenteditable element, or when meta/control/alt is pressed.
+In continuous modes Space, the vertical arrows, Page Up/Down, Home and End scroll natively.
+
+Comic shortcuts, configurable through `preferences.shortcuts.comic` (`ThComicShortcutKeys`). Omitted keys keep their default; `null` turns a shortcut off, so hosts can meet WCAG 2.1.4 for single-character shortcuts:
+
+| Key | `ThComicShortcutKeys` | Behavior |
+| --- | --- | --- |
+| `A` | `pageLeft` | Previous in `ltr`, next in `rtl` |
+| `D` | `pageRight` | Next in `ltr`, previous in `rtl` |
+| `M` | `toggleMenu` | Toggle the reader menu/immersive state |
+| `I` | `cycleScaleType` | Cycle scale type: `fitWidth`, `fitHeight`, `fitScreen`, `originalSize` |
+| `R` | `cycleReadingMode` | Cycle reading mode: `singlePage`, `doublePage`, `continuousVertical`, `continuousHorizontal`, `webtoon` |
+| `T` | `toggleDirection` | Toggle reading direction between `ltr` and `rtl` |
+
+Navigation and comic shortcuts are ignored while focus is on an interactive element (buttons, form fields, sliders, radio groups, menus) or inside a sheet or dialog, and when another handler has already handled the key.
 
 The shared visual navigator supports `go`, `goLink`, `goForward`, `goBackward`, `currentLocator`, `previousLocator`, and `nextLocator`. It maps links and locators to the current comic page list by normalized href, ignoring fragments and query strings.
 
@@ -144,12 +156,9 @@ The overlay contains separate support for floating chapter call-to-action button
 
 ## Progress Bar
 
-The progress bar is rendered by `ComicReaderProgressNavigator` when `progressBarType` is `standard`.
+The progress bar is rendered by `ComicReaderProgressNavigator` when `progressBarType` is `standard`. It is a single slider (react-aria `Slider`): one focusable thumb operated with arrow keys, dragging, or clicking the track, over a segmented track showing read, loaded and current pages. It stays a thin rail until hovered, focused or dragged, when it grows and shows the current and total page numbers.
 
-It has two visual states:
-
-- Compact rail: a small rail of page/spread indicators.
-- Expanded rail: a clickable rail with start/end labels and individual buttons for pages or spreads.
+The slider follows the comic's reading direction: in `rtl` the first page is on the right. Vertical rails (left/right positions) read top to bottom. Its accessible value is the page, for example "Page 3 of 20" or "Pages 2-3 of 20" for spreads.
 
 The progress bar is present even when the main overlay is hidden, unless the progress bar type is `hidden`. It is not controlled by `overlayMode`.
 
@@ -157,7 +166,7 @@ Progress bar items are built from the current viewport pages:
 
 - In single-page and continuous modes, each page is one progress item.
 - In double-page mode, pages are grouped into spreads of up to 2 pages.
-- The current item uses `aria-current="page"`.
+- The current item is the slider value.
 - Completed state is based on whether the item is at or before the current cursor.
 - Loaded state is based on image load tracking.
 - Clicking a page or spread target sets the cursor to that item target.
@@ -301,7 +310,7 @@ Each image reports one of four load states: `idle`, `loading`, `loaded`, or `err
 
 In continuous vertical, continuous horizontal, and webtoon modes, a page image is loaded when `abs(page.index - cursorIndex) <= imagePreloadAmount`. The default value is 5. The settings control allows 0-10, step 1.
 
-In single-page and double-page modes, visible pages are always loaded.
+In single-page and double-page modes, visible pages are always loaded, and the next `imagePreloadAmount` pages or spreads (at least one) plus one step behind are prefetched so page turns are instant.
 
 On image load failure, the reader renders an alert with a retry button.
 
@@ -312,7 +321,7 @@ On image load failure, the reader renders an alert with a retry button.
 | Theme | Shared reader theme preference | Shared preference default | Yes | Applies reader theme CSS variables used by comic viewport and chrome |
 | `readingMode` | `default`, `singlePage`, `doublePage`, `continuousVertical`, `continuousHorizontal`, `webtoon` | `default` | Yes | Controls layout and navigation step |
 | `pageGapPx` | 0-80 in UI | `0` | Yes | Controls CSS gap between rendered page cells; hidden in single-page mode |
-| `direction` | `ltr`, `rtl` | `ltr` | Yes | Swaps next/previous side behavior and double-page ordering |
+| `direction` | `ltr`, `rtl` | Manifest reading progression | Yes | Per publication. Swaps next/previous side behavior and double-page ordering |
 | `tapZones` | `default`, `edge`, `kindle`, `lShape`, `rightAndLeft`, `disabled` | `default` | Yes | Controls tap navigation/toggle regions |
 | `scaleType` | `fitWidth`, `fitHeight`, `fitScreen`, `originalSize` | `originalSize` | Yes | Controls image sizing styles |
 | `overlayMode` | `auto`, `pinned` | `auto` | Component exists, not default order | Controls whether overlay can be toggled or is always shown |
@@ -325,12 +334,12 @@ On image load failure, the reader renders an alert with a retry button.
 | `widthLimitEnabled` | boolean | `false` | Yes, conditional | Enables width limiting for `fitWidth`/`fitScreen` |
 | `widthLimitPercent` | 10-100 in UI | `50` | Yes, conditional | Sets content width when width limit applies |
 | `scrollAmountPercent` | 10-100, step 5 in UI | `95` | Yes | Sets the viewport percentage used by previous/next actions in webtoon mode |
-| `autoScrollEnabled` | boolean | `false` | Component exists, not default order | Stored/toggled by Space; no current scrolling loop found |
+| `autoScrollEnabled` | boolean | `false` | Component exists (deprecated), not default order | Stored only; no current scrolling loop found |
 | `autoScrollSpeedSeconds` | 1-20, step 1 in UI | `5` | Component exists, not default order | Stored only; no current scrolling loop found |
 | `autoScrollSmooth` | boolean | `true` | Component exists, not default order | Stored only; no current scrolling loop found |
-| `readingModePreview` | boolean | `true` | Yes | Stored only; no current comic runtime use found |
+| `readingModePreview` | boolean | `true` | Component exists (deprecated), not default order | Stored only; no current comic runtime use found |
 | `tapZonePreview` | boolean | `false` | Yes | Draws tap-zone visualization overlay |
-| `imagePreloadAmount` | 0-10, step 1 in UI | `5` | Yes | Controls continuous-mode image preload window |
+| `imagePreloadAmount` | 0-10, step 1 in UI | `1` | Yes | Pages loaded ahead in continuous modes; pages/spreads prefetched ahead in paginated modes |
 | `comicChapterBoundaries` | boolean | `true` | Component exists, not default order | Keeps navigation and progress scoped to TOC/chapter segments when available |
 
 ## Implementation Notes for React Native Alignment

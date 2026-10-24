@@ -2,23 +2,14 @@
 
 import { useMemo } from "react";
 import { useI18n } from "@/i18n/useI18n";
-import { useAppDispatch, useAppSelector } from "@/lib/hooks";
-import {
-  ComicReadingMode,
-  updateComicSettings,
-} from "@/lib/comicSettingsReducer";
+import { ComicReadingMode } from "@/lib/comicSettingsReducer";
+import { useComicSettings } from "@/components/Comic/hooks/useComicSettings";
 
 import { StatefulRadioGroup } from "../StatefulRadioGroup";
 
 export const StatefulComicReadingMode = () => {
   const { t } = useI18n();
-  const dispatch = useAppDispatch();
-  const activeKey = useAppSelector((s) => s.comicSettings.activeKey);
-  const settings = useAppSelector((s) =>
-    activeKey ? s.comicSettings.byKey[activeKey] : undefined
-  );
-
-  const value = settings?.readingMode ?? ComicReadingMode.default;
+  const { settings, patch } = useComicSettings();
 
   const options = useMemo(
     () => [
@@ -36,18 +27,9 @@ export const StatefulComicReadingMode = () => {
     <StatefulRadioGroup
       standalone={true}
       label={t("reader.comic.readingMode.label")}
-      value={value}
-      onChange={(v) => {
-        if (!activeKey) return;
-        dispatch(
-          updateComicSettings({
-            key: activeKey,
-            patch: { readingMode: v as ComicReadingMode },
-          })
-        );
-      }}
+      value={settings.readingMode}
+      onChange={(v) => patch({ readingMode: v as ComicReadingMode })}
       items={options}
     />
   );
 };
-

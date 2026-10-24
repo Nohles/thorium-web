@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import classNames from "classnames";
-import { Link, Manifest, Publication } from "@readium/shared";
+import { Link, Manifest, Publication, ReadingProgression } from "@readium/shared";
 
 import readerStyles from "../assets/styles/thorium-web.reader.app.module.css";
+import arrowStyles from "../assets/styles/thorium-web.reader.paginatedArrow.module.css";
+import comicStyles from "./assets/styles/thorium-web.comic.module.css";
 
 import { NavigatorProvider } from "@/core/Navigator";
 import { useComicNavigator } from "@/core/Hooks/Comic/useComicNavigator";
@@ -12,8 +14,9 @@ import { StatefulReaderProps } from "../Reader/StatefulReaderWrapper";
 import { StatefulDockingWrapper } from "../Docking/StatefulDockingWrapper";
 import { StatefulReaderHeader } from "../StatefulReaderHeader";
 import { StatefulReaderFooter } from "../StatefulReaderFooter";
+import { StatefulReaderArrowButton } from "../StatefulReaderArrowButton";
 import { getReaderClassNames } from "../Helpers/getReaderClassNames";
-import { ThDockingKeys, ThLayoutUI, ThProgressionFormat } from "@/preferences/models";
+import { ThActionsKeys, ThComicShortcutKeys, ThDockingKeys, ThLayoutUI, ThProgressionFormat } from "@/preferences/models";
 
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import {
@@ -21,28 +24,45 @@ import {
   ComicReadingMode,
   ComicScaleType,
   ComicTapZones,
-  defaultComicSettings,
-  LegacyComicSettings,
-  normalizeComicSettings,
+  initComicSettings,
   setComicActiveKey,
-  updateComicSettings,
 } from "@/lib/comicSettingsReducer";
 import { updateComicPosition } from "@/lib/comicPositionReducer";
-import { setHovering, setLoading, toggleImmersive } from "@/lib/readerReducer";
+import {
+  setDirection,
+  setFullscreen,
+  setHovering,
+  setLoading,
+  setPlatformModifier,
+  setUserNavigated,
+  toggleImmersive,
+} from "@/lib/readerReducer";
+import { dockAction, toggleActionOpen } from "@/lib/actionsReducer";
+import {
+  fromActionPeripheralType,
+  fromComicPeripheralType,
+  fromDockingPeripheralType,
+  NavPeripheralType,
+} from "@/helpers/peripherals";
+import { useFullscreen } from "@/core/Hooks/useFullscreen";
+import { useFocusedDockableKey } from "../Docking/hooks/useFocusedDockableKey";
 import {
   setAdjacentTimelineItems,
   setProgress,
   setPublicationEnd,
   setPublicationStart,
+  setRTL,
   setTocEntry,
   setTocTree,
 } from "@/lib/publicationReducer";
 import { ThPluginRegistry } from "../Plugins/PluginRegistry";
 import { ThPluginProvider } from "../Plugins/PluginProvider";
 import { createDefaultPlugin } from "../Plugins/helpers/createDefaultPlugin";
-import { ComicReaderOverlay } from "./components/ComicReaderOverlay";
+import { ComicReaderProgress } from "./components/ComicReaderProgress";
 import { ComicReaderViewport, type ComicBoundaryScrollControls } from "./components/ComicReaderViewport";
+import { useComicSettings } from "./hooks/useComicSettings";
 import { useComicKeyboardShortcuts } from "./hooks/useComicKeyboardShortcuts";
+import { useComicKeyboardPeripherals } from "./hooks/useComicKeyboardPeripherals";
 import { resolveTapAction } from "./hooks/useComicTapNavigation";
 import { ComicPage, useComicReaderController } from "./hooks/useComicReaderController";
 import {
@@ -74,18 +94,23 @@ import {
   type ComicArchiveChapter,
   type ComicArchivePageIdentity,
 } from "./lib/comicArchiveSeries";
+import { type ComicLabels, useComicLabels } from "./lib/comicLabels";
 
 import { usePreferences } from "@/preferences/hooks/usePreferences";
 import { useI18n } from "@/i18n/useI18n";
+import { useLocale } from "react-aria";
+import { useReaderDocumentTitle } from "@/hooks/useReaderDocumentTitle";
+import { getPlatformModifier } from "@/core/Helpers/keyboardUtilities";
+import { ThLayoutDirection } from "@/preferences/models";
 import { usePositionStorage } from "@/hooks/usePositionStorage";
 import { useReaderNavigation } from "../Reader/ReaderNavigationContext";
 
-const getReadingOrderImages = (publication: Publication): ComicPage[] => {
+const getReadingOrderImages = (publication: Publication, labels: ComicLabels): ComicPage[] => {
   const items = publication.readingOrder?.items ?? [];
   return items
     .filter((item) => !item.templated)
     .filter((item) => typeof item.type === "string" && item.type.startsWith("image/"))
-    .map((link, index) => ({ index, link, href: link.href, title: link.title || `Page ${index + 1}` }));
+    .map((link, index) => ({ index, link, href: link.href, title: link.title || labels.page(index + 1) }));
 };
 
 const getManifestSelfHref = (publication: Publication): string | undefined => {
@@ -97,7 +122,8 @@ const getChapterImages = (
   chapter: ComicArchiveChapter,
   manifest: Manifest,
   manifestUrl: string,
-  startIndex: number
+  startIndex: number,
+  labels: ComicLabels
 ): ComicPage[] => {
   const items = manifest.readingOrder?.items ?? [];
   return items
@@ -108,7 +134,7 @@ const getChapterImages = (
       const pageLink = new Link({
         href,
         type: link.type,
-        title: link.title || `${chapter.title} - Page ${pageIndexInChapter + 1}`,
+        title: link.title || labels.chapterPage(chapter.title, pageIndexInChapter + 1),
         // Preserve probed pixel dimensions so placeholders can reserve the
         // eventual page height without decoding the image first.
         ...(link.width && link.width > 0 ? { width: link.width } : null),
@@ -119,7 +145,7 @@ const getChapterImages = (
         index,
         link: pageLink,
         href,
-        title: pageLink.title || `Page ${index + 1}`,
+        title: pageLink.title || labels.page(index + 1),
         archive: {
           chapterIndex: chapter.index,
           chapterHref: chapter.href,
@@ -239,6 +265,8 @@ const findArchivePageInPages = (
 const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }: StatefulReaderProps) => {
   const { preferences } = usePreferences();
   const { t } = useI18n();
+  const { direction: uiDirection } = useLocale();
+  const labels = useComicLabels();
   const { publicationHref, homeHref, continueElsewhere } = useReaderNavigation();
   const dispatch = useAppDispatch();
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -247,12 +275,25 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   const [activeBoundaryPage, setActiveBoundaryPage] = useState<"prev" | "next" | null>(null);
 
   const comicNavigator = useComicNavigator();
+  const getFocusedDockableKey = useFocusedDockableKey();
+  const onFullscreenChange = useCallback(
+    (isFullscreen: boolean) => {
+      dispatch(setFullscreen(isFullscreen));
+    },
+    [dispatch]
+  );
+  const { handleFullscreen } = useFullscreen(onFullscreenChange);
 
   const activeKey = useMemo(
     () => localDataKey ?? (publication.baseURL ? `${publication.baseURL}-comic-settings` : "comic:ephemeral"),
     [localDataKey, publication.baseURL]
   );
-  const settings = useAppSelector((s) => (activeKey ? s.comicSettings.byKey[activeKey] : undefined));
+  const { settings: resolvedSettings, patch: updateSettings } = useComicSettings(activeKey);
+  const hasOwnDirection = useAppSelector((s) => s.comicSettings.byKey[activeKey]?.direction !== undefined);
+  const manifestDirection =
+    publication.metadata.effectiveReadingProgression === ReadingProgression.rtl
+      ? ComicReadingDirection.rtl
+      : ComicReadingDirection.ltr;
   const savedComicPosition = useAppSelector((s) => (activeKey ? s.comicPosition.byKey[activeKey] : undefined));
   const savedPosition = savedComicPosition?.pageIndex;
   const isImmersive = useAppSelector((s) => s.reader.isImmersive);
@@ -260,7 +301,11 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   const breakpoint = useAppSelector((s) => s.theming.breakpoint);
   const profile = useAppSelector((s) => s.reader.profile);
   const actionsMap = useAppSelector((s) => (profile ? s.actions.keys[profile] : undefined));
-  const merged = useMemo(() => normalizeComicSettings(settings as LegacyComicSettings), [settings]);
+  // Until the publication is seeded, follow its manifest so RTL comics never flash LTR.
+  const merged = useMemo(
+    () => (hasOwnDirection ? resolvedSettings : { ...resolvedSettings, direction: manifestDirection }),
+    [hasOwnDirection, manifestDirection, resolvedSettings]
+  );
 
   /** Transient sheets (TOC popover/modal/etc.) sit over the viewport; docked panels do not. */
   const hasTransientActionOpen = useMemo(
@@ -290,12 +335,18 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   const manifestSelfHref = useMemo(() => getManifestSelfHref(publication), [publication]);
   const isArchiveSeries = useMemo(() => isComicArchiveSeriesManifest(publication.manifest), [publication.manifest]);
   const archiveChapters = useMemo(
-    () => (isArchiveSeries && manifestSelfHref ? buildComicArchiveChapters(publication.manifest, manifestSelfHref) : []),
-    [isArchiveSeries, manifestSelfHref, publication.manifest]
+    () =>
+      isArchiveSeries && manifestSelfHref
+        ? buildComicArchiveChapters(publication.manifest, manifestSelfHref, labels)
+        : [],
+    [isArchiveSeries, labels, manifestSelfHref, publication.manifest]
   );
   const [chapterManifests, setChapterManifests] = useState<Record<number, { manifest: Manifest; manifestUrl: string }>>({});
   const chapterManifestPromisesRef = useRef<Partial<Record<number, Promise<boolean>>>>({});
-  const [chapterLoadError, setChapterLoadError] = useState<string | null>(null);
+  const [chapterLoadError, setChapterLoadError] = useState<{
+    chapterIndex: number;
+    reason: "failed" | "undiscoverable";
+  } | null>(null);
   const { setLocalData, localData } = usePositionStorage(localDataKey, positionStorage);
   const [manifestCurrentChapterIdentity, setManifestCurrentChapterIdentity] = useState<Pick<
     ComicArchivePageIdentity,
@@ -374,7 +425,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
         return chapterManifestPromisesRef.current[chapterIndex]!;
       }
       if (!chapter.manifestUrl) {
-        setChapterLoadError("This comic series server does not expose chapter manifests Thorium Web can discover.");
+        setChapterLoadError({ chapterIndex, reason: "undiscoverable" });
         return false;
       }
 
@@ -387,8 +438,8 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
           setChapterLoadError(null);
           return true;
         })
-        .catch((error) => {
-          setChapterLoadError(error instanceof Error ? error.message : "Failed to load chapter manifest.");
+        .catch(() => {
+          setChapterLoadError({ chapterIndex, reason: "failed" });
           return false;
         })
         .finally(() => {
@@ -413,18 +464,18 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   }, [archiveChapters.length, initialArchiveChapterIndex, isArchiveSeries, loadChapter]);
 
   const allPages = useMemo(() => {
-    if (!isArchiveSeries) return getReadingOrderImages(publication);
+    if (!isArchiveSeries) return getReadingOrderImages(publication, labels);
     let startIndex = 0;
     const pages: ComicPage[] = [];
     for (const chapter of archiveChapters) {
       const loaded = chapterManifests[chapter.index];
       if (!loaded) continue;
-      const chapterPages = getChapterImages(chapter, loaded.manifest, loaded.manifestUrl, startIndex);
+      const chapterPages = getChapterImages(chapter, loaded.manifest, loaded.manifestUrl, startIndex, labels);
       pages.push(...chapterPages);
       startIndex += chapterPages.length;
     }
     return pages;
-  }, [archiveChapters, chapterManifests, isArchiveSeries, publication]);
+  }, [archiveChapters, chapterManifests, isArchiveSeries, labels, publication]);
   const allPagesRef = useRef(allPages);
   const setLocalDataRef = useRef(setLocalData);
   const manifestRef = useRef(publication.manifest);
@@ -448,8 +499,11 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     return index >= 0 ? index : undefined;
   }, [allPages, localData, restoreArchiveIdentity]);
   const chapterSegments = useMemo(
-    () => (isArchiveSeries ? buildSeriesSegments(archiveChapters, allPages) : buildComicChapterSegments(publication, allPages)),
-    [archiveChapters, allPages, isArchiveSeries, publication]
+    () =>
+      isArchiveSeries
+        ? buildSeriesSegments(archiveChapters, allPages)
+        : buildComicChapterSegments(publication, allPages, labels),
+    [archiveChapters, allPages, isArchiveSeries, labels, publication]
   );
   const chapterTocActive =
     merged.comicChapterBoundaries &&
@@ -600,15 +654,6 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
       ? progressChapterSegment.endIndex - progressChapterSegment.startIndex + 1
       : allPages.length;
 
-  const progressCurrentPage = useMemo(() => {
-    if (progressChapterSegment) {
-      return Math.min(cursorIndex - progressChapterSegment.startIndex + 1, chapterPageCount);
-    }
-    return Math.min(cursorIndex + 1, allPages.length);
-  }, [allPages.length, chapterPageCount, cursorIndex, progressChapterSegment]);
-
-  const showNextChapterCta = false;
-  const showPrevChapterCta = false;
 
   const nextChapterTitle = useMemo(() => {
     if (!chapterModeActive || segmentIndex < 0 || segmentIndex >= chapterSegments.length - 1) return undefined;
@@ -621,6 +666,11 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   }, [chapterModeActive, chapterSegments, segmentIndex]);
 
   const currentChapterTitle = activeSegment?.title;
+
+  useReaderDocumentTitle({
+    title: publication.metadata.title.getTranslation(),
+    chapter: currentChapterTitle ?? allPages[cursorIndex]?.title,
+  });
 
   const scrollBoundaryPages = useMemo(
     () => {
@@ -845,13 +895,6 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     goPrev();
   }, [activeBoundaryPage, goPrev, goPrevFromBoundary, merged.scrollAmountPercent, mode, scrollBoundaryPages.previous]);
 
-  const updateSettings = useCallback(
-    (patch: Partial<typeof defaultComicSettings>) => {
-      dispatch(updateComicSettings({ key: activeKey, patch }));
-    },
-    [activeKey, dispatch]
-  );
-
   const cycleOption = useCallback(<T,>(options: readonly T[], current: T) => {
     const idx = options.findIndex((item) => item === current);
     return options[(Math.max(0, idx) + 1) % options.length];
@@ -884,20 +927,109 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     updateSettings({ direction: next });
   }, [cycleOption, direction, updateSettings]);
 
-  useComicKeyboardShortcuts({
-    direction,
-    onPrev: handlePrev,
-    onNext: handleNext,
-    onToggleMenu: toggleMenu,
-    onCycleScaleType: cycleScaleType,
-    onCycleReadingMode: cycleReadingMode,
-    onCycleDirection: cycleDirection,
-    onToggleAutoScroll: () => updateSettings({ autoScrollEnabled: !merged.autoScrollEnabled }),
-  });
+  const keyboardPeripherals = useComicKeyboardPeripherals({ isPaged: !isScrollMode });
+
+  const handlePeripheral = useCallback(
+    (type: string) => {
+      const isRtl = direction === ComicReadingDirection.rtl;
+      const goLeft = isRtl ? handleNext : handlePrev;
+      const goRight = isRtl ? handlePrev : handleNext;
+      const navigate = (go: () => void) => {
+        dispatch(setUserNavigated(true));
+        go();
+      };
+
+      switch (type) {
+        case NavPeripheralType.moveLeft:         navigate(goLeft);     return;
+        case NavPeripheralType.moveRight:        navigate(goRight);    return;
+        case NavPeripheralType.progressForward:
+        case NavPeripheralType.moveDown:         navigate(handleNext); return;
+        case NavPeripheralType.progressBackward:
+        case NavPeripheralType.moveUp:           navigate(handlePrev); return;
+        case NavPeripheralType.moveHome:
+          navigate(() => {
+            const first = viewportPages[0];
+            if (first) setCursorIndex(first.index);
+          });
+          return;
+        case NavPeripheralType.moveEnd:
+          navigate(() => {
+            const last = viewportPages[viewportPages.length - 1];
+            if (last) setCursorIndex(Math.max(viewportPages[0]?.index ?? 0, last.index - (step - 1)));
+          });
+          return;
+      }
+
+      switch (fromComicPeripheralType(type)) {
+        case ThComicShortcutKeys.pageLeft:         navigate(goLeft);  return;
+        case ThComicShortcutKeys.pageRight:        navigate(goRight); return;
+        case ThComicShortcutKeys.toggleMenu:       toggleMenu();       return;
+        case ThComicShortcutKeys.cycleScaleType:   cycleScaleType();   return;
+        case ThComicShortcutKeys.cycleReadingMode: cycleReadingMode(); return;
+        case ThComicShortcutKeys.toggleDirection:  cycleDirection();   return;
+      }
+
+      const actionKey = fromActionPeripheralType(type);
+      if (actionKey === ThActionsKeys.fullscreen) {
+        handleFullscreen();
+        return;
+      }
+      if (actionKey && profile) {
+        dispatch(toggleActionOpen({ key: actionKey, profile }));
+        return;
+      }
+
+      const dockingKey = fromDockingPeripheralType(type);
+      if (dockingKey && profile) {
+        const dockableKey = getFocusedDockableKey(dockingKey as ThDockingKeys);
+        if (dockableKey) {
+          dispatch(dockAction({ key: dockableKey, dockingKey: dockingKey as ThDockingKeys, profile }));
+        }
+      }
+    },
+    [
+      cycleDirection,
+      cycleReadingMode,
+      cycleScaleType,
+      direction,
+      dispatch,
+      getFocusedDockableKey,
+      handleFullscreen,
+      handleNext,
+      handlePrev,
+      profile,
+      setCursorIndex,
+      step,
+      toggleMenu,
+      viewportPages,
+    ]
+  );
+
+  useComicKeyboardShortcuts(keyboardPeripherals, handlePeripheral);
 
   useEffect(() => {
+    // First open of a publication follows its declared reading progression (e.g. RTL manga).
+    dispatch(initComicSettings({ key: activeKey, defaults: { direction: manifestDirection } }));
     dispatch(setComicActiveKey(activeKey));
-  }, [activeKey, dispatch]);
+  }, [activeKey, dispatch, manifestDirection]);
+
+  // Same UI direction and shortcut modifier bookkeeping as the other readers.
+  useLayoutEffect(() => {
+    dispatch(setDirection(uiDirection as ThLayoutDirection));
+    dispatch(setPlatformModifier(getPlatformModifier()));
+  }, [dispatch, uiDirection]);
+
+  // Shared chrome (arrow labels, pagination) reads the publication direction;
+  // for comics that is the reader's chosen direction, not only the manifest's.
+  useEffect(() => {
+    dispatch(setRTL(direction === ComicReadingDirection.rtl));
+  }, [dispatch, direction]);
+
+  const retryChapterLoad = useCallback(() => {
+    if (!chapterLoadError) return;
+    setChapterLoadError(null);
+    loadChapter(chapterLoadError.chapterIndex).catch(() => undefined);
+  }, [chapterLoadError, loadChapter]);
 
   useEffect(() => {
     dispatch(setLoading(false));
@@ -939,9 +1071,19 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     ]
   );
 
+  const isRtl = direction === ComicReadingDirection.rtl;
+  const canGoBackward = canGoPrev || !!scrollBoundaryPages.previous || activeBoundaryPage === "prev";
+  const canGoForward = canGoNext || !!scrollBoundaryPages.next || activeBoundaryPage === "next";
+  const navigateFromArrow = (go: () => void) => {
+    dispatch(setUserNavigated(true));
+    go();
+  };
+
   // Hide edge nav while a sheet overlays the page so it can't steal TOC clicks.
   const showOverlay =
     (merged.overlayMode === "pinned" || !isImmersive) && !hasTransientActionOpen;
+  // Like the other readers, edge arrows belong to paginated layouts; continuous modes scroll.
+  const showArrows = showOverlay && !isScrollMode;
   const progressItems = useMemo(
     () =>
       buildComicProgressItems({
@@ -973,13 +1115,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
 
   return (
     <NavigatorProvider visualNavigator={comicNavigator} publication={publication}>
-        <main
-          className={readerStyles.main}
-          style={{
-            background: "var(--th-theme-background, #111)",
-            color: "var(--th-theme-text, #fff)",
-          }}
-        >
+        <main className={classNames(readerStyles.main, comicStyles.main)}>
           <StatefulDockingWrapper>
             <div
               className={classNames(
@@ -1000,10 +1136,19 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
                 runningHeadFormatPref={preferences.theming.header?.runningHead?.format?.fxl}
               />
 
+              {showArrows ? (
+                <nav className={classNames(arrowStyles.container, arrowStyles.leftContainer)}>
+                  <StatefulReaderArrowButton
+                    direction="left"
+                    isDisabled={isRtl ? !canGoForward : !canGoBackward}
+                    onPress={() => navigateFromArrow(isRtl ? handleNext : handlePrev)}
+                  />
+                </nav>
+              ) : null}
+
               <article
-                className={readerStyles.wrapper}
+                className={classNames(readerStyles.wrapper, comicStyles.publication)}
                 aria-label={t("reader.app.publicationWrapper")}
-                style={{ position: "relative", display: "flex", flexDirection: "column", minHeight: 0 }}
               >
                 <ComicReaderViewport
                   publication={publication}
@@ -1025,78 +1170,67 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
                   onBoundaryPageChange={handleBoundaryPageChange}
                   boundaryScrollControlsRef={boundaryScrollControlsRef}
                 />
+                {!isArchiveSeries && allPages.length === 0 ? (
+                  <p role="status" className={comicStyles.statusMessage}>
+                    {t("reader.comic.empty.noPages")}
+                  </p>
+                ) : null}
                 {chapterLoadError ? (
-                  <div
-                    role="status"
-                    style={{
-                      position: "absolute",
-                      left: "50%",
-                      bottom: 24,
-                      transform: "translateX(-50%)",
-                      maxWidth: "min(520px, calc(100% - 32px))",
-                      padding: "10px 14px",
-                      borderRadius: 6,
-                      background: "rgba(20, 20, 20, 0.88)",
-                      color: "#fff",
-                      fontSize: 14,
-                      lineHeight: 1.4,
-                      zIndex: 30,
-                    }}
-                  >
-                    {chapterLoadError}
+                  <div role="alert" className={comicStyles.statusMessage}>
+                    <p>
+                      {chapterLoadError.reason === "undiscoverable"
+                        ? t("reader.comic.chapterLoad.undiscoverable")
+                        : t("reader.comic.chapterLoad.failed")}
+                    </p>
+                    {chapterLoadError.reason === "failed" ? (
+                      <button
+                        type="button"
+                        className={comicStyles.actionButton}
+                        data-size="compact"
+                        onClick={retryChapterLoad}
+                      >
+                        {t("reader.comic.chapterLoad.retry")}
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className={comicStyles.actionButton}
+                      data-variant="secondary"
+                      data-size="compact"
+                      onClick={() => setChapterLoadError(null)}
+                    >
+                      {t("reader.comic.chapterLoad.dismiss")}
+                    </button>
                   </div>
                 ) : null}
-                <ComicReaderOverlay
+                <ComicReaderProgress
                   mode={mode}
-                  pageCount={chapterPageCount}
-                  progressCurrentPage={progressCurrentPage}
-                  progressItems={progressItems}
                   direction={direction}
-                  canGoPrev={canGoPrev || !!scrollBoundaryPages.previous || activeBoundaryPage === "prev"}
-                  canGoNext={canGoNext || !!scrollBoundaryPages.next || activeBoundaryPage === "next"}
-                  onPrev={handlePrev}
-                  onNext={handleNext}
-                  onJumpTo={setCursorIndex}
                   settings={merged}
-                  isVisible={showOverlay}
                   layoutUI={layoutUI}
-                  showNextChapterCta={showNextChapterCta}
-                  showPrevChapterCta={showPrevChapterCta}
-                  nextChapterTitle={nextChapterTitle}
-                  prevChapterTitle={prevChapterTitle}
-                  onNextChapter={goNextChapter}
-                  onPrevChapter={goPrevChapter}
+                  isChromeVisible={showOverlay}
+                  items={progressItems}
+                  totalPages={chapterPageCount}
+                  onJumpTo={setCursorIndex}
                 />
                 {merged.tapZonePreview ? (
-                  <div
-                    aria-hidden
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      pointerEvents: "none",
-                      display: "grid",
-                      gridTemplateColumns: "repeat(12, 1fr)",
-                      gridTemplateRows: "repeat(12, 1fr)",
-                      zIndex: 25,
-                    }}
-                  >
+                  <div aria-hidden className={comicStyles.tapZonePreview}>
                     {tapZonePreviewCells.map((cell) => (
-                      <div
-                        key={`${cell.row}-${cell.col}`}
-                        style={{
-                          background:
-                            cell.action === "prev"
-                              ? "rgba(255, 80, 80, 0.18)"
-                              : cell.action === "next"
-                                ? "rgba(80, 180, 255, 0.18)"
-                                : "rgba(90, 255, 120, 0.16)",
-                          border: "1px solid rgba(255, 255, 255, 0.05)",
-                        }}
-                      />
+                      <div key={`${cell.row}-${cell.col}`} className={comicStyles.tapZoneCell} data-action={cell.action} />
                     ))}
                   </div>
                 ) : null}
               </article>
+
+              {showArrows ? (
+                <nav className={classNames(arrowStyles.container, arrowStyles.rightContainer)}>
+                  <StatefulReaderArrowButton
+                    direction="right"
+                    isDisabled={isRtl ? !canGoBackward : !canGoForward}
+                    onPress={() => navigateFromArrow(isRtl ? handlePrev : handleNext)}
+                  />
+                </nav>
+              ) : null}
 
               <StatefulReaderFooter
                 layout={layoutUI}

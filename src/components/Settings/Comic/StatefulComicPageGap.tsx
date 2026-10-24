@@ -2,27 +2,17 @@
 
 import { useMemo } from "react";
 import { useI18n } from "@/i18n/useI18n";
-import { useAppDispatch, useAppSelector } from "@/lib/hooks";
-import {
-  ComicReadingMode,
-  updateComicSettings,
-} from "@/lib/comicSettingsReducer";
+import { ComicReadingMode } from "@/lib/comicSettingsReducer";
+import { useComicSettings } from "@/components/Comic/hooks/useComicSettings";
 import { StatefulSlider } from "../StatefulSlider";
 
 export const StatefulComicPageGap = () => {
   const { t } = useI18n();
-  const dispatch = useAppDispatch();
-  const activeKey = useAppSelector((s) => s.comicSettings.activeKey);
-  const settings = useAppSelector((s) =>
-    activeKey ? s.comicSettings.byKey[activeKey] : undefined
-  );
-
-  const value = settings?.pageGapPx ?? 0;
+  const { settings, patch } = useComicSettings();
 
   const range = useMemo<[number, number]>(() => [0, 80], []);
 
   if (
-    !settings ||
     settings.readingMode === ComicReadingMode.default ||
     settings.readingMode === ComicReadingMode.singlePage
   ) {
@@ -33,14 +23,11 @@ export const StatefulComicPageGap = () => {
     <StatefulSlider
       standalone={true}
       label={`${t("reader.comic.pageGap.label")} (px)`}
-      value={value}
+      value={settings.pageGapPx}
       defaultValue={0}
       range={range}
       step={1}
-      onChange={(v) => {
-        if (!activeKey) return;
-        dispatch(updateComicSettings({ key: activeKey, patch: { pageGapPx: v as number } }));
-      }}
+      onChange={(v) => patch({ pageGapPx: v as number })}
     />
   );
 };

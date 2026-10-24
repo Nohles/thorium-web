@@ -100,9 +100,25 @@ export const defaultComicSettings: ComicSettings = {
   comicChapterBoundaries: true,
 };
 
+/**
+ * Settings that follow the publication rather than the reader: a manga and a
+ * western comic need different reading directions. Everything else is shared.
+ */
+export const COMIC_PUBLICATION_SETTING_KEYS = ["direction"] as const;
+
+export type ComicPublicationSettingKey = (typeof COMIC_PUBLICATION_SETTING_KEYS)[number];
+
+export type ComicPublicationSettings = Pick<ComicSettings, ComicPublicationSettingKey>;
+
 export interface ComicSettingsReducerState {
   activeKey: string | null;
-  byKey: Record<string, ComicSettings>;
+  /** Reader-wide settings shared by every comic. Absent until a publication is first activated. */
+  global?: ComicSettings;
+  /**
+   * Per-publication settings ({@link COMIC_PUBLICATION_SETTING_KEYS}).
+   * Entries persisted before settings became global may still hold every field.
+   */
+  byKey: Record<string, Partial<ComicSettings>>;
 }
 
 const initialState: ComicSettingsReducerState = {
@@ -143,46 +159,93 @@ export const normalizeComicSettings = (entry?: LegacyComicSettings): ComicSettin
   return {
     ...defaultComicSettings,
     ...(entry as ComicSettings),
-    comicChapterBoundaries: true,
     scaleType,
     widthLimitEnabled,
     widthLimitPercent,
   };
 };
 
-const ensureKey = (state: ComicSettingsReducerState, key: string): ComicSettings => {
-  if (!state.byKey[key]) {
-    state.byKey[key] = { ...defaultComicSettings };
-  } else {
-    state.byKey[key] = normalizeComicSettings(state.byKey[key] as LegacyComicSettings);
+const isPublicationSettingKey = (key: string): key is ComicPublicationSettingKey =>
+  (COMIC_PUBLICATION_SETTING_KEYS as readonly string[]).includes(key);
+
+const pickPublicationSettings = (entry?: Partial<ComicSettings>): Partial<ComicPublicationSettings> => {
+  const picked: Partial<ComicPublicationSettings> = {};
+  if (!entry) return picked;
+  for (const key of COMIC_PUBLICATION_SETTING_KEYS) {
+    if (entry[key] !== undefined) (picked as Record<string, unknown>)[key] = entry[key];
   }
-  return state.byKey[key];
+  return picked;
+};
+
+const omitPublicationSettings = (entry: Partial<ComicSettings>): Partial<ComicSettings> =>
+  Object.fromEntries(Object.entries(entry).filter(([key]) => !isPublicationSettingKey(key))) as Partial<ComicSettings>;
+
+/**
+ * Effective settings for a publication: the shared settings plus its own overrides.
+ * Before the shared settings exist, a legacy full per-publication entry stands in for them.
+ */
+export const resolveComicSettings = (state: ComicSettingsReducerState, key: string | null): ComicSettings => {
+  const entry = key ? state.byKey[key] : undefined;
+  const shared = state.global ?? omitPublicationSettings(entry ?? {});
+  return normalizeComicSettings({ ...shared, ...pickPublicationSettings(entry) } as LegacyComicSettings);
+};
+
+/** Creates the shared settings on first use, inheriting a legacy per-publication entry when there is one. */
+const ensureGlobal = (state: ComicSettingsReducerState, key: string) => {
+  if (state.global) return;
+  state.global = normalizeComicSettings(omitPublicationSettings(state.byKey[key] ?? {}) as LegacyComicSettings);
+};
+
+/** Ensures the publication entry exists and only holds publication settings. */
+const ensureKey = (state: ComicSettingsReducerState, key: string) => {
+  state.byKey[key] = {
+    ...pickPublicationSettings(defaultComicSettings),
+    ...pickPublicationSettings(state.byKey[key]),
+  };
 };
 
 export const comicSettingsSlice = createSlice({
   name: "comicSettings",
   initialState,
   reducers: {
+    /**
+     * Seeds the publication settings of a key seen for the first time (e.g. its reading
+     * direction from manifest metadata). Existing publication settings win; shared keys are ignored.
+     */
+    initComicSettings: (
+      state,
+      action: PayloadAction<{ key: string; defaults: Partial<ComicSettings> }>
+    ) => {
+      const { key, defaults } = action.payload;
+      ensureGlobal(state, key);
+      if (state.byKey[key]) return;
+      state.byKey[key] = { ...pickPublicationSettings(defaultComicSettings), ...pickPublicationSettings(defaults) };
+    },
     setComicActiveKey: (state, action: PayloadAction<string | null>) => {
       state.activeKey = action.payload;
-      if (action.payload) ensureKey(state, action.payload);
+      if (!action.payload) return;
+      ensureGlobal(state, action.payload);
+      ensureKey(state, action.payload);
     },
     updateComicSettings: (
       state,
       action: PayloadAction<{ key: string; patch: Partial<ComicSettings> }>
     ) => {
       const { key, patch } = action.payload;
-      const current = ensureKey(state, key);
-      state.byKey[key] = normalizeComicSettings({ ...current, ...patch });
+      ensureGlobal(state, key);
+      ensureKey(state, key);
+      state.global = normalizeComicSettings({ ...state.global, ...omitPublicationSettings(patch) } as LegacyComicSettings);
+      state.byKey[key] = { ...state.byKey[key], ...pickPublicationSettings(patch) };
     },
     resetComicSettings: (state, action: PayloadAction<{ key: string }>) => {
       const { key } = action.payload;
-      state.byKey[key] = { ...defaultComicSettings };
+      state.global = { ...defaultComicSettings };
+      state.byKey[key] = pickPublicationSettings(defaultComicSettings);
     },
   },
 });
 
-export const { setComicActiveKey, updateComicSettings, resetComicSettings } =
+export const { initComicSettings, setComicActiveKey, updateComicSettings, resetComicSettings } =
   comicSettingsSlice.actions;
 
 export default comicSettingsSlice.reducer;

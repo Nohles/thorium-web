@@ -181,6 +181,13 @@ const audiobooks = [
 ];
 const comics = [
   {
+    title: "Pepper & Carrot: A Fresh Start",
+    author: "David Revoy",
+    cover: "/images/pepper-and-carrot.jpg",
+    url: "/read/pepper-and-carrot",
+    rendition: "Comic (Divina)",
+  },
+  {
     title: "cbz",
     author: "John Doe",
     cover: "/images/cbz.jpg",
