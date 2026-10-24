@@ -35,7 +35,7 @@ export const StatefulReaderHeader = ({
 }) => {
   const {
     headerRef, focusWithinProps, setHover, removeHover,
-    listActionItems, isImmersive, isHovering, isScroll, t,
+    listActionItems, withHeaderActionItemPrefs, isImmersive, isHovering, isScroll, t,
   } = useReaderHeaderBase(actionKeys);
 
   const { preferences } = usePreferences();
@@ -72,7 +72,7 @@ export const StatefulReaderHeader = ({
           <StatefulCollapsibleActionsBar
             id="reader-header-overflowMenu"
             items={ listActionItems() }
-            prefs={{ ...preferences.actions, displayOrder: actionsOrder }}
+            prefs={ withHeaderActionItemPrefs({ ...preferences.actions, displayOrder: actionsOrder }) }
             className={ readerHeaderStyles.actionsWrapper }
             aria-label={ t("reader.app.header.actions") }
             overflowMenuClassName={

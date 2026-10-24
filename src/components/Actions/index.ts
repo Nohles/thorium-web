@@ -5,6 +5,7 @@ export * from "./models";
 
 export * from "./Dictionary";
 export * from "./Fullscreen";
+export * from "./HeaderActionItem";
 export * from "./JumpToPosition";
 export * from "./Settings";
 export * from "./Search";
