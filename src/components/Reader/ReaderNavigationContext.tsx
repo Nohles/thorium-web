@@ -64,6 +64,12 @@ export interface ReaderNavigation {
    */
   headerActionItems?: ReaderHeaderActionItem[];
   /**
+   * Application-owned bar rendered in place of the built-in footer (progression
+   * and pagination). It sits in the layout flow, so the publication is sized
+   * above it, and it stays visible in immersive mode.
+   */
+  footer?: ReactNode;
+  /**
    * Shown on the last-chapter exit page when another Media source can continue
    * reading past the current source's end.
    */

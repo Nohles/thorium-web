@@ -141,6 +141,13 @@
   box-shadow: none;
 }
 
+/* Application-owned footer: in flow under the publication, never hidden by immersive mode */
+.customFooter {
+  position: relative;
+  flex: none;
+  z-index: 2;
+}
+
 .barOverlay {
   position: absolute;
   left: 0;

@@ -24,6 +24,7 @@ import { setHovering } from "@/lib/readerReducer";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { useIsScroll } from "@/hooks";
 import { useAdjacentReadingOrderItems } from "./hooks/useAdjacentReadingOrderItems";
+import { useReaderNavigation } from "./Reader/ReaderNavigationContext";
 
 import classNames from "classnames";
 
@@ -53,6 +54,7 @@ export const StatefulReaderFooter = ({
   const { previous: previousReadingOrderItem, next: nextReadingOrderItem } = useAdjacentReadingOrderItems(publication.readingOrder);
   const { preferences } = usePreferences();
   const affordance = preferences.affordances.scroll.affordance;
+  const { footer: customFooter } = useReaderNavigation();
 
   const dispatch = useAppDispatch();
 
@@ -145,6 +147,14 @@ export const StatefulReaderFooter = ({
       }
     }
   }, [isImmersive]);
+
+  if (customFooter) {
+    return(
+      <div className={ readerStyles.customFooter }>
+        { customFooter }
+      </div>
+    )
+  }
 
   return(
     <>
