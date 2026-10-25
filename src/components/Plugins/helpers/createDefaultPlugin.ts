@@ -32,7 +32,6 @@ import { StatefulTheme } from "../../Settings/StatefulTheme";
 import { StatefulWordSpacing } from "../../Settings/Spacing/StatefulWordSpacing";
 import { StatefulZoom } from "../../Settings/StatefulZoom";
 import {
-  StatefulComicImagePreloadAmount,
   StatefulComicPageGap,
   StatefulComicProgressBarPosition,
   StatefulComicProgressBarType,
@@ -52,7 +51,7 @@ export const createDefaultPlugin = (): ThPlugin => {
     id: "core",
     name: "Core Components",
     description: "Default components for Thorium Web Epub StatefulReader",
-    version: "1.5.34",
+    version: "1.5.35",
     components: {
       actions: {
         [ThActionsKeys.fullscreen]: {
@@ -187,9 +186,6 @@ export const createDefaultPlugin = (): ThPlugin => {
         [ThSettingsKeys.comicTapZonePreview]: {
           Comp: StatefulComicTapZonePreview
         },
-        [ThSettingsKeys.comicImagePreloadAmount]: {
-          Comp: StatefulComicImagePreloadAmount
-        }
       }
     }
   };

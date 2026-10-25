@@ -69,7 +69,6 @@ export interface ComicSettings {
   autoScrollSmooth: boolean;
   readingModePreview: boolean;
   tapZonePreview: boolean;
-  imagePreloadAmount: number;
   /** When true and the manifest TOC defines multiple segments, navigation stays within the current chapter until explicit next/previous chapter. */
   comicChapterBoundaries: boolean;
 }
@@ -95,8 +94,6 @@ export const defaultComicSettings: ComicSettings = {
   autoScrollSmooth: true,
   readingModePreview: true,
   tapZonePreview: false,
-  /** Pages to preload in the scroll direction. Recently viewed pages use a separate fixed retention buffer. */
-  imagePreloadAmount: 1,
   comicChapterBoundaries: true,
 };
 
@@ -156,9 +153,13 @@ export const normalizeComicSettings = (entry?: LegacyComicSettings): ComicSettin
       ? entry.widthLimitPercent
       : defaultComicSettings.widthLimitPercent;
   const scaleType = normalizeComicScaleType(entry.scaleType);
+  // Retired: pages now load in reading order without a user-tuned window.
+  const { imagePreloadAmount: _retiredImagePreloadAmount, ...rest } = entry as ComicSettings & {
+    imagePreloadAmount?: unknown;
+  };
   return {
     ...defaultComicSettings,
-    ...(entry as ComicSettings),
+    ...rest,
     scaleType,
     widthLimitEnabled,
     widthLimitPercent,

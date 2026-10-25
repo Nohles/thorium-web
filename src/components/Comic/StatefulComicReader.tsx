@@ -103,6 +103,7 @@ import { getPlatformModifier } from "@/core/Helpers/keyboardUtilities";
 import { ThLayoutDirection } from "@/preferences/models";
 import { usePositionStorage } from "@/hooks/usePositionStorage";
 import { useReaderNavigation } from "../Reader/ReaderNavigationContext";
+import { goBack, useReaderBackLink } from "../StatefulBackLink";
 
 const getReadingOrderImages = (publication: Publication, labels: ComicLabels): ComicPage[] => {
   const items = publication.readingOrder?.items ?? [];
@@ -267,6 +268,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   const { direction: uiDirection } = useLocale();
   const labels = useComicLabels();
   const { publicationHref, homeHref, continueElsewhere } = useReaderNavigation();
+  const backLink = useReaderBackLink();
   const dispatch = useAppDispatch();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const boundaryScrollControlsRef = useRef<ComicBoundaryScrollControls | null>(null);
@@ -686,8 +688,8 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
         chapterModeActive &&
         activeSegment &&
         !hasNextChapter &&
-        atLastInSegment &&
-        (!!publicationHref || !!homeHref || !!continueElsewhere);
+        atLastInSegment;
+      const exitHref = backLink?.href ?? publicationHref ?? homeHref ?? "/";
 
       return {
         previous:
@@ -711,8 +713,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
           : showEndOfReadable
             ? {
                 currentTitle: currentChapterTitle,
-                mediaHref: publicationHref,
-                homeHref,
+                goBack: { href: exitHref, onClick: goBack },
                 continueElsewhere,
               }
             : undefined,
@@ -720,6 +721,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     },
     [
       activeSegment,
+      backLink?.href,
       chapterModeActive,
       continueElsewhere,
       currentChapterTitle,
@@ -1038,12 +1040,35 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     setPageLoadStates({});
   }, [viewportChapterKey]);
 
+  // Pages report load state as they mount and decode; coalesce those reports into
+  // one render per frame instead of re-rendering the whole reader per image.
+  const pendingPageLoadStatesRef = useRef<Map<number, ComicPageLoadState>>(new Map());
+  const pageLoadStateFlushRef = useRef<number | null>(null);
   const onPageLoadStateChange = useCallback((pageIndex: number, state: ComicPageLoadState) => {
-    setPageLoadStates((prev) => {
-      if (prev[pageIndex] === state) return prev;
-      return { ...prev, [pageIndex]: state };
+    pendingPageLoadStatesRef.current.set(pageIndex, state);
+    if (pageLoadStateFlushRef.current !== null) return;
+    pageLoadStateFlushRef.current = requestAnimationFrame(() => {
+      pageLoadStateFlushRef.current = null;
+      const pending = pendingPageLoadStatesRef.current;
+      pendingPageLoadStatesRef.current = new Map();
+      setPageLoadStates((prev) => {
+        let next = prev;
+        pending.forEach((pageState, index) => {
+          if (next[index] === pageState) return;
+          if (next === prev) next = { ...prev };
+          next[index] = pageState;
+        });
+        return next;
+      });
     });
   }, []);
+
+  useEffect(
+    () => () => {
+      if (pageLoadStateFlushRef.current !== null) cancelAnimationFrame(pageLoadStateFlushRef.current);
+    },
+    []
+  );
 
   const onTap = useCallback(
     (event: React.PointerEvent) => {
@@ -1161,7 +1186,6 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
                   stretchSmallPages={merged.stretchSmallPages}
                   widthLimitEnabled={merged.widthLimitEnabled}
                   widthLimitPercent={merged.widthLimitPercent}
-                  imagePreloadAmount={merged.imagePreloadAmount}
                   onTap={onTap}
                   containerRef={containerRef}
                   onPageLoadStateChange={onPageLoadStateChange}

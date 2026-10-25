@@ -1,6 +1,6 @@
 "use client";
 
-import { Link, Publication } from "@readium/shared";
+import { HttpResource, Link, Publication } from "@readium/shared";
 import {
   CSSProperties,
   Dispatch,
@@ -32,7 +32,12 @@ import {
 } from "@/components/Comic/lib/comicReaderLayout";
 import { ComicPage } from "../hooks/useComicReaderController";
 import { ComicPageLoadState } from "../lib/comicProgress";
-import { getComicPageLoadSet } from "../lib/comicPageLoadWindow";
+import {
+  COMIC_MOUNT_AHEAD_PAGES,
+  getComicPageLoadSet,
+  getComicPageWarmupOrder,
+} from "../lib/comicPageLoadWindow";
+import { ComicPageWarmer, warmComicHttpImage } from "../lib/comicPageWarmer";
 import {
   acquireComicImageMount,
   recordComicImageDecode,
@@ -256,9 +261,30 @@ const getComicImageDimensions = (
   return comicImageDimensionsCache.get(publication)?.get(link.href);
 };
 
+const comicImageDimensionListeners = new WeakMap<Publication, Map<string, Set<() => void>>>();
+
+/** Notifies a mounted page when warmup learns its size, so its placeholder stops guessing. */
+const subscribeComicImageDimensions = (publication: Publication, href: string, listener: () => void) => {
+  let publicationListeners = comicImageDimensionListeners.get(publication);
+  if (!publicationListeners) {
+    publicationListeners = new Map();
+    comicImageDimensionListeners.set(publication, publicationListeners);
+  }
+  let hrefListeners = publicationListeners.get(href);
+  if (!hrefListeners) {
+    hrefListeners = new Set();
+    publicationListeners.set(href, hrefListeners);
+  }
+  hrefListeners.add(listener);
+  return () => {
+    hrefListeners.delete(listener);
+    if (hrefListeners.size === 0) publicationListeners.delete(href);
+  };
+};
+
 const rememberComicImageDimensions = (
   publication: Publication,
-  link: Link,
+  href: string,
   dimensions: ComicImageDimensions
 ) => {
   if (
@@ -274,25 +300,10 @@ const rememberComicImageDimensions = (
     publicationCache = new Map();
     comicImageDimensionsCache.set(publication, publicationCache);
   }
-  publicationCache.set(link.href, dimensions);
-};
-
-/** Load ahead in the scroll direction while retaining a small buffer behind the cursor. */
-const useDirectionalLoadSet = (
-  enabled: boolean,
-  pages: readonly ComicPage[],
-  cursorIndex: number,
-  imagePreloadAmount: number,
-  loadDirection: 1 | -1
-) => {
-  const allowed = useMemo(
-    () =>
-      enabled
-        ? getComicPageLoadSet(pages, cursorIndex, imagePreloadAmount, loadDirection)
-        : new Set([cursorIndex]),
-    [cursorIndex, enabled, imagePreloadAmount, loadDirection, pages]
-  );
-  return useCallback((pageIndex: number) => allowed.has(pageIndex), [allowed]);
+  const previous = publicationCache.get(href);
+  if (previous?.width === dimensions.width && previous.height === dimensions.height) return;
+  publicationCache.set(href, dimensions);
+  comicImageDimensionListeners.get(publication)?.get(href)?.forEach((listener) => listener());
 };
 
 const isHttpUrl = (href: string | undefined): href is string => {
@@ -305,90 +316,111 @@ const isHttpUrl = (href: string | undefined): href is string => {
   }
 };
 
+const comicDirectImageUrls = new WeakMap<Link, string | null>();
+
+/**
+ * Absolute URL for an image the browser can load itself. Manifests usually use
+ * relative hrefs; when the publication is fetched over plain HTTP, resolve them the
+ * same way its fetcher does so pages skip the Blob copy and use the HTTP cache.
+ * Custom fetchers (e.g. ones adding auth headers) keep the publication-read path.
+ */
+const getComicDirectImageUrl = (publication: Publication, link: Link): string | undefined => {
+  if (isHttpUrl(link.href)) return link.href;
+  let cached = comicDirectImageUrls.get(link);
+  if (cached === undefined) {
+    cached = null;
+    try {
+      if (publication.get(link) instanceof HttpResource) {
+        const selfHref = publication.manifest.links?.findWithRel("self")?.href;
+        const url = link.toURL(selfHref);
+        if (isHttpUrl(url)) cached = url;
+      }
+    } catch {
+      cached = null;
+    }
+    comicDirectImageUrls.set(link, cached);
+  }
+  return cached ?? undefined;
+};
+
 /** Below every on-screen read so warming never delays the visible page. */
 const COMIC_PREFETCH_PRIORITY = -10;
 
-type ComicPrefetchEntry = { cancel: () => void };
+/** Pages warmed ahead when reads go through the bounded blob cache rather than HTTP. */
+const COMIC_BLOB_WARMUP_AHEAD = 6;
+
+/** Direct HTTP images already downloaded into the browser cache, per publication. */
+const comicWarmedHttpImages = new WeakMap<Publication, Set<string>>();
 
 /**
- * Paged modes mount only the visible page(s), so warm upcoming pages ahead of the
- * cursor (and a step behind) to make page turns instant. Direct HTTP images warm the
- * browser cache; publication-read images warm the bounded blob cache.
+ * Downloads every page of the current slice in reading order: the next few pages
+ * urgently, then the rest in the background with low priority. Direct HTTP images
+ * warm the browser cache (and report their size so placeholders match the page);
+ * publication-read images warm the bounded blob cache a few pages ahead.
  */
-const useComicPagePrefetch = ({
-  enabled,
+const useComicPageWarmup = ({
   publication,
   pages,
   cursorIndex,
-  step,
-  imagePreloadAmount,
+  loadDirection,
 }: {
-  enabled: boolean;
   publication: Publication;
   pages: readonly ComicPage[];
   cursorIndex: number;
-  step: number;
-  imagePreloadAmount: number;
+  loadDirection: 1 | -1;
 }) => {
-  const entriesRef = useRef<Map<string, ComicPrefetchEntry>>(new Map());
+  const warmerRef = useRef<ComicPageWarmer | null>(null);
+  const firstPage = pages[0];
+  const isDirect = !!firstPage && !!getComicDirectImageUrl(publication, firstPage.link);
 
   useEffect(() => {
-    const entries = entriesRef.current;
-    const wanted = new Map<string, Link>();
-
-    if (enabled) {
-      const behind = step;
-      // Keep the window inside the blob cache so prefetching cannot evict visible pages.
-      const ahead = Math.min(
-        Math.max(1, Math.floor(imagePreloadAmount)) * step,
-        MAX_COMIC_IMAGE_BLOB_CACHE - behind - step
-      );
-      // Visible pages stay in the set: a page turn must not cancel a read the
-      // on-screen image is now sharing (reads are deduplicated per href).
-      const indices = getComicPageLoadSet(pages, cursorIndex, ahead + step - 1, 1, behind);
-      for (const page of pages) {
-        if (indices.has(page.index)) wanted.set(page.href, page.link);
+    let warmed: Set<string> | undefined;
+    if (isDirect) {
+      warmed = comicWarmedHttpImages.get(publication);
+      if (!warmed) {
+        warmed = new Set();
+        comicWarmedHttpImages.set(publication, warmed);
       }
     }
-
-    entries.forEach((entry, href) => {
-      if (wanted.has(href)) return;
-      entry.cancel();
-      entries.delete(href);
+    const warmer = new ComicPageWarmer(warmed, (href, dimensions) => {
+      if (dimensions) rememberComicImageDimensions(publication, href, dimensions);
     });
-
-    wanted.forEach((link, href) => {
-      if (entries.has(href)) return;
-      if (isHttpUrl(href)) {
-        const img = new Image();
-        img.decoding = "async";
-        img.fetchPriority = "low";
-        img.src = href;
-        entries.set(href, {
-          cancel: () => {
-            if (!img.complete) img.src = "";
-          },
-        });
-        return;
-      }
-      const controller = new AbortController();
-      enqueueComicImageRead(
-        () => getComicImageBlob(publication, link, controller.signal),
-        COMIC_PREFETCH_PRIORITY,
-        controller.signal
-      ).catch(() => undefined);
-      entries.set(href, { cancel: () => controller.abort() });
-    });
-  }, [cursorIndex, enabled, imagePreloadAmount, pages, publication, step]);
+    warmerRef.current = warmer;
+    return () => {
+      warmer.dispose();
+      if (warmerRef.current === warmer) warmerRef.current = null;
+    };
+  }, [isDirect, publication]);
 
   useEffect(() => {
-    const entries = entriesRef.current;
-    return () => {
-      entries.forEach((entry) => entry.cancel());
-      entries.clear();
-    };
-  }, []);
+    const warmer = warmerRef.current;
+    if (!warmer) return;
+    const order = getComicPageWarmupOrder(
+      pages,
+      cursorIndex,
+      loadDirection,
+      isDirect ? undefined : { aheadLimit: COMIC_BLOB_WARMUP_AHEAD, behindLimit: 1 }
+    );
+    warmer.plan(
+      order.map(({ page, urgent }) => ({
+        key: page.href,
+        urgent,
+        load: (signal: AbortSignal) =>
+          isDirect
+            ? warmComicHttpImage(getComicDirectImageUrl(publication, page.link) ?? page.href, urgent, signal)
+            : enqueueComicImageRead(
+                () => getComicImageBlob(publication, page.link, signal),
+                COMIC_PREFETCH_PRIORITY,
+                signal
+              ).then(() => undefined),
+      }))
+    );
+  }, [cursorIndex, isDirect, loadDirection, pages, publication]);
 };
+
+/** How far beyond the viewport scroll-mode pages stay mounted (and decoded). */
+const COMIC_MOUNT_ROOT_MARGIN_VERTICAL = "150% 0px";
+const COMIC_MOUNT_ROOT_MARGIN_HORIZONTAL = "0px 150%";
 
 const withComicImageTimeout = <T,>(
   operation: () => Promise<T>,
@@ -456,9 +488,10 @@ const useObjectUrl = (
       // HTTP(S) resources go straight to <img>: native loading/prioritization,
       // no intermediate Blob copies, no manual object-URL lifetime. Only
       // resources requiring Publication.read() use the queued blob path below.
-      if (isHttpUrl(currentLink.href)) {
+      const directUrl = getComicDirectImageUrl(publication, currentLink);
+      if (directUrl) {
         setIsLoading(false);
-        setObjectUrl(currentLink.href);
+        setObjectUrl(directUrl);
         return;
       }
 
@@ -761,6 +794,13 @@ const ComicImage = memo(function ComicImage({
   }, [link, publication]);
 
   useEffect(() => {
+    if (imageDimensions) return;
+    return subscribeComicImageDimensions(publication, link.href, () =>
+      setImageDimensions(getComicImageDimensions(publication, link))
+    );
+  }, [imageDimensions, link, publication]);
+
+  useEffect(() => {
     const frame = frameRef.current;
     if (!frame || !imageDimensions) return;
 
@@ -820,7 +860,7 @@ const ComicImage = memo(function ComicImage({
           width: img.naturalWidth,
           height: img.naturalHeight,
         };
-        rememberComicImageDimensions(publication, link, nextDimensions);
+        rememberComicImageDimensions(publication, link.href, nextDimensions);
         setImageDimensions(nextDimensions);
         const nextPlaceholderHeight = getComicImagePlaceholderHeight({
           dimensions: nextDimensions,
@@ -831,12 +871,20 @@ const ComicImage = memo(function ComicImage({
         });
         if (nextPlaceholderHeight !== undefined) setPlaceholderHeight(nextPlaceholderHeight);
       }
-      if (decodeStartRef.current !== undefined) {
-        recordComicImageDecode(performance.now() - decodeStartRef.current, link.href);
-        decodeStartRef.current = undefined;
-      }
-      shouldStretchRef.current = stretch;
-      setIsImageReady(true);
+      // Reveal only once the bitmap is decoded off the main thread, so a large page
+      // never decodes synchronously in the middle of a scroll.
+      const loadedSrc = img.src;
+      const reveal = () => {
+        if (!img.isConnected || img.src !== loadedSrc) return;
+        if (decodeStartRef.current !== undefined) {
+          recordComicImageDecode(performance.now() - decodeStartRef.current, link.href);
+          decodeStartRef.current = undefined;
+        }
+        shouldStretchRef.current = stretch;
+        setIsImageReady(true);
+      };
+      if (typeof img.decode === "function") img.decode().then(reveal, reveal);
+      else reveal();
     },
     [layoutMode, link, publication, scaleType, stretchOk, stretchSmallPages]
   );
@@ -959,10 +1007,14 @@ export type ComicBoundaryPageData = {
   adjacentTitle?: string;
   /** Navigate to the adjacent chapter. Omit on the last-chapter exit page. */
   onNavigate?: () => void;
-  /** Media item page href shown when there is no next chapter. */
-  mediaHref?: string;
-  /** App home href shown when there is no next chapter. */
-  homeHref?: string;
+  /**
+   * Last-chapter exit page: leave the reader the same way as the header back link.
+   * `href` is the fallback target when there is no history to return to.
+   */
+  goBack?: {
+    href: string;
+    onClick: (event: React.MouseEvent<HTMLAnchorElement>) => void;
+  };
   /** Optional continue action when another source has later chapters. */
   continueElsewhere?: {
     label: string;
@@ -982,14 +1034,13 @@ const ComicChapterBoundaryPage = ({
   currentTitle,
   adjacentTitle,
   onNavigate,
-  mediaHref,
-  homeHref,
+  goBack,
   continueElsewhere,
 }: ComicBoundaryPageData & {
   kind: ComicBoundaryPageKind;
 }) => {
   const { t } = useI18n();
-  const isExitPage = !onNavigate && (!!mediaHref || !!homeHref || !!continueElsewhere);
+  const isExitPage = !onNavigate && (!!goBack || !!continueElsewhere);
   const actionLabel =
     kind === "next"
       ? t("reader.comic.chapterBoundaries.nextChapter")
@@ -1008,6 +1059,9 @@ const ComicChapterBoundaryPage = ({
         <section className={styles.boundarySection}>
           {isExitPage ? (
             <>
+              <strong className={styles.boundaryTitle}>
+                {t("reader.comic.chapterBoundaries.noChaptersLeft")}
+              </strong>
               {continueElsewhere ? (
                 <button
                   type="button"
@@ -1018,24 +1072,15 @@ const ComicChapterBoundaryPage = ({
                   {continueElsewhere.label}
                 </button>
               ) : null}
-              {mediaHref ? (
+              {goBack ? (
                 <a
-                  href={mediaHref}
+                  href={goBack.href}
                   className={styles.actionButton}
                   data-variant={continueElsewhere ? "secondary" : undefined}
                   onPointerUp={(event) => event.stopPropagation()}
+                  onClick={goBack.onClick}
                 >
-                  {t("reader.comic.chapterBoundaries.returnToMediaPage")}
-                </a>
-              ) : null}
-              {homeHref ? (
-                <a
-                  href={homeHref}
-                  className={styles.actionButton}
-                  data-variant="secondary"
-                  onPointerUp={(event) => event.stopPropagation()}
-                >
-                  {t("reader.comic.chapterBoundaries.returnHome")}
+                  {t("reader.comic.chapterBoundaries.goBack")}
                 </a>
               ) : null}
             </>
@@ -1127,7 +1172,6 @@ export type ComicReaderViewportProps = {
   stretchSmallPages: boolean;
   widthLimitEnabled: boolean;
   widthLimitPercent: number;
-  imagePreloadAmount: number;
   onTap: (event: React.PointerEvent) => void;
   containerRef: React.RefObject<HTMLDivElement | null>;
   onPageLoadStateChange?: (pageIndex: number, state: ComicPageLoadState) => void;
@@ -1151,7 +1195,6 @@ export const ComicReaderViewport = ({
   stretchSmallPages,
   widthLimitEnabled,
   widthLimitPercent,
-  imagePreloadAmount,
   onTap,
   containerRef,
   onPageLoadStateChange,
@@ -1184,26 +1227,79 @@ export const ComicReaderViewport = ({
     scrollRef.current = el;
   }, []);
 
-  const shouldLoadPage = useDirectionalLoadSet(
-    isContinuousScrollMode,
-    pages,
-    cursorIndex,
-    imagePreloadAmount,
-    loadDirection
+  useComicPageWarmup({ publication, pages, cursorIndex, loadDirection });
+
+  // Scroll modes mount (and decode) only pages near the viewport; everything else
+  // is already downloaded by warmup, so mounting is a cache hit plus a decode.
+  const nearObserverRef = useRef<IntersectionObserver | null>(null);
+  const [nearPages, setNearPages] = useState<ReadonlySet<number>>(() => new Set());
+
+  useLayoutEffect(() => {
+    const root = scrollRef.current;
+    if (!isContinuousScrollMode || !root || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        setNearPages((previous) => {
+          let next: Set<number> | null = null;
+          for (const entry of entries) {
+            const pageIndex = Number((entry.target as HTMLElement).dataset.pageIndex);
+            if (!Number.isFinite(pageIndex)) continue;
+            const isNear = (next ?? previous).has(pageIndex);
+            if (entry.isIntersecting === isNear) continue;
+            next ??= new Set(previous);
+            if (entry.isIntersecting) next.add(pageIndex);
+            else next.delete(pageIndex);
+          }
+          return next ?? previous;
+        });
+      },
+      {
+        root,
+        rootMargin: isVerticalScrollMode
+          ? COMIC_MOUNT_ROOT_MARGIN_VERTICAL
+          : COMIC_MOUNT_ROOT_MARGIN_HORIZONTAL,
+      }
+    );
+    nearObserverRef.current = observer;
+    itemRefs.current.forEach((element) => observer.observe(element));
+    return () => {
+      observer.disconnect();
+      nearObserverRef.current = null;
+      setNearPages(new Set());
+    };
+  }, [isContinuousScrollMode, isVerticalScrollMode]);
+
+  // A jump (slider, TOC, restored position) mounts its target before the observer reports.
+  const cursorMountWindow = useMemo(
+    () => getComicPageLoadSet(pages, cursorIndex, COMIC_MOUNT_AHEAD_PAGES, loadDirection),
+    [cursorIndex, loadDirection, pages]
+  );
+  const shouldLoadPage = useCallback(
+    (pageIndex: number) =>
+      !isContinuousScrollMode || nearPages.has(pageIndex) || cursorMountWindow.has(pageIndex),
+    [cursorMountWindow, isContinuousScrollMode, nearPages]
   );
 
-  useComicPagePrefetch({
-    enabled: !isContinuousScrollMode,
-    publication,
-    pages,
-    cursorIndex,
-    step: mode === ComicReadingMode.doublePage ? 2 : 1,
-    imagePreloadAmount,
-  });
-
-  const setPageRef = useCallback((pageIndex: number, element: HTMLDivElement | null) => {
-    if (element) itemRefs.current.set(pageIndex, element);
-    else itemRefs.current.delete(pageIndex);
+  // Stable per-page ref callbacks: a fresh callback each render would detach and
+  // re-attach every page, re-observing it on every cursor change.
+  const pageRefCallbacks = useRef<Map<number, (element: HTMLDivElement | null) => void>>(new Map());
+  const getPageRef = useCallback((pageIndex: number) => {
+    let callback = pageRefCallbacks.current.get(pageIndex);
+    if (!callback) {
+      callback = (element: HTMLDivElement | null) => {
+        const previous = itemRefs.current.get(pageIndex);
+        if (previous && previous !== element) nearObserverRef.current?.unobserve(previous);
+        if (element) {
+          itemRefs.current.set(pageIndex, element);
+          nearObserverRef.current?.observe(element);
+        } else {
+          itemRefs.current.delete(pageIndex);
+          pageRefCallbacks.current.delete(pageIndex);
+        }
+      };
+      pageRefCallbacks.current.set(pageIndex, callback);
+    }
+    return callback;
   }, []);
 
   const getActiveBoundaryPage = useCallback(
@@ -1449,7 +1545,7 @@ export const ComicReaderViewport = ({
     <div
       key={page.href}
       data-page-index={page.index}
-      ref={(element) => setPageRef(page.index, element)}
+      ref={getPageRef(page.index)}
       className={styles.scrollCell}
     >
       <ComicImage
@@ -1464,7 +1560,8 @@ export const ComicReaderViewport = ({
         layoutMode={isVerticalScrollMode ? "verticalStack" : "viewportBound"}
         isDoublePageCell={false}
         shouldLoad={shouldLoadPage(page.index)}
-        loadPriority={page.index === cursorIndex ? 100 : 10 - Math.abs(page.index - cursorIndex)}
+        // Clamped so pages far from the cursor keep identical props and skip re-rendering.
+        loadPriority={page.index === cursorIndex ? 100 : Math.max(0, 10 - Math.abs(page.index - cursorIndex))}
         onPageLoadStateChange={onPageLoadStateChange}
       />
     </div>
@@ -1485,13 +1582,13 @@ export const ComicReaderViewport = ({
           style={{ gap: pageGapPx }}
         >
           {boundaryPages?.previous ? (
-            <div ref={setBoundaryRef("prev")} className={styles.scrollCell}>
+            <div ref={setBoundaryRef("prev")} className={styles.scrollCell} data-boundary="prev">
               <ComicChapterBoundaryPage kind="prev" {...boundaryPages.previous} />
             </div>
           ) : null}
           {pages.map(renderScrollPage)}
           {boundaryPages?.next ? (
-            <div ref={setBoundaryRef("next")} className={styles.scrollCell}>
+            <div ref={setBoundaryRef("next")} className={styles.scrollCell} data-boundary="next">
               <ComicChapterBoundaryPage kind="next" {...boundaryPages.next} />
             </div>
           ) : null}
