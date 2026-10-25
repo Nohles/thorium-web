@@ -69,6 +69,11 @@
   min-height: 0;
 }
 
+/* Chapter boundary pages fill the whole reader, whatever the page width limit. */
+.scroller[data-orientation="vertical"] > .scrollCell[data-boundary] {
+  min-height: 100%;
+}
+
 .paged {
   display: flex;
   flex-direction: column;
@@ -134,6 +139,13 @@
   }
 }
 
+@keyframes reveal {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Cached pages decode in a few frames; only a genuinely slow load shows the spinner. */
 .imageSpinner {
   display: block;
   width: 28px;
@@ -141,7 +153,10 @@
   border-radius: 50%;
   border: 3px solid color-mix(in srgb, var(--th-theme-text, #fff) 18%, transparent);
   border-top-color: var(--th-theme-text, #fff);
-  animation: spin 700ms linear infinite;
+  opacity: 0;
+  animation:
+    spin 700ms linear infinite,
+    reveal 150ms ease-out 400ms forwards;
 }
 
 .imagePlaceholderInner {
@@ -249,11 +264,11 @@
 
 .boundaryPage {
   display: flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
   width: 100%;
-  min-height: 100%;
   padding: 32px;
 }
 
@@ -500,7 +515,7 @@
   }
 
   .imageSpinner {
-    animation: none;
+    animation: reveal 0ms 400ms forwards;
     border-top-color: color-mix(in srgb, var(--th-theme-text, #fff) 58%, transparent);
   }
 }

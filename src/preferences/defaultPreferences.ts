@@ -387,7 +387,6 @@ export const defaultPreferences: ThPreferences<DefaultKeys> = createPreferences<
       ThSettingsKeys.comicWidthLimitEnabled,
       ThSettingsKeys.comicWidthLimitPercent,
       ThSettingsKeys.comicScrollAmountPercent,
-      ThSettingsKeys.comicImagePreloadAmount,
     ],
     keys: {
       [ThSettingsKeys.fontFamily]: {

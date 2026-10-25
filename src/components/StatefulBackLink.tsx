@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 
 import backLinkStyles from "./assets/styles/thorium-web.backlink.module.css";
 import readerSharedUI from "./assets/styles/thorium-web.button.module.css";
@@ -17,9 +17,12 @@ import { useI18n } from "@/i18n";
 import { useSharedPreferences } from "@/preferences/hooks/useSharedPreferences";
 
 import classNames from "classnames";
-import type { LinkProps } from "react-aria-components";
 
-const goBack: NonNullable<LinkProps["onClick"]> = (event) => {
+/**
+ * Returns to the previous page in history, preserving where the reader was opened
+ * from. Falls through to the link's `href` for modified clicks or a fresh tab.
+ */
+export const goBack = (event: React.MouseEvent<Element>) => {
   if (
     event.button !== 0 ||
     event.metaKey ||
@@ -33,6 +36,13 @@ const goBack: NonNullable<LinkProps["onClick"]> = (event) => {
 
   event.preventDefault();
   window.history.back();
+};
+
+/** The header back link's target and click behavior, for other "leave the reader" actions. */
+export const useReaderBackLink = () => {
+  const { theming } = useSharedPreferences();
+  const href = theming.header?.backLink?.href;
+  return useMemo(() => (href ? { href, onClick: goBack } : undefined), [href]);
 };
 
 export const StatefulBackLink = ({ 

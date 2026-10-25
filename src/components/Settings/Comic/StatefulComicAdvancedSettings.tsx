@@ -259,18 +259,3 @@ export const StatefulComicTapZonePreview = () => {
     />
   );
 };
-
-export const StatefulComicImagePreloadAmount = () => {
-  const { t } = useI18n();
-  const { settings, patch } = useComicSettings();
-  return (
-    <StatefulNumberField
-      standalone={true}
-      label={t("reader.comic.imagePreloadAmount.label")}
-      range={[0, 10]}
-      step={1}
-      value={settings.imagePreloadAmount}
-      onChange={(value) => patch({ imagePreloadAmount: value })}
-    />
-  );
-};

@@ -126,8 +126,8 @@
         "finished": "Finished:",
         "next": "Next:",
         "previous": "Previous:",
-        "returnToMediaPage": "Return to media page",
-        "returnHome": "Return home"
+        "noChaptersLeft": "No chapters left",
+        "goBack": "Go back"
       },
       "imageLoad": {
         "failed": "Failed to load image.",
@@ -201,9 +201,6 @@
       },
       "tapZonePreview": {
         "label": "Show tap zone preview"
-      },
-      "imagePreloadAmount": {
-        "label": "Image preload amount"
       },
       "labels": {
         "page": "Page {{ number }}",
