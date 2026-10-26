@@ -61,17 +61,20 @@ const stripHashAndQuery = (href: string): string => {
   return path;
 };
 
+// Path tokens are base64url of UTF-8 bytes; atob/btoa only handle Latin-1 strings.
 const decodeBase64Url = (value: string): string => {
   if (typeof atob === "function") {
     const padded = value.padEnd(Math.ceil(value.length / 4) * 4, "=");
-    return atob(padded.replace(/-/g, "+").replace(/_/g, "/"));
+    const binary = atob(padded.replace(/-/g, "+").replace(/_/g, "/"));
+    return new TextDecoder().decode(Uint8Array.from(binary, (char) => char.charCodeAt(0)));
   }
   return Buffer.from(value, "base64url").toString("utf8");
 };
 
 const encodeBase64Url = (value: string): string => {
   if (typeof btoa === "function") {
-    return btoa(value).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    const binary = Array.from(new TextEncoder().encode(value), (byte) => String.fromCharCode(byte)).join("");
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   }
   return Buffer.from(value, "utf8").toString("base64url");
 };
