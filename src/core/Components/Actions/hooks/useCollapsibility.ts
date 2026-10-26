@@ -19,9 +19,21 @@ export interface CollapsiblePref {
     [key: string]: {
       [key: string]: any;
       visibility: ThCollapsibilityVisibility;
+      /**
+       * Space-fit mode only: `partially` items with a lower priority move to the
+       * overflow menu first. Defaults to 0; ties fall back to display order.
+       */
+      collapsePriority?: number;
     };
   }
 }
+
+/** `partially` keys ordered by which stays in the bar longest (highest priority first). */
+export const orderByCollapsePriority = (keys: string[], prefs: CollapsiblePref) =>
+  keys
+    .map((key, index) => ({ key, index, priority: prefs.keys[key]?.collapsePriority ?? 0 }))
+    .sort((a, b) => b.priority - a.priority || a.index - b.index)
+    .map(({ key }) => key);
 
 export const useCollapsibility = (
   items: ThActionEntry<string>[],
@@ -129,7 +141,7 @@ export const useCollapsibility = (
   useLayoutEffect(() => {
     if (!isSpaceFit || !containerRef?.current) return;
 
-    const spec = items.map(i => `${i.key}:${prefs.keys[i.key]?.visibility ?? ""}`).join(",");
+    const spec = items.map(i => `${i.key}:${prefs.keys[i.key]?.visibility ?? ""}:${prefs.keys[i.key]?.collapsePriority ?? 0}`).join(",");
     const widthsMissing = items.some(i => !(itemWidthsRef.current.get(i.key) ?? 0));
     if (spec === specRef.current && !widthsMissing) return;
     specRef.current = spec;
@@ -145,7 +157,7 @@ export const useCollapsibility = (
     }
 
     alwaysKeysRef.current = always;
-    orderedPartialKeysRef.current = partial;
+    orderedPartialKeysRef.current = orderByCollapsePriority(partial, prefs);
     hasOverflowRef.current = hasOverflow;
 
     remeasureAndCompute(containerRef.current.getBoundingClientRect().width);
@@ -220,17 +232,11 @@ export const useCollapsibility = (
     }
 
     if (prefs.collapse === true) {
-      // Build the set of partial keys that fit in the bar (first N in displayOrder)
-      const barPartialSet = new Set<string>();
-      let partialCount = 0;
-      for (const item of items) {
-        if (prefs.keys[item.key]?.visibility === ThCollapsibilityVisibility.partially) {
-          if (partialCount < partialInBar) {
-            barPartialSet.add(item.key);
-            partialCount++;
-          }
-        }
-      }
+      // Build the set of partial keys that fit in the bar (first N by collapse priority)
+      const partialKeys = items
+        .filter(item => prefs.keys[item.key]?.visibility === ThCollapsibilityVisibility.partially)
+        .map(item => item.key);
+      const barPartialSet = new Set(orderByCollapsePriority(partialKeys, prefs).slice(0, partialInBar));
 
       for (const item of items) {
         const v = prefs.keys[item.key]?.visibility;

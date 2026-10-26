@@ -106,7 +106,10 @@ export const useReaderHeaderBase = (actionKeys: string[]) => {
     if (!headerActionItems?.length) return prefs;
     const keys = { ...prefs.keys };
     headerActionItems.forEach((item) => {
-      keys[item.id] = { visibility: item.visibility ?? ThCollapsibilityVisibility.always };
+      keys[item.id] = {
+        visibility: item.visibility ?? ThCollapsibilityVisibility.always,
+        collapsePriority: item.collapsePriority,
+      };
     });
     return { ...prefs, keys };
   }, [headerActionItems]);

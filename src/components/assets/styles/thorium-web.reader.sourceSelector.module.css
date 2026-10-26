@@ -5,8 +5,9 @@
   gap: calc(var(--th-layout-spacing) / 4);
   /* Reserve a stable header slot so label length never shifts the actions bar. */
   width: clamp(7.5rem, 18vw, 12rem);
-  min-width: 0;
-  flex: 0 0 auto;
+  /* Yield width before the header actions bar has to collapse its always-visible items. */
+  min-width: 5rem;
+  flex: 0 1 auto;
 }
 
 .select {
