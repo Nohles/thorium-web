@@ -71,6 +71,7 @@ import {
   buildComicTocTreeFromLinks,
 } from "./buildComicTimeline";
 import { buildComicProgressItems, ComicPageLoadState } from "./lib/comicProgress";
+import { remapCursorToSamePage } from "./lib/comicCursorAnchor";
 import {
   buildComicChapterSegments,
   canAdvanceWithinSegment,
@@ -480,8 +481,6 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   const allPagesRef = useRef(allPages);
   const setLocalDataRef = useRef(setLocalData);
   const manifestRef = useRef(publication.manifest);
-  const currentArchiveIdentityRef = useRef<ComicPage["archive"] | undefined>(undefined);
-  const restoreCompleteRef = useRef(!isArchiveSeries || !restoreArchiveIdentity);
 
   useEffect(() => {
     allPagesRef.current = allPages;
@@ -590,39 +589,21 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   });
 
   useEffect(() => {
-    if (!isArchiveSeries) {
-      restoreCompleteRef.current = true;
-      return;
-    }
-    if (!restoreArchiveIdentity) {
-      restoreCompleteRef.current = true;
-      return;
-    }
-    restoreCompleteRef.current =
-      typeof storedPosition === "number" && cursorIndex === storedPosition;
-  }, [cursorIndex, isArchiveSeries, restoreArchiveIdentity, storedPosition]);
-
-  useEffect(() => {
     if (typeof storedPosition !== "number") return;
     setCursorIndex((prev) => (prev === storedPosition ? prev : storedPosition));
   }, [storedPosition, setCursorIndex]);
 
-  useEffect(() => {
-    currentArchiveIdentityRef.current = allPages[cursorIndex]?.archive;
-  }, [allPages, cursorIndex]);
-
-  useEffect(() => {
-    if (!isArchiveSeries || !restoreCompleteRef.current) return;
-    const identity = currentArchiveIdentityRef.current;
-    if (!identity) return;
-    const nextIndex = allPages.findIndex(
-      (page) =>
-        page.archive?.chapterIndex === identity.chapterIndex &&
-        page.archive.pageIndexInChapter === identity.pageIndexInChapter
-    );
-    if (nextIndex < 0) return;
-    setCursorIndex((prev) => (prev === nextIndex ? prev : nextIndex));
-  }, [allPages, isArchiveSeries, setCursorIndex]);
+  // Remap during render, not in an effect: a commit with the stale index mounts the
+  // previous chapter, whose scroll sync and neighbor prefetch then walk the reader
+  // backwards one chapter per load.
+  const [cursorAnchorPages, setCursorAnchorPages] = useState(allPages);
+  if (cursorAnchorPages !== allPages) {
+    setCursorAnchorPages(allPages);
+    if (isArchiveSeries) {
+      const nextIndex = remapCursorToSamePage(cursorAnchorPages, allPages, cursorIndex);
+      if (nextIndex !== cursorIndex) setCursorIndex(nextIndex);
+    }
+  }
 
   const viewportPages = useMemo(() => {
     if (!chapterModeActive) return allPages;
