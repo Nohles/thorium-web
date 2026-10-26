@@ -35,6 +35,7 @@ export const StatefulReaderSourceSelector = ({
   return (
     <div
       className={ sourceSelectorStyles.root }
+      data-reader-source-selector=""
       data-loading={ isLoading || undefined }
     >
       <Select

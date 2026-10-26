@@ -44,6 +44,8 @@ export type ReaderHeaderActionItem = {
   tooltipLabel?: string;
   /** Defaults to `always`. */
   visibility?: ThCollapsibilityVisibility;
+  /** Lower values collapse into the overflow menu first (built-ins default to 0, fullscreen -1). */
+  collapsePriority?: number;
 };
 
 export interface ReaderNavigation {

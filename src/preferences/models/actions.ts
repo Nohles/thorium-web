@@ -19,6 +19,8 @@ export type ThBottomSheetDetent = "content-height" | "full-height";
 
 export interface ThActionsTokens {
   visibility: ThCollapsibilityVisibility;
+  /** Lower values collapse into the overflow menu first. Defaults to 0. */
+  collapsePriority?: number;
   shortcut: ThShortcutConfig | null;
   sheet?: {
     defaultSheet: Exclude<ThSheetTypes, ThSheetTypes.dockedStart | ThSheetTypes.dockedEnd | ThSheetTypes.compactPopover>;
@@ -107,7 +109,8 @@ export const defaultActionKeysObject: ThActionsTokens = {
 };
 
 export const defaultSettingsAction: ThActionsTokens = {
-  visibility: ThCollapsibilityVisibility.partially,
+  // Primary reader controls: never collapsed into the overflow menu.
+  visibility: ThCollapsibilityVisibility.always,
   shortcut: {
     label: "P",
     keyCombos: [{ keyCode: 80, shift: true, alt: true, suppressOnInteractiveElement: TEXT_INPUT_SELECTORS }]
@@ -132,6 +135,8 @@ export const defaultSettingsAction: ThActionsTokens = {
 
 export const defaultFullscreenAction: ThActionsTokens = {
   visibility: ThCollapsibilityVisibility.partially,
+  // First built-in action to give up its slot when the header runs short.
+  collapsePriority: -1,
   shortcut: null
 }
 
@@ -158,7 +163,8 @@ export const defaultDictionaryAction: ThActionsTokens = {
 }
 
 export const defaultTocAction: ThActionsTokens = {
-  visibility: ThCollapsibilityVisibility.partially,
+  // Primary reader controls: never collapsed into the overflow menu.
+  visibility: ThCollapsibilityVisibility.always,
   shortcut: {
     label: "T",
     keyCombos: [{ keyCode: 84, shift: true, alt: true, suppressOnInteractiveElement: TEXT_INPUT_SELECTORS }]
