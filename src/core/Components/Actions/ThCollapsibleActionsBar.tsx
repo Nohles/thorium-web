@@ -50,7 +50,9 @@ export const ThCollapsibleActionsBar = ({
         // so gap, display, and any other CSS-driven layout is identical.
         // Plain div (not Toolbar) to avoid a nested role="toolbar".
         // Absolutely positioned so it is out of flow; aria-hidden to exclude from AT.
-        <div ref={ Actions.getGhostRef } className={ className } aria-hidden="true" style={{ position: "absolute", visibility: "hidden", pointerEvents: "none" }}>
+        // Anchored to the inline end: the clone is wider than the collapsed bar, and left at its
+        // static position it overflowed scrollable sheets, making them scroll horizontally.
+        <div ref={ Actions.getGhostRef } className={ className } aria-hidden="true" style={{ position: "absolute", top: 0, insetInlineEnd: 0, visibility: "hidden", pointerEvents: "none" }}>
           { items.map(({ Trigger, key }) =>
             <span key={ key } ref={ Actions.getItemRef(key) }>
               <Trigger variant={ ThActionsTriggerVariant.button } { ...props } />
