@@ -3,13 +3,16 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import { ThemeKeyType, ThemeTokens, ThThemeKeys } from "@/preferences";
-import { DECORATION_TOKEN_DEFAULTS } from "@/preferences/models";
+import { DECORATION_TOKEN_DEFAULTS, customTheme } from "@/preferences/models";
 import { withDecorationTokenDefaults } from "@/preferences/hooks/useTheming";
 import { useSharedPreferences } from "@/preferences/hooks/useSharedPreferences";
 
 import settingsStyles from "../Settings/assets/styles/thorium-web.reader.settings.module.css";
 
 import CheckIcon from "./assets/icons/check.svg";
+import EditIcon from "./assets/icons/edit.svg";
+import AddIcon from "@/core/Components/Settings/assets/icons/add.svg";
+import DeleteIcon from "@/core/Components/Buttons/assets/icons/delete.svg";
 
 import { ThActionsKeys, ThLayoutDirection, ThSettingsContainerKeys } from "@/preferences/models";
 
@@ -248,7 +251,24 @@ const customThemeFields: Array<{
   { key: "dictionary", label: "Dictionary marks" }
 ];
 
-export const StatefulCustomTheme = () => {
+const savedThemeName = (theme: SavedCustomTheme, index: number) =>
+  theme.name?.trim() || `Saved theme ${ index + 1 }`;
+
+/**
+ * The Custom theme panel. At rest it is a library of saved themes — pick one to
+ * read with it, or create a new one. Editing is a level below, entered from a
+ * theme's pencil or from Create, and the host's Back returns to the library.
+ *
+ * `editingId` lives in the host container so its header and Back button can
+ * follow the two levels.
+ */
+export const StatefulCustomTheme = ({
+  editingId,
+  onEditingChange
+}: {
+  editingId: string | null;
+  onEditingChange: (id: string | null) => void;
+}) => {
   const { theming } = useSharedPreferences();
   const { systemThemes, keys: preferenceThemeKeys } = theming.themes;
   const storedCustomThemes = useAppSelector(state => state.theming.customThemes);
@@ -257,7 +277,7 @@ export const StatefulCustomTheme = () => {
     ...preferenceThemeKeys,
     ...storedCustomThemes
   }), [preferenceThemeKeys, storedCustomThemes]);
-  const theme = useMemo(
+  const current = useMemo(
     () => themeKeys[ThThemeKeys.custom]
       ? withDecorationTokenDefaults(themeKeys[ThThemeKeys.custom])
       : undefined,
@@ -266,39 +286,17 @@ export const StatefulCustomTheme = () => {
   const dispatch = useAppDispatch();
   const { submitPreferences } = useEpubNavigator();
   const savedThemes = useAppSelector(state => state.theming.savedCustomThemes) ?? [];
+  // Colour pickers fire many changes per second; reading the list from a ref
+  // keeps each one building on the last instead of on a stale render.
   const savedThemesRef = useRef(savedThemes);
-  const editingSavedThemeId = useRef<string | null>(null);
+  useEffect(() => {
+    savedThemesRef.current = savedThemes;
+  }, [savedThemes]);
 
   const commitSavedThemes = useCallback((nextThemes: SavedCustomTheme[]) => {
     savedThemesRef.current = nextThemes;
     dispatch(setSavedCustomThemes(nextThemes));
   }, [dispatch]);
-
-  useEffect(() => {
-    savedThemesRef.current = savedThemes;
-  }, [savedThemes]);
-
-  const saveThemeToHistory = useCallback((tokens: ThemeTokens) => {
-    const id = editingSavedThemeId.current ?? createSavedCustomThemeId();
-    editingSavedThemeId.current = id;
-    const fingerprint = customThemeFingerprint(tokens);
-    const existing = savedThemesRef.current.find(savedTheme => savedTheme.id === id);
-    const nextThemes = [
-      {
-        id,
-        name: existing?.name,
-        source: existing?.source,
-        tokens,
-        updatedAt: Date.now()
-      },
-      ...savedThemesRef.current.filter(savedTheme =>
-        savedTheme.id !== id &&
-        customThemeFingerprint(savedTheme.tokens) !== fingerprint
-      )
-    ].slice(0, maxSavedCustomThemes);
-
-    commitSavedThemes(nextThemes);
-  }, [commitSavedThemes]);
 
   const applyCustomTheme = useCallback(async (next: ThemeTokens) => {
     dispatch(setCustomTheme({ key: ThThemeKeys.custom, tokens: next }));
@@ -313,50 +311,180 @@ export const StatefulCustomTheme = () => {
     }));
   }, [colorScheme, dispatch, submitPreferences, systemThemes, themeKeys]);
 
-  const updateCustomTheme = useCallback(async (
-    key: EditableThemeToken,
-    value: string
+  const updateSavedTheme = useCallback((
+    id: string,
+    patch: Partial<Pick<SavedCustomTheme, "name" | "tokens">>
   ) => {
-    if (!theme) return;
+    commitSavedThemes(savedThemesRef.current.map(savedTheme =>
+      savedTheme.id === id
+        ? { ...savedTheme, ...patch, updatedAt: Date.now() }
+        : savedTheme
+    ));
+  }, [commitSavedThemes]);
 
-    const next = {
-      ...theme,
-      [key]: value
-    };
-    saveThemeToHistory(next);
-    await applyCustomTheme(next);
-  }, [applyCustomTheme, saveThemeToHistory, theme]);
+  const createTheme = useCallback(async () => {
+    const tokens = withDecorationTokenDefaults(current ?? customTheme);
+    const id = createSavedCustomThemeId();
+    commitSavedThemes([
+      {
+        id,
+        name: `Theme ${ savedThemesRef.current.length + 1 }`,
+        tokens,
+        updatedAt: Date.now()
+      },
+      ...savedThemesRef.current
+    ].slice(0, maxSavedCustomThemes));
+    onEditingChange(id);
+    await applyCustomTheme(tokens);
+  }, [applyCustomTheme, commitSavedThemes, current, onEditingChange]);
 
-  const selectSavedTheme = useCallback(async (savedTheme: SavedCustomTheme) => {
-    editingSavedThemeId.current = null;
-    await applyCustomTheme(savedTheme.tokens);
-  }, [applyCustomTheme]);
+  const editing = editingId
+    ? savedThemes.find(savedTheme => savedTheme.id === editingId)
+    : undefined;
 
-  return theme
-    ? <CustomThemeEditor
-        theme={ theme }
-        savedThemes={ savedThemes }
-        onChange={ updateCustomTheme }
-        onSelectSavedTheme={ selectSavedTheme }
+  // The theme being edited was removed elsewhere; fall back to the library.
+  useEffect(() => {
+    if (editingId && !editing) onEditingChange(null);
+  }, [editing, editingId, onEditingChange]);
+
+  if (editing) {
+    const tokens = withDecorationTokenDefaults(editing.tokens);
+    return (
+      <CustomThemeEditor
+        key={ editing.id }
+        name={ editing.name ?? "" }
+        theme={ tokens }
+        onRename={ name => updateSavedTheme(editing.id, { name }) }
+        onChange={ async (key, value) => {
+          const next = { ...tokens, [key]: value };
+          updateSavedTheme(editing.id, { tokens: next });
+          await applyCustomTheme(next);
+        } }
+        onDelete={ () => {
+          commitSavedThemes(savedThemesRef.current.filter(savedTheme => savedTheme.id !== editing.id));
+          onEditingChange(null);
+        } }
+        onDone={ () => onEditingChange(null) }
       />
-    : null;
-};
+    );
+  }
 
-const CustomThemeEditor = ({
-  theme,
-  savedThemes,
-  onChange,
-  onSelectSavedTheme
-}: {
-  theme: ThemeTokens;
-  savedThemes: SavedCustomTheme[];
-  onChange: (key: EditableThemeToken, value: string) => void;
-  onSelectSavedTheme: (theme: SavedCustomTheme) => void;
-}) => {
-  const currentFingerprint = customThemeFingerprint(theme);
+  const currentFingerprint = current ? customThemeFingerprint(current) : null;
 
   return (
-  <section className={ settingsStyles.customThemeEditor } aria-label="Custom palette">
+    <CustomThemeLibrary
+      savedThemes={ savedThemes }
+      isSelected={ savedTheme => customThemeFingerprint(savedTheme.tokens) === currentFingerprint }
+      onSelect={ savedTheme => applyCustomTheme(savedTheme.tokens) }
+      onEdit={ async savedTheme => {
+        onEditingChange(savedTheme.id);
+        await applyCustomTheme(savedTheme.tokens);
+      } }
+      onCreate={ createTheme }
+    />
+  );
+};
+
+const CustomThemeLibrary = ({
+  savedThemes,
+  isSelected,
+  onSelect,
+  onEdit,
+  onCreate
+}: {
+  savedThemes: SavedCustomTheme[];
+  isSelected: (theme: SavedCustomTheme) => boolean;
+  onSelect: (theme: SavedCustomTheme) => void;
+  onEdit: (theme: SavedCustomTheme) => void;
+  onCreate: () => void;
+}) => (
+  <section className={ settingsStyles.customThemeLibrary } aria-label="Custom themes">
+    { savedThemes.length === 0 &&
+      <p className={ settingsStyles.customThemeEmpty }>
+        No saved themes yet. Create one, or add themes from Settings, then Appearance.
+      </p>
+    }
+    <div className={ settingsStyles.customThemeGrid }>
+      { savedThemes.map((savedTheme, index) => {
+        const selected = isSelected(savedTheme);
+        const name = savedThemeName(savedTheme, index);
+        const tokens = withDecorationTokenDefaults(savedTheme.tokens);
+        return (
+          <div
+            className={ settingsStyles.customThemeCard }
+            data-selected={ selected }
+            key={ savedTheme.id }
+          >
+            <button
+              type="button"
+              className={ settingsStyles.customThemeCardSelect }
+              aria-pressed={ selected }
+              aria-label={ `Read with ${ name }` }
+              onClick={ () => onSelect(savedTheme) }
+            >
+              <CustomThemeSample theme={ tokens } />
+              <span className={ settingsStyles.customThemeCardName }>
+                <span>{ name }</span>
+                { selected && <CheckIcon aria-hidden="true" focusable="false" /> }
+              </span>
+            </button>
+            <button
+              type="button"
+              className={ settingsStyles.customThemeCardEdit }
+              aria-label={ `Edit ${ name }` }
+              title="Edit"
+              onClick={ () => onEdit(savedTheme) }
+            >
+              <EditIcon aria-hidden="true" focusable="false" />
+            </button>
+          </div>
+        );
+      }) }
+      <button
+        type="button"
+        className={ settingsStyles.customThemeCreate }
+        onClick={ onCreate }
+      >
+        <AddIcon aria-hidden="true" focusable="false" />
+        <span>Create theme</span>
+      </button>
+    </div>
+  </section>
+);
+
+/** A miniature page in the theme's own colors: title, text, link, highlight. */
+const CustomThemeSample = ({ theme }: { theme: ThemeTokens }) => (
+  <span
+    className={ settingsStyles.customThemeSample }
+    aria-hidden="true"
+    style={ { background: theme.background, color: theme.text } }
+  >
+    <strong>Aa</strong>
+    <span style={ { background: theme.subdue } } />
+    <span style={ { background: theme.subdue, width: "70%" } } />
+    <span className={ settingsStyles.customThemeSampleMarks }>
+      <span style={ { background: theme.link } } />
+      <span style={ { background: theme.highlight ?? DECORATION_TOKEN_DEFAULTS.highlight } } />
+    </span>
+  </span>
+);
+
+const CustomThemeEditor = ({
+  name,
+  theme,
+  onRename,
+  onChange,
+  onDelete,
+  onDone
+}: {
+  name: string;
+  theme: ThemeTokens;
+  onRename: (name: string) => void;
+  onChange: (key: EditableThemeToken, value: string) => void;
+  onDelete: () => void;
+  onDone: () => void;
+}) => (
+  <section className={ settingsStyles.customThemeEditor } aria-label="Edit theme">
     <div
       className={ settingsStyles.customThemePreview }
       style={ {
@@ -370,18 +498,43 @@ const CustomThemeEditor = ({
       <span className={ settingsStyles.customThemePreviewLink } style={ { color: theme.link } }>
         A link inside the publication
       </span>
-      <span style={ {
-        color: theme.text,
-        backgroundColor: theme.highlight ?? DECORATION_TOKEN_DEFAULTS.highlight
-      } }>
-        Highlighted text as it appears while reading
+      <span>
+        <mark style={ {
+          color: theme.text,
+          backgroundColor: theme.highlight ?? DECORATION_TOKEN_DEFAULTS.highlight
+        } }>
+          Highlighted text
+        </mark>
+        { " " }
+        <mark style={ {
+          color: theme.text,
+          backgroundColor: theme.dictionary ?? DECORATION_TOKEN_DEFAULTS.dictionary
+        } }>
+          Dictionary mark
+        </mark>
       </span>
     </div>
-    <div className={ settingsStyles.customThemeFields }>
+    <label className={ settingsStyles.customThemeName }>
+      <span>Name</span>
+      <input
+        type="text"
+        defaultValue={ name }
+        placeholder="Untitled theme"
+        maxLength={ 60 }
+        onBlur={ event => {
+          const next = event.target.value.trim();
+          if (next !== name) onRename(next);
+        } }
+        onKeyDown={ event => {
+          if (event.key === "Enter") event.currentTarget.blur();
+        } }
+      />
+    </label>
+    <div className={ settingsStyles.customThemeFields } role="group" aria-label="Colors">
       { customThemeFields.map(({ key, label }) =>
-        <fieldset className={ settingsStyles.customThemeField } key={ key }>
-          <legend>{ label }</legend>
-          <span>
+        <div className={ settingsStyles.customThemeField } key={ key }>
+          <span>{ label }</span>
+          <span className={ settingsStyles.customThemeFieldControls }>
             <input
               type="color"
               value={ theme[key] }
@@ -403,61 +556,30 @@ const CustomThemeEditor = ({
                   event.target.value = theme[key] ?? "";
                 }
               } }
+              onKeyDown={ event => {
+                if (event.key === "Enter") event.currentTarget.blur();
+              } }
             />
           </span>
-        </fieldset>
+        </div>
       ) }
     </div>
-    { savedThemes.length > 0 &&
-      <section className={ settingsStyles.savedCustomThemes } aria-labelledby="saved-custom-themes-heading">
-        <h3 id="saved-custom-themes-heading">Saved themes</h3>
-        <div className={ settingsStyles.savedCustomThemeGrid }>
-          { savedThemes.map((savedTheme, index) => {
-            const isSelected = customThemeFingerprint(savedTheme.tokens) === currentFingerprint;
-            return (
-              <button
-                type="button"
-                className={ settingsStyles.savedCustomTheme }
-                key={ savedTheme.id }
-                data-selected={ isSelected }
-                aria-pressed={ isSelected }
-                aria-label={ savedTheme.name ?? `Apply saved theme ${ index + 1 }` }
-                onClick={ () => onSelectSavedTheme(savedTheme) }
-              >
-                <span
-                  className={ settingsStyles.savedCustomThemeSample }
-                  style={ {
-                    background: savedTheme.tokens.background,
-                    color: savedTheme.tokens.text,
-                    borderColor: savedTheme.tokens.subdue
-                  } }
-                >
-                  <strong>Aa</strong>
-                  <span style={ { color: savedTheme.tokens.link } }>●</span>
-                </span>
-                <span className={ settingsStyles.savedCustomThemeSwatches } aria-hidden="true">
-                  { [
-                    { key: "background", color: savedTheme.tokens.background },
-                    { key: "text", color: savedTheme.tokens.text },
-                    { key: "subdue", color: savedTheme.tokens.subdue },
-                    { key: "link", color: savedTheme.tokens.link },
-                    { key: "visited", color: savedTheme.tokens.visited },
-                    { key: "highlight", color: savedTheme.tokens.highlight ?? DECORATION_TOKEN_DEFAULTS.highlight },
-                    { key: "dictionary", color: savedTheme.tokens.dictionary ?? DECORATION_TOKEN_DEFAULTS.dictionary }
-                  ].map(swatch =>
-                    <span key={ swatch.key } style={ { background: swatch.color } } />
-                  ) }
-                </span>
-                <span className={ settingsStyles.savedCustomThemeLabel }>
-                  { savedTheme.name ?? `Saved theme ${ index + 1 }` }
-                  { isSelected && <CheckIcon aria-hidden="true" focusable="false" /> }
-                </span>
-              </button>
-            );
-          }) }
-        </div>
-      </section>
-    }
+    <div className={ settingsStyles.customThemeActions }>
+      <button
+        type="button"
+        className={ settingsStyles.customThemeDelete }
+        onClick={ onDelete }
+      >
+        <DeleteIcon aria-hidden="true" focusable="false" />
+        Delete
+      </button>
+      <button
+        type="button"
+        className={ settingsStyles.customThemeDone }
+        onClick={ onDone }
+      >
+        Done
+      </button>
+    </div>
   </section>
-  );
-};
+);

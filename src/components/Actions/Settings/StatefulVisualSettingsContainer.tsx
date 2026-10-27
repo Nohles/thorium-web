@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   defaultSpacingSettingsMain,
@@ -54,6 +54,12 @@ export const StatefulVisualSettingsContainer = ({
   const hasDisplayTransformability = useAppSelector(state => state.publication.hasDisplayTransformability);
   const contains = useAppSelector(state => state.reader.settingsContainer);
   const dispatch = useAppDispatch();
+  // The Custom panel has two levels: its theme library, and the editor for one
+  // theme. Held here so the header title and Back follow the inner level.
+  const [editingCustomTheme, setEditingCustomTheme] = useState<string | null>(null);
+  useEffect(() => {
+    if (contains !== ThSettingsContainerKeys.customTheme) setEditingCustomTheme(null);
+  }, [contains]);
 
   const settingItems = useMemo(() => {
     return profile === "webPub"
@@ -122,7 +128,12 @@ export const StatefulVisualSettingsContainer = ({
         return <StatefulSpacingGroupContainer />;
 
       case ThSettingsContainerKeys.customTheme:
-        return <StatefulCustomTheme />;
+        return (
+          <StatefulCustomTheme
+            editingId={ editingCustomTheme }
+            onEditingChange={ setEditingCustomTheme }
+          />
+        );
 
       case ThSettingsContainerKeys.initial:
       default:
@@ -154,7 +165,7 @@ export const StatefulVisualSettingsContainer = ({
           </>
         );
     }
-  }, [settingsComponentsMap, contains, settingItems, isTextNested, isSpacingNested, isWebPubDisabled]);
+  }, [settingsComponentsMap, contains, settingItems, isTextNested, isSpacingNested, isWebPubDisabled, editingCustomTheme]);
 
   const getHeading = useCallback(() => {
     switch (contains) {
@@ -165,15 +176,19 @@ export const StatefulVisualSettingsContainer = ({
         return t("reader.preferences.spacing.title");
 
       case ThSettingsContainerKeys.customTheme:
-        return t("reader.preferences.themes.customPalette", {
-          defaultValue: "Custom palette"
-        });
+        return editingCustomTheme
+          ? t("reader.preferences.themes.editCustomTheme", {
+              defaultValue: "Edit theme"
+            })
+          : t("reader.preferences.themes.customThemes", {
+              defaultValue: "Custom themes"
+            });
 
       case ThSettingsContainerKeys.initial:
       default:
         return t("reader.preferences.title");
     }
-  }, [contains, t]);
+  }, [contains, editingCustomTheme, t]);
 
   const getHeaderVariant = useCallback(() => {
     switch (contains) {
@@ -195,7 +210,11 @@ export const StatefulVisualSettingsContainer = ({
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape" && contains !== ThSettingsContainerKeys.initial) {
-        dispatch(setSettingsContainer(ThSettingsContainerKeys.initial));
+        if (editingCustomTheme) {
+          setEditingCustomTheme(null);
+        } else {
+          dispatch(setSettingsContainer(ThSettingsContainerKeys.initial));
+        }
       }
     };
 
@@ -204,17 +223,23 @@ export const StatefulVisualSettingsContainer = ({
     return () => {
       document.removeEventListener("keydown", handleEscape, true);
     };
-  }, [contains, dispatch]);
+  }, [contains, dispatch, editingCustomTheme]);
 
   return (
     <StatefulSettingsWrapper
       triggerRef={ triggerRef }
       heading={ getHeading() }
       headerVariant={ getHeaderVariant() }
-      onClosePress={ contains === ThSettingsContainerKeys.initial ? close : setInitial }
+      onClosePress={
+        contains === ThSettingsContainerKeys.initial
+          ? close
+          : editingCustomTheme
+            ? () => setEditingCustomTheme(null)
+            : setInitial
+      }
       onReset={ setInitial }
       dismissEscapeKeyClose={ contains !== ThSettingsContainerKeys.initial }
-      resetFocus={ contains }
+      resetFocus={ editingCustomTheme ? `${ contains }:edit` : contains }
     >
       { renderSettings() }
     </StatefulSettingsWrapper>
