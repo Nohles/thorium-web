@@ -146,24 +146,31 @@ export const decorationFrameTargetsFromNavigator = (
 };
 
 /**
- * Pooled frames can become ready before Readium exposes them through its
- * current viewport. In that state commands work, but frame events are only
- * buffered because the navigator never attached its listener. Attach the
- * same forwarding listener Readium uses once a frame enters the viewport.
+ * Fill in a missing listener only after Readium exposes the frame in its
+ * current viewport. Setting FrameComms.listener synchronously flushes buffered
+ * lifecycle events; forwarding a pooled frame's _pong before it is current can
+ * make Readium dereference an absent current iframe during chapter changes.
  */
 export const ensureNavigatorFrameListeners = (navigator: unknown): boolean => {
   if (!navigator || typeof navigator !== "object") return false;
   const candidate = navigator as {
     eventListener?: (key: string, data: unknown, sourceFrame?: object) => void;
+    _cframes?: unknown;
   };
   if (typeof candidate.eventListener !== "function") return false;
+  const isCurrentFrame = (frame: object | undefined): boolean => {
+    const frames = candidate._cframes;
+    return frame !== undefined && Array.isArray(frames) && frames.includes(frame);
+  };
   const targets = decorationFrameTargetsFromNavigator(navigator);
   if (!targets) return false;
   let attached = false;
   for (const target of targets) {
+    if (!isCurrentFrame(target.frame)) continue;
     const message = target.msg;
     if (!message || typeof message._listener === "function") continue;
     message.listener = (key, data) => {
+      if (!isCurrentFrame(target.frame)) return;
       candidate.eventListener?.(key, data, target.frame);
     };
     attached = true;
