@@ -248,6 +248,8 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
 
   const listeners: WebPubNavigatorListeners = useMemo(() => ({
     frameLoaded: async function (_wnd: Window): Promise<void> {},
+    // Position notifications already drive Reader progress/navigation state.
+    viewportChanged: () => {},
     timelineItemChanged: function (item: TimelineItem | undefined): void {
       setCurrentTimelineItem(item);
 
