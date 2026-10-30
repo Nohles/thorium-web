@@ -1,5 +1,23 @@
 import type { ComicPage } from "../hooks/useComicReaderController";
 
+/** Recover within the saved chapter if an edited archive removed its saved page. */
+export const findClosestArchivePageIndex = (
+  pages: readonly ComicPage[],
+  identity: { chapterIndex: number; pageIndexInChapter: number }
+): number => {
+  let closest = -1;
+  let distance = Infinity;
+  pages.forEach((page, index) => {
+    if (page.archive?.chapterIndex !== identity.chapterIndex) return;
+    const candidate = Math.abs(page.archive.pageIndexInChapter - identity.pageIndexInChapter);
+    if (candidate < distance) {
+      closest = index;
+      distance = candidate;
+    }
+  });
+  return closest;
+};
+
 /**
  * Keeps the cursor on the same archive page when the loaded page list changes.
  * Prefetching an earlier chapter prepends its pages, which shifts every index

@@ -133,6 +133,7 @@
     "@svgr/webpack": "^8.1.0",
     "@types/bun": "1.2.20",
     "@types/css-modules": "^1.0.5",
+    "@types/jsdom": "21.1.7",
     "@types/node": "^22.19.7",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -143,6 +144,7 @@
     "eslint-plugin-unused-imports": "^4.4.1",
     "glob": "^13.0.6",
     "immer": "11.1.2",
+    "jsdom": "26.1.0",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "wrangler": "4.107.1"
