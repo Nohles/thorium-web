@@ -8,6 +8,8 @@ manage-package-manager-versions: true
 minimumReleaseAge: 4320 # 3 days
 minimumReleaseAgeExclude:
   - "@readium/*"
+  # Reviewed local fork, qualified with the matching 2.14 dependency set.
+  - "@nohles/readium-navigator"
 blockExoticSubdeps: true
 trustPolicy: no-downgrade
 # undici's 5.x maintenance line was never wired into npm provenance attestation,

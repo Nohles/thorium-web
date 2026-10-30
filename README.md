@@ -115,3 +115,7 @@ Thorium Web is licensed under the [BSD-3-Clause license](https://opensource.org/
 ## Acknowledgments
 
 Thorium Web is built using a number of open-source libraries and frameworks, including [Readium](https://readium.org/), [React](https://reactjs.org/), [React Aria](https://react-spectrum.adobe.com/react-aria/index.html), and [Material Symbols and Icons](https://fonts.google.com/icons). We are grateful for the contributions of the developers and maintainers of these projects.
+
+## Directory-comic resume
+
+The 1.5.41 reader restores the saved chapter before persisting a cursor when chapter manifests arrive out of order. Prefetched neighbours remain outside the viewport until that chapter is available, and prepending an earlier chapter preserves the page currently being read.

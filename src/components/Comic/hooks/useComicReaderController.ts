@@ -69,17 +69,19 @@ export const useComicReaderController = ({
   }, [pages.length, savedPosition]);
 
   const [cursorIndex, setCursorIndex] = useState(initialIndex);
-  const initialPositionAppliedRef = useRef(
+  const [initialPositionApplied, setInitialPositionApplied] = useState(
     typeof savedPosition === "number" && savedPosition >= 0 && savedPosition < pages.length
   );
   const skipInitialPersistRef = useRef(true);
 
-  useEffect(() => {
-    if (initialPositionAppliedRef.current) return;
-    if (typeof savedPosition !== "number" || savedPosition < 0 || savedPosition >= pages.length) return;
-    initialPositionAppliedRef.current = true;
+  // A neighbour can arrive before the saved chapter. Restore before committing
+  // its pages, so persistence never records a transient neighbouring cursor.
+  const isRestoringPosition = !initialPositionApplied &&
+    typeof savedPosition === "number" && savedPosition >= 0 && savedPosition < pages.length;
+  if (isRestoringPosition) {
+    setInitialPositionApplied(true);
     setCursorIndex(savedPosition);
-  }, [pages.length, savedPosition]);
+  }
 
   useEffect(() => {
     if (skipInitialPersistRef.current) {
@@ -179,6 +181,7 @@ export const useComicReaderController = ({
     scaleType,
     step,
     cursorIndex,
+    isRestoringPosition,
     setCursorIndex,
     canGoPrev,
     canGoNext,

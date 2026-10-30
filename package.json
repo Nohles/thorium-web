@@ -20,7 +20,7 @@
   "bugs": {
     "url": "https://github.com/nohles/thorium-web/issues"
   },
-  "version": "1.5.39",
+  "version": "1.5.41",
   "packageManager": "pnpm@11.1.0",
   "private": false,
   "publishConfig": {
@@ -85,9 +85,9 @@
   },
   "peerDependencies": {
     "@readium/css": "^2.0.5",
-    "@readium/navigator": "^2.8.0",
-    "@readium/navigator-html-injectables": "^2.6.3",
-    "@readium/shared": "^2.4.0",
+    "@readium/navigator": "2.14.0-nohles.1",
+    "@readium/navigator-html-injectables": "2.9.2",
+    "@readium/shared": "2.8.0",
     "@reduxjs/toolkit": "^2.11.2",
     "i18next": "^25.8.13",
     "i18next-browser-languagedetector": "^8.2.1",
@@ -105,9 +105,9 @@
   },
   "dependencies": {
     "@readium/css": "^2.0.5",
-    "@readium/navigator": "^2.8.0",
-    "@readium/navigator-html-injectables": "^2.6.3",
-    "@readium/shared": "^2.4.0",
+    "@readium/navigator": "npm:@nohles/readium-navigator@2.14.0-nohles.1",
+    "@readium/navigator-html-injectables": "2.9.2",
+    "@readium/shared": "2.8.0",
     "@reduxjs/toolkit": "^2.11.2",
     "classnames": "^2.5.1",
     "colorthief": "^3.3.1",
@@ -133,6 +133,7 @@
     "@svgr/webpack": "^8.1.0",
     "@types/bun": "1.2.20",
     "@types/css-modules": "^1.0.5",
+    "@types/jsdom": "21.1.7",
     "@types/node": "^22.19.7",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -143,6 +144,7 @@
     "eslint-plugin-unused-imports": "^4.4.1",
     "glob": "^13.0.6",
     "immer": "11.1.2",
+    "jsdom": "26.1.0",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "wrangler": "4.107.1"
