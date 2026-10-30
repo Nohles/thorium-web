@@ -102,10 +102,13 @@
 .treeItemText {
   display: flex;
   flex: 1 1 auto;
+  min-width: 0;
 }
 
 .treeItemTextTitle {
+  min-width: 0;
   text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 
 .treeItemTextPosition {

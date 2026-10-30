@@ -10,6 +10,7 @@
   bottom: 0;
   z-index: 100000;
   overflow-y: auto;
+  overflow-x: hidden;
   scroll-padding-top: calc(var(--th-sheet-sticky-header, 80px) + var(--th-layout-spacing));
   scroll-padding-bottom: var(--th-layout-spacing);
   box-sizing: border-box;
@@ -36,6 +37,7 @@
 .modalDialog {
   pointer-events: auto;
   overflow-y: auto;
+  overflow-x: hidden;
   scroll-padding-top: calc(var(--th-sheet-sticky-header, 80px) + var(--th-layout-spacing));
   scroll-padding-bottom: var(--th-layout-spacing);
   box-sizing: border-box;
@@ -52,6 +54,7 @@
 .popover {
   z-index: 100000;
   overflow-y: auto;
+  overflow-x: hidden;
   scroll-padding-top: calc(var(--th-sheet-sticky-header, 80px) + var(--th-layout-spacing));
   scroll-padding-bottom: var(--th-layout-spacing);
   box-sizing: border-box;
@@ -70,6 +73,7 @@
 .compactPopover {
   z-index: 100000;
   overflow-y: auto;
+  overflow-x: hidden;
   scroll-padding-top: var(--th-layout-spacing);
   scroll-padding-bottom: var(--th-layout-spacing);
   box-sizing: border-box;
@@ -149,6 +153,7 @@
 
 .draggableScroller {
   position: relative;
+  overflow-x: hidden;
   scroll-padding-bottom: calc(var(--th-layout-spacing) * 4);
 }
 
@@ -193,6 +198,7 @@
   /* We need relative positioning so that RAC FocusScope scrolls properly on tabbing */
   position: relative;
   overflow-y: auto;
+  overflow-x: hidden;
   scroll-padding-top: calc(var(--th-sheet-sticky-header, 80px) + var(--th-layout-spacing));
   scroll-padding-bottom: var(--th-layout-spacing);
   box-sizing: border-box;
