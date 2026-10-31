@@ -22,6 +22,7 @@ import {
 } from "@/lib/comicSettingsReducer";
 import { useI18n } from "@/i18n/useI18n";
 import { useAppSelector } from "@/lib/hooks";
+import type { ComicContinueElsewhereAction } from "@/components/Reader/ReaderNavigationContext";
 import {
   ComicPageLayoutMode,
   getImagePlaceholderStyling,
@@ -1016,10 +1017,7 @@ export type ComicBoundaryPageData = {
     onClick: (event: React.MouseEvent<HTMLAnchorElement>) => void;
   };
   /** Optional continue action when another source has later chapters. */
-  continueElsewhere?: {
-    label: string;
-    onContinue: () => void;
-  };
+  continueElsewhere?: ComicContinueElsewhereAction;
 };
 
 export type ComicBoundaryPageKind = "prev" | "next";
@@ -1059,9 +1057,18 @@ const ComicChapterBoundaryPage = ({
         <section className={styles.boundarySection}>
           {isExitPage ? (
             <>
-              <strong className={styles.boundaryTitle}>
-                {t("reader.comic.chapterBoundaries.noChaptersLeft")}
-              </strong>
+              {continueElsewhere?.nextTitle ? (
+                <>
+                  {continueElsewhere.nextLabel ? (
+                    <strong className={styles.boundaryLabel}>{continueElsewhere.nextLabel}</strong>
+                  ) : null}
+                  <span className={styles.boundaryTitle}>{continueElsewhere.nextTitle}</span>
+                </>
+              ) : (
+                <strong className={styles.boundaryTitle}>
+                  {t("reader.comic.chapterBoundaries.noChaptersLeft")}
+                </strong>
+              )}
               {continueElsewhere ? (
                 <button
                   type="button"

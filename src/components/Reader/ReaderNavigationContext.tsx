@@ -7,6 +7,12 @@ export type ComicContinueElsewhereAction = {
   /** Fully formed button label, e.g. "Continue on Source 2". */
   label: string;
   onContinue: () => void;
+  /**
+   * Where reading continues, shown in place of "No chapters left", e.g.
+   * "Continues on Source 2:" / "Chapter 151".
+   */
+  nextLabel?: string;
+  nextTitle?: string;
 };
 
 export type ReaderSourceOption = {
