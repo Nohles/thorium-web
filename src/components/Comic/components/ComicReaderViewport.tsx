@@ -40,6 +40,7 @@ import {
   getComicPageLoadSet,
   getComicPageWarmupOrder,
 } from "../lib/comicPageLoadWindow";
+import { type ComicScrollEdge, getComicScrollEdge } from "../lib/comicScrollEdge";
 import { ComicPageWarmer, warmComicHttpImage } from "../lib/comicPageWarmer";
 import {
   acquireComicImageMount,
@@ -1169,6 +1170,31 @@ const getActivePageIndexHorizontal = (root: HTMLDivElement, itemRefs: Map<number
   return bestIdx;
 };
 
+/** How long after a chapter change newly mounted pages may still be finding their height. */
+const COMIC_CHAPTER_SETTLE_MS = 600;
+
+/** Scrolls `root` so `page` sits at its start, center or end. */
+const alignScrollerToPage = (
+  root: HTMLDivElement,
+  page: HTMLDivElement,
+  isHorizontal: boolean,
+  align: "start" | "center" | "end"
+) => {
+  const rootRect = root.getBoundingClientRect();
+  const pageRect = page.getBoundingClientRect();
+  const [rootStart, rootEnd, pageStart, pageEnd] = isHorizontal
+    ? [rootRect.left, rootRect.right, pageRect.left, pageRect.right]
+    : [rootRect.top, rootRect.bottom, pageRect.top, pageRect.bottom];
+  const delta =
+    align === "start"
+      ? pageStart - rootStart
+      : align === "end"
+        ? pageEnd - rootEnd
+        : (pageStart + pageEnd) / 2 - (rootStart + rootEnd) / 2;
+  if (isHorizontal) root.scrollLeft += delta;
+  else root.scrollTop += delta;
+};
+
 export type ComicReaderViewportProps = {
   publication: Publication;
   pages: ComicPage[];
@@ -1225,7 +1251,12 @@ export const ComicReaderViewport = ({
   const programmaticScrollRafRef = useRef<number | null>(null);
   const isProgrammaticScrollRef = useRef(false);
   const scrollMeasurementRafRef = useRef<number | null>(null);
-  const firstViewportPageIndexRef = useRef<number | undefined>(undefined);
+  /** The page list last laid out, to tell a new chapter from the same chapter renumbered. */
+  const laidOutPagesRef = useRef<{ pages: ComicPage[]; firstHref: string; cursorHref?: string } | null>(null);
+  const hadPreviousBoundaryRef = useRef(false);
+  const stopChapterSettleRef = useRef<(() => void) | null>(null);
+  /** The reader acted or a chapter change placed them, so a restore estimate no longer applies. */
+  const readerHasPositionRef = useRef(false);
   const activeBoundaryPageRef = useRef<ComicBoundaryPageKind | null>(null);
   /** Briefly ignore scroll measurement after the visible chapter slice changes. */
   const scrollSyncSuppressUntilRef = useRef(0);
@@ -1314,33 +1345,27 @@ export const ComicReaderViewport = ({
     return callback;
   }, []);
 
+  const getScrollEdge = useCallback(
+    (root: HTMLDivElement) =>
+      mode === ComicReadingMode.continuousHorizontal
+        ? getComicScrollEdge({ position: root.scrollLeft, viewportSize: root.clientWidth, contentSize: root.scrollWidth })
+        : getComicScrollEdge({ position: root.scrollTop, viewportSize: root.clientHeight, contentSize: root.scrollHeight }),
+    [mode]
+  );
+
   const getActiveBoundaryPage = useCallback(
-    (root: HTMLDivElement): ComicBoundaryPageKind | null => {
+    (root: HTMLDivElement, edge: ComicScrollEdge | null): ComicBoundaryPageKind | null => {
+      const kind: ComicBoundaryPageKind | null = edge === "start" ? "prev" : edge === "end" ? "next" : null;
+      const el = kind && boundaryRefs.current.get(kind);
+      if (!el) return null;
       const rootRect = root.getBoundingClientRect();
-      const yMid = rootRect.top + rootRect.height / 2;
-      const xMid = rootRect.left + rootRect.width / 2;
-      const edgeTolerance = 2;
-      const isAtStart =
-        mode === ComicReadingMode.continuousHorizontal
-          ? root.scrollLeft <= edgeTolerance
-          : root.scrollTop <= edgeTolerance;
-      const isAtEnd =
-        mode === ComicReadingMode.continuousHorizontal
-          ? root.scrollLeft + root.clientWidth >= root.scrollWidth - edgeTolerance
-          : root.scrollTop + root.clientHeight >= root.scrollHeight - edgeTolerance;
-      for (const kind of ["prev", "next"] as const) {
-        const el = boundaryRefs.current.get(kind);
-        if (!el) continue;
-        if (kind === "prev" && !isAtStart) continue;
-        if (kind === "next" && !isAtEnd) continue;
-        const r = el.getBoundingClientRect();
-        const containsMidpoint =
-          mode === ComicReadingMode.continuousHorizontal
-            ? r.left <= xMid && r.right >= xMid
-            : r.top <= yMid && r.bottom >= yMid;
-        if (containsMidpoint) return kind;
+      const r = el.getBoundingClientRect();
+      if (mode === ComicReadingMode.continuousHorizontal) {
+        const xMid = rootRect.left + rootRect.width / 2;
+        return r.left <= xMid && r.right >= xMid ? kind : null;
       }
-      return null;
+      const yMid = rootRect.top + rootRect.height / 2;
+      return r.top <= yMid && r.bottom >= yMid ? kind : null;
     },
     [mode]
   );
@@ -1373,14 +1398,17 @@ export const ComicReaderViewport = ({
     if (performance.now() < scrollSyncSuppressUntilRef.current) return;
     if (!root) return;
     if (itemRefs.current.size === 0) return;
-    const activeBoundary = getActiveBoundaryPage(root);
-    if (activeBoundary) {
-      emitBoundaryPageChange(activeBoundary);
-      return;
-    }
-    emitBoundaryPageChange(null);
+    const edge = getScrollEdge(root);
+    const activeBoundary = getActiveBoundaryPage(root, edge);
+    emitBoundaryPageChange(activeBoundary);
     let idx: number;
-    if (isVerticalScrollMode) {
+    if (edge) {
+      // A page shorter than half the viewport never reaches the center line, so
+      // the ends of the scroller have to settle on the first and last pages.
+      const edgePage = edge === "start" ? pages[0] : pages[pages.length - 1];
+      if (!edgePage) return;
+      idx = edgePage.index;
+    } else if (isVerticalScrollMode) {
       idx = getActivePageIndexVertical(root, itemRefs.current);
     } else if (mode === ComicReadingMode.continuousHorizontal) {
       idx = getActivePageIndexHorizontal(root, itemRefs.current);
@@ -1393,7 +1421,7 @@ export const ComicReaderViewport = ({
       syncFromScrollRef.current = true;
       return idx;
     });
-  }, [cursorIndex, emitBoundaryPageChange, getActiveBoundaryPage, isVerticalScrollMode, mode, setCursorIndex]);
+  }, [cursorIndex, emitBoundaryPageChange, getActiveBoundaryPage, getScrollEdge, isVerticalScrollMode, mode, pages, setCursorIndex]);
 
   const scheduleActivePageUpdate = useCallback(() => {
     if (scrollMeasurementRafRef.current !== null) return;
@@ -1414,28 +1442,92 @@ export const ComicReaderViewport = ({
     };
   }, [isVerticalScrollMode, scheduleActivePageUpdate]);
 
+  // Once the reader acts, their position is theirs: stop adjusting it.
+  useEffect(() => {
+    const onReaderInput = () => {
+      readerHasPositionRef.current = true;
+      stopChapterSettleRef.current?.();
+    };
+    const inputs = ["wheel", "touchstart", "pointerdown", "keydown"] as const;
+    inputs.forEach((type) => document.addEventListener(type, onReaderInput, { capture: true, passive: true }));
+    return () => {
+      inputs.forEach((type) => document.removeEventListener(type, onReaderInput, { capture: true }));
+    };
+  }, []);
+
+  // New pages take their real height after this commit, so one alignment would be
+  // measured against placeholders. Hold it until they settle or the reader takes over.
+  const holdPageAlignment = useCallback(
+    (root: HTMLDivElement, page: HTMLDivElement, isHorizontal: boolean, align: "start" | "center" | "end") => {
+      stopChapterSettleRef.current?.();
+      const settleUntil = performance.now() + COMIC_CHAPTER_SETTLE_MS;
+      let frame = 0;
+      const hold = () => {
+        if (performance.now() >= settleUntil || !page.isConnected) {
+          stopChapterSettleRef.current = null;
+          return;
+        }
+        alignScrollerToPage(root, page, isHorizontal, align);
+        frame = requestAnimationFrame(hold);
+      };
+      stopChapterSettleRef.current = () => {
+        cancelAnimationFrame(frame);
+        stopChapterSettleRef.current = null;
+      };
+      alignScrollerToPage(root, page, isHorizontal, align);
+      frame = requestAnimationFrame(hold);
+    },
+    []
+  );
+
   useLayoutEffect(() => {
-    const first = pages[0]?.index;
-    if (typeof first !== "number") return;
-    const prevFirst = firstViewportPageIndexRef.current;
-    firstViewportPageIndexRef.current = first;
-    if (prevFirst === undefined || prevFirst === first) return;
-    scrollSyncSuppressUntilRef.current = performance.now() + 600;
+    const first = pages[0];
+    if (!first) return;
+    const cursorHref = pages.find((page) => page.index === cursorIndex)?.href;
+    const previous = laidOutPagesRef.current;
+    laidOutPagesRef.current = { pages, firstHref: first.href, cursorHref };
+    if (!previous || previous.pages === pages) return;
+    if (previous.firstHref === first.href) {
+      // Prefetching a neighbouring chapter renumbers the same pages. The scroll sync
+      // below may refine a restored position, but must not pull a reader off theirs.
+      if (previous.cursorHref === cursorHref && readerHasPositionRef.current) syncFromScrollRef.current = true;
+      return;
+    }
+    readerHasPositionRef.current = true;
+    scrollSyncSuppressUntilRef.current = performance.now() + COMIC_CHAPTER_SETTLE_MS;
     const el = scrollRef.current;
     if (!el) return;
     suppressScrollSync();
     syncFromScrollRef.current = true;
-    const firstPage = itemRefs.current.get(first);
-    if (mode === ComicReadingMode.continuousHorizontal) {
-      el.scrollLeft = firstPage
-        ? el.scrollLeft + firstPage.getBoundingClientRect().left - el.getBoundingClientRect().left
-        : 0;
+    const isHorizontal = mode === ComicReadingMode.continuousHorizontal;
+    const target = itemRefs.current.get(cursorIndex);
+    if (!target) {
+      if (isHorizontal) el.scrollLeft = 0;
+      else el.scrollTop = 0;
       return;
     }
-    el.scrollTop = firstPage
-      ? el.scrollTop + firstPage.getBoundingClientRect().top - el.getBoundingClientRect().top
-      : 0;
-  }, [mode, pages, suppressScrollSync]);
+    const align =
+      cursorIndex === first.index ? "start" : cursorIndex === pages[pages.length - 1]?.index ? "end" : "center";
+    holdPageAlignment(el, target, isHorizontal, align);
+  }, [cursorIndex, holdPageAlignment, mode, pages, suppressScrollSync]);
+
+  // The previous-chapter page sits above the first page. When it appears with the
+  // reader at the very top, step past it so they open on the page, not on it.
+  const hasPreviousBoundary = isContinuousScrollMode && !!boundaryPages?.previous;
+  useLayoutEffect(() => {
+    const first = pages[0];
+    if (!first) return;
+    const hadPreviousBoundary = hadPreviousBoundaryRef.current;
+    hadPreviousBoundaryRef.current = hasPreviousBoundary;
+    if (!hasPreviousBoundary || hadPreviousBoundary || first.index !== cursorIndex) return;
+    const el = scrollRef.current;
+    const firstPage = itemRefs.current.get(first.index);
+    if (!el || !firstPage) return;
+    const isHorizontal = mode === ComicReadingMode.continuousHorizontal;
+    if ((isHorizontal ? el.scrollLeft : el.scrollTop) > 2) return;
+    suppressScrollSync();
+    alignScrollerToPage(el, firstPage, isHorizontal, "start");
+  }, [cursorIndex, hasPreviousBoundary, mode, pages, suppressScrollSync]);
 
   useEffect(() => {
     if (mode !== ComicReadingMode.continuousHorizontal) return;
@@ -1459,17 +1551,27 @@ export const ComicReaderViewport = ({
     const root = scrollRef.current;
     const el = itemRefs.current.get(cursorIndex);
     if (!el) return;
+    const isHorizontal = mode === ComicReadingMode.continuousHorizontal;
+    // Centering would scroll a tall first page halfway past its top, and a reader
+    // on the previous-chapter page has just landed the cursor on the first page.
     const atChapterStart =
       pages[0]?.index === cursorIndex &&
       root != null &&
-      (mode === ComicReadingMode.continuousHorizontal ? root.scrollLeft <= 2 : root.scrollTop <= 2);
+      ((isHorizontal ? root.scrollLeft : root.scrollTop) <= 2 ||
+        Math.abs(
+          isHorizontal
+            ? el.getBoundingClientRect().left - root.getBoundingClientRect().left
+            : el.getBoundingClientRect().top - root.getBoundingClientRect().top
+        ) <= 2);
     if (atChapterStart) return;
+    stopChapterSettleRef.current?.();
     suppressScrollSync();
     el.scrollIntoView({ block: "center", inline: "center", behavior: "auto" });
   }, [cursorIndex, mode, pages, suppressScrollSync]);
 
   useEffect(() => {
     return () => {
+      stopChapterSettleRef.current?.();
       if (programmaticScrollRafRef.current !== null) {
         cancelAnimationFrame(programmaticScrollRafRef.current);
       }

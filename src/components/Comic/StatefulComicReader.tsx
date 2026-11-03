@@ -663,22 +663,26 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     chapter: currentChapterTitle ?? allPages[cursorIndex]?.title,
   });
 
+  const atLastInSegment =
+    !!activeSegment && isAtLastNavigablePositionInSegment(cursorIndex, activeSegment, step);
+  const atFirstInSegment =
+    !!activeSegment && isAtFirstNavigablePositionInSegment(cursorIndex, activeSegment, step);
+
   const scrollBoundaryPages = useMemo(
     () => {
-      const atLastInSegment =
-        !!activeSegment && isAtLastNavigablePositionInSegment(cursorIndex, activeSegment, step);
+      // Scroll modes keep their boundary pages mounted for the whole chapter: they
+      // are what gives a short first or last page enough room to reach the center
+      // line, so mounting them only once the cursor got there could never happen.
       const showNextChapter =
         isScrollMode &&
         chapterModeActive &&
         activeSegment &&
-        hasNextChapter &&
-        atLastInSegment;
+        hasNextChapter;
       const showEndOfReadable =
         (isScrollMode &&
           chapterModeActive &&
           activeSegment &&
-          !hasNextChapter &&
-          atLastInSegment) ||
+          !hasNextChapter) ||
         // Paged modes have no exit page to scroll onto; one opens past the
         // last page only when reading continues on another source.
         (!isScrollMode &&
@@ -692,8 +696,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
           isScrollMode &&
           chapterModeActive &&
           activeSegment &&
-          hasPrevChapter &&
-          isAtFirstNavigablePositionInSegment(cursorIndex, activeSegment, step)
+          hasPrevChapter
             ? {
                 currentTitle: currentChapterTitle,
                 adjacentTitle: prevChapterTitle,
@@ -718,12 +721,12 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     [
       activeSegment,
       allPages.length,
+      atLastInSegment,
       backLink?.href,
       canGoNext,
       chapterModeActive,
       continueElsewhere,
       currentChapterTitle,
-      cursorIndex,
       hasNextChapter,
       hasPrevChapter,
       homeHref,
@@ -733,7 +736,6 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
       nextChapterTitle,
       prevChapterTitle,
       publicationHref,
-      step,
     ]
   );
 
@@ -865,14 +867,14 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
       }
       return;
     }
-    if (scrollBoundaryPages.next) {
+    if (scrollBoundaryPages.next && (!isScrollMode || atLastInSegment)) {
       if (!isScrollMode || boundaryScrollControlsRef.current?.scrollToBoundary("next")) {
         setActiveBoundaryPage("next");
       }
       return;
     }
     goNext();
-  }, [activeBoundaryPage, goNext, goNextFromBoundary, isScrollMode, merged.scrollAmountPercent, mode, scrollBoundaryPages.next]);
+  }, [activeBoundaryPage, atLastInSegment, goNext, goNextFromBoundary, isScrollMode, merged.scrollAmountPercent, mode, scrollBoundaryPages.next]);
 
   const handlePrev = useCallback(() => {
     if (
@@ -890,14 +892,14 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
       setActiveBoundaryPage(null);
       return;
     }
-    if (scrollBoundaryPages.previous) {
+    if (scrollBoundaryPages.previous && atFirstInSegment) {
       if (boundaryScrollControlsRef.current?.scrollToBoundary("prev")) {
         setActiveBoundaryPage("prev");
       }
       return;
     }
     goPrev();
-  }, [activeBoundaryPage, goPrev, goPrevFromBoundary, isScrollMode, merged.scrollAmountPercent, mode, scrollBoundaryPages.previous]);
+  }, [activeBoundaryPage, atFirstInSegment, goPrev, goPrevFromBoundary, isScrollMode, merged.scrollAmountPercent, mode, scrollBoundaryPages.previous]);
 
   const cycleOption = useCallback(<T,>(options: readonly T[], current: T) => {
     const idx = options.findIndex((item) => item === current);
