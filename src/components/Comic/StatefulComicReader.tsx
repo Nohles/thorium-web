@@ -674,11 +674,17 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
         hasNextChapter &&
         atLastInSegment;
       const showEndOfReadable =
-        isScrollMode &&
-        chapterModeActive &&
-        activeSegment &&
-        !hasNextChapter &&
-        atLastInSegment;
+        (isScrollMode &&
+          chapterModeActive &&
+          activeSegment &&
+          !hasNextChapter &&
+          atLastInSegment) ||
+        // Paged modes have no exit page to scroll onto; one opens past the
+        // last page only when reading continues on another source.
+        (!isScrollMode &&
+          !!continueElsewhere &&
+          allPages.length > 0 &&
+          (chapterModeActive ? !!activeSegment && !hasNextChapter && atLastInSegment : !canGoNext));
       const exitHref = backLink?.href ?? publicationHref ?? homeHref ?? "/";
 
       return {
@@ -711,7 +717,9 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     },
     [
       activeSegment,
+      allPages.length,
       backLink?.href,
+      canGoNext,
       chapterModeActive,
       continueElsewhere,
       currentChapterTitle,
@@ -858,13 +866,13 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
       return;
     }
     if (scrollBoundaryPages.next) {
-      if (boundaryScrollControlsRef.current?.scrollToBoundary("next")) {
+      if (!isScrollMode || boundaryScrollControlsRef.current?.scrollToBoundary("next")) {
         setActiveBoundaryPage("next");
       }
       return;
     }
     goNext();
-  }, [activeBoundaryPage, goNext, goNextFromBoundary, merged.scrollAmountPercent, mode, scrollBoundaryPages.next]);
+  }, [activeBoundaryPage, goNext, goNextFromBoundary, isScrollMode, merged.scrollAmountPercent, mode, scrollBoundaryPages.next]);
 
   const handlePrev = useCallback(() => {
     if (
@@ -877,6 +885,11 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
       goPrevFromBoundary();
       return;
     }
+    // Back off a paged exit page onto the last page.
+    if (activeBoundaryPage === "next" && !isScrollMode) {
+      setActiveBoundaryPage(null);
+      return;
+    }
     if (scrollBoundaryPages.previous) {
       if (boundaryScrollControlsRef.current?.scrollToBoundary("prev")) {
         setActiveBoundaryPage("prev");
@@ -884,7 +897,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
       return;
     }
     goPrev();
-  }, [activeBoundaryPage, goPrev, goPrevFromBoundary, merged.scrollAmountPercent, mode, scrollBoundaryPages.previous]);
+  }, [activeBoundaryPage, goPrev, goPrevFromBoundary, isScrollMode, merged.scrollAmountPercent, mode, scrollBoundaryPages.previous]);
 
   const cycleOption = useCallback(<T,>(options: readonly T[], current: T) => {
     const idx = options.findIndex((item) => item === current);
@@ -1180,6 +1193,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
                   containerRef={containerRef}
                   onPageLoadStateChange={onPageLoadStateChange}
                   boundaryPages={scrollBoundaryPages}
+                  pagedBoundaryPage={!isScrollMode && activeBoundaryPage === "next" ? scrollBoundaryPages.next : undefined}
                   onBoundaryPageChange={handleBoundaryPageChange}
                   boundaryScrollControlsRef={boundaryScrollControlsRef}
                 />

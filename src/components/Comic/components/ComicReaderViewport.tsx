@@ -1186,6 +1186,8 @@ export type ComicReaderViewportProps = {
     previous?: ComicBoundaryPageData;
     next?: ComicBoundaryPageData;
   };
+  /** Paged modes: an exit page shown in place of the pages. */
+  pagedBoundaryPage?: ComicBoundaryPageData;
   onBoundaryPageChange?: (kind: ComicBoundaryPageKind | null) => void;
   boundaryScrollControlsRef?: MutableRefObject<ComicBoundaryScrollControls | null>;
 };
@@ -1206,6 +1208,7 @@ export const ComicReaderViewport = ({
   containerRef,
   onPageLoadStateChange,
   boundaryPages,
+  pagedBoundaryPage,
   onBoundaryPageChange,
   boundaryScrollControlsRef,
 }: ComicReaderViewportProps) => {
@@ -1599,6 +1602,12 @@ export const ComicReaderViewport = ({
               <ComicChapterBoundaryPage kind="next" {...boundaryPages.next} />
             </div>
           ) : null}
+        </div>
+      ) : pagedBoundaryPage ? (
+        <div className={styles.paged}>
+          <div className={styles.pagedCell}>
+            <ComicChapterBoundaryPage kind="next" {...pagedBoundaryPage} />
+          </div>
         </div>
       ) : mode === ComicReadingMode.doublePage ? (
         <div
