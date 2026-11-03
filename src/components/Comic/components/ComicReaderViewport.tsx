@@ -32,6 +32,8 @@ import {
   stretchAllowedForScale,
 } from "@/components/Comic/lib/comicReaderLayout";
 import { ComicPage } from "../hooks/useComicReaderController";
+import { useComicImageRecovery } from "../hooks/useComicImageRecovery";
+import { getComicImageRetryUrl } from "../lib/comicImageRecovery";
 import { ComicPageLoadState } from "../lib/comicProgress";
 import {
   COMIC_MOUNT_AHEAD_PAGES,
@@ -569,49 +571,53 @@ const comicPageJustifyContent: Record<ComicPageHorizontalAlignment, CSSPropertie
 
 const ComicImagePlaceholder = ({
   style,
-  showSpinner,
   isBusy,
 }: {
   style: CSSProperties;
-  showSpinner: boolean;
   isBusy: boolean;
-}) => (
-  <div style={style} aria-busy={isBusy}>
-    {showSpinner ? (
-      <div className={styles.imagePlaceholderInner}>
-        <span className={styles.imageSpinner} aria-hidden />
-      </div>
-    ) : null}
-  </div>
-);
+}) => <div style={style} aria-busy={isBusy} />;
 
-const ComicImageLoadError = ({
-  message,
+/** Pins itself to the middle of the screen so it stays reachable on very tall pages. */
+const ComicImageStatus = ({
+  showSpinner,
+  showRetryAction,
+  failedMessage,
   onRetry,
-  frameStyle,
-  areaStyle,
 }: {
-  message: string;
+  showSpinner: boolean;
+  showRetryAction: boolean;
+  failedMessage?: string;
   onRetry: () => void;
-  frameStyle: CSSProperties;
-  areaStyle: CSSProperties;
 }) => {
   const { t } = useI18n();
+  const retryButton = (
+    <button
+      type="button"
+      className={styles.actionButton}
+      data-size="compact"
+      onPointerUp={(event) => event.stopPropagation()}
+      onClick={onRetry}
+    >
+      {t("reader.comic.imageLoad.retry")}
+    </button>
+  );
 
+  if (failedMessage) {
+    return (
+      <div className={styles.imageStatusLayer}>
+        <div className={styles.imageStatus} role="alert">
+          <p className={styles.imageErrorMessage}>{failedMessage}</p>
+          {retryButton}
+        </div>
+      </div>
+    );
+  }
+  if (!showSpinner) return null;
   return (
-    <div style={frameStyle}>
-      {/* The card's padding stays inside the page cell (border-box), or it overflows and scrolls the reader. */}
-      <div className={styles.imageError} style={areaStyle} role="alert">
-        <p className={styles.imageErrorMessage}>{message}</p>
-        <button
-          type="button"
-          className={styles.actionButton}
-          data-size="compact"
-          onPointerUp={(event) => event.stopPropagation()}
-          onClick={onRetry}
-        >
-          {t("reader.comic.imageLoad.retry")}
-        </button>
+    <div className={styles.imageStatusLayer}>
+      <div className={styles.imageStatus}>
+        <span className={styles.imageSpinner} aria-hidden />
+        {showRetryAction ? <div className={styles.imageRetryAction}>{retryButton}</div> : null}
       </div>
     </div>
   );
@@ -747,7 +753,9 @@ const ComicImage = memo(function ComicImage({
   horizontalAlignment?: ComicPageHorizontalAlignment;
 }) {
   const { t } = useI18n();
-  const [reloadKey, setReloadKey] = useState(0);
+  // Scoped to the page: paged mode reuses this component as the reader turns pages.
+  const [reloadState, setReloadState] = useState({ href: link.href, count: 0 });
+  const reloadKey = reloadState.href === link.href ? reloadState.count : 0;
   const { objectUrl, error, isLoading } = useObjectUrl(
     publication,
     link,
@@ -756,15 +764,14 @@ const ComicImage = memo(function ComicImage({
     loadPriority
   );
   const frameRef = useRef<HTMLDivElement | null>(null);
+  const imageRef = useRef<HTMLImageElement | null>(null);
   const shouldStretchRef = useRef(false);
   const [isImageReady, setIsImageReady] = useState(false);
-  const [imageError, setImageError] = useState<string | null>(null);
   const [isPlaceholderVisible, setIsPlaceholderVisible] = useState(false);
   const [imageDimensions, setImageDimensions] = useState<ComicImageDimensions | undefined>(() =>
     getComicImageDimensions(publication, link)
   );
   const [placeholderHeight, setPlaceholderHeight] = useState<number | undefined>();
-  const failedMessage = t("reader.comic.imageLoad.failed");
 
   const stretchOk = stretchSmallPages && stretchAllowedForScale(scaleType);
   const shouldStretch = isImageReady && shouldStretchRef.current;
@@ -772,7 +779,6 @@ const ComicImage = memo(function ComicImage({
   useEffect(() => {
     shouldStretchRef.current = false;
     setIsImageReady(false);
-    setImageError(null);
   }, [link.href, reloadKey]);
 
   // When a page leaves the load window its src is released; drop ready/stretch
@@ -839,13 +845,24 @@ const ComicImage = memo(function ComicImage({
     return () => observer.disconnect();
   }, [isImageReady, shouldLoad]);
 
-  useEffect(() => {
-    if (!objectUrl || isImageReady || error || imageError || !shouldLoad) return;
-    const timeoutId = setTimeout(() => {
-      setImageError(failedMessage);
-    }, COMIC_IMAGE_LOAD_TIMEOUT_MS);
-    return () => clearTimeout(timeoutId);
-  }, [error, failedMessage, imageError, isImageReady, objectUrl, shouldLoad]);
+  const reloadImage = useCallback(() => {
+    if (link.href) invalidateComicImageBlob(publication, link.href);
+    // A detached <img> keeps downloading until collected; free its connection now.
+    imageRef.current?.removeAttribute("src");
+    setIsImageReady(false);
+    setReloadState((previous) => ({
+      href: link.href,
+      count: (previous.href === link.href ? previous.count : 0) + 1,
+    }));
+  }, [link.href, publication]);
+
+  const { hasFailed, showRetryAction, reportImageError, retry } = useComicImageRecovery({
+    href: link.href,
+    isPending: shouldLoad && !isImageReady,
+    hasLoadError: !!error,
+    isInView: isPlaceholderVisible,
+    onReload: reloadImage,
+  });
 
   const onImgLoad = useCallback(
     (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -892,15 +909,8 @@ const ComicImage = memo(function ComicImage({
 
   const onImgError = useCallback(() => {
     setIsImageReady(false);
-    setImageError(failedMessage);
-  }, [failedMessage]);
-
-  const handleRetry = useCallback(() => {
-    if (link.href) invalidateComicImageBlob(publication, link.href);
-    setImageError(null);
-    setIsImageReady(false);
-    setReloadKey((key) => key + 1);
-  }, [link.href, publication]);
+    reportImageError();
+  }, [reportImageError]);
 
   const imgStyle = useMemo(
     () => ({
@@ -921,12 +931,12 @@ const ComicImage = memo(function ComicImage({
   );
 
   const loadState = useMemo<ComicPageLoadState>(() => {
-    if (error || imageError) return "error";
+    if (hasFailed) return "error";
     if (!shouldLoad) return "idle";
     if (isLoading || (objectUrl && !isImageReady)) return "loading";
     if (objectUrl && isImageReady) return "loaded";
     return "idle";
-  }, [error, imageError, isImageReady, isLoading, objectUrl, shouldLoad]);
+  }, [hasFailed, isImageReady, isLoading, objectUrl, shouldLoad]);
 
   useEffect(() => {
     onPageLoadStateChange?.(pageIndex, loadState);
@@ -957,32 +967,17 @@ const ComicImage = memo(function ComicImage({
     position: "relative",
   };
 
-  if (error || imageError) {
-    return (
-      <ComicImageLoadError
-        // Raw fetch/decode messages are browser-specific English; telemetry keeps them.
-        message={failedMessage}
-        onRetry={handleRetry}
-        frameStyle={frameStyle}
-        areaStyle={areaStyle}
-      />
-    );
-  }
-
   return (
     <div style={frameStyle}>
       <div ref={frameRef} style={areaStyle}>
-        {!isImageReady ? (
-          <ComicImagePlaceholder
-            style={placeholderStyle}
-            showSpinner={loadState === "loading" && isPlaceholderVisible}
-            isBusy={loadState === "loading"}
-          />
+        {!isImageReady || hasFailed ? (
+          <ComicImagePlaceholder style={placeholderStyle} isBusy={loadState === "loading"} />
         ) : null}
-        {objectUrl ? (
+        {objectUrl && !hasFailed ? (
           <img
+            ref={imageRef}
             key={reloadKey}
-            src={objectUrl}
+            src={getComicImageRetryUrl(objectUrl, reloadKey)}
             alt={alt}
             className={styles.image}
             data-ready={isImageReady}
@@ -998,6 +993,13 @@ const ComicImage = memo(function ComicImage({
             }
           />
         ) : null}
+        <ComicImageStatus
+          showSpinner={loadState === "loading" && isPlaceholderVisible}
+          showRetryAction={showRetryAction}
+          // Raw fetch/decode messages are browser-specific English; telemetry keeps them.
+          failedMessage={hasFailed ? t("reader.comic.imageLoad.failed") : undefined}
+          onRetry={retry}
+        />
       </div>
     </div>
   );

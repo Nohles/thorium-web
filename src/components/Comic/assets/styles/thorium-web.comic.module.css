@@ -159,13 +159,49 @@
     reveal 150ms ease-out 400ms forwards;
 }
 
-.imagePlaceholderInner {
+/* Spans the page so the status can center on short pages and travel on tall ones. */
+.imageStatusLayer {
+  position: absolute;
+  inset: 0;
+  container-type: size;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
-  min-height: inherit;
+  pointer-events: none;
+}
+
+.imageStatus {
+  position: sticky;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding-inline: 16px;
+  text-align: center;
+}
+
+/* Tall pages hold it near the middle of the scrollport while any of the page shows. */
+@container (min-height: 50vh) {
+  .imageStatus {
+    top: calc(50% - 3rem);
+    bottom: calc(50% - 3rem);
+  }
+}
+
+.imageStatus .actionButton {
+  pointer-events: auto;
+}
+
+/* Out of flow, so the spinner does not jump when the button appears. */
+.imageRetryAction {
+  position: absolute;
+  top: calc(100% + 12px);
+  width: max-content;
+  opacity: 0;
+  animation: reveal 150ms ease-out forwards;
 }
 
 .image {
@@ -175,14 +211,6 @@
 
 .image[data-ready="true"] {
   visibility: visible;
-}
-
-.imageError {
-  flex-direction: column;
-  gap: 12px;
-  box-sizing: border-box;
-  padding: 16px;
-  text-align: center;
 }
 
 .imageErrorMessage {
@@ -517,5 +545,9 @@
   .imageSpinner {
     animation: reveal 0ms 400ms forwards;
     border-top-color: color-mix(in srgb, var(--th-theme-text, #fff) 58%, transparent);
+  }
+
+  .imageRetryAction {
+    animation-duration: 0ms;
   }
 }
