@@ -932,18 +932,12 @@ export function pushDecorationsToFrames(
   );
 
   type Acked = { ok: boolean };
-  const acked: Acked[] = [];
-  const track = (ack?: (ok: boolean) => void) => {
-    const record: Acked = { ok: false };
-    acked.push(record);
-    return (ok: boolean) => {
-      record.ok = ok;
-      ack?.(ok);
-    };
-  };
-
-  const synced: { state: DecorationFrameSync; desired: Map<string, string> }[] =
-    [];
+  const synced: {
+    state: DecorationFrameSync;
+    desired: Map<string, string>;
+    acked: Acked[];
+    settled: boolean;
+  }[] = [];
   let reachableTargets = 0;
 
   for (const target of targets) {
@@ -979,6 +973,16 @@ export function pushDecorationsToFrames(
       groupStates.set(group, state);
     }
 
+    // A pooled chapter can still be loading while the visible one is ready.
+    // Its missing acknowledgements must not invalidate healthy frames and
+    // cause every retry to clear/re-add their visible highlights.
+    const acked: Acked[] = [];
+    const track = () => {
+      const record: Acked = { ok: false };
+      acked.push(record);
+      return (ok: boolean) => { record.ok = ok; };
+    };
+
     if (!state.clean) {
       // Frame state is unknown (a previous sync failed): full resync.
       msg.send(
@@ -1012,30 +1016,28 @@ export function pushDecorationsToFrames(
       }
     }
 
-    synced.push({ state, desired });
+    synced.push({ state, desired, acked, settled: false });
   }
 
   if (reachableTargets === 0) return Promise.resolve(false);
-  if (acked.length === 0) {
-    // Live frames already match the desired state exactly.
-    for (const { state, desired } of synced) {
-      state.applied = desired;
-      state.clean = true;
-    }
-    return Promise.resolve(true);
-  }
-
   return new Promise((resolve) => {
     const started = Date.now();
     const check = () => {
-      if (acked.every((a) => a.ok)) {
-        for (const { state, desired } of synced) {
+      for (const frame of synced) {
+        if (frame.settled) continue;
+        if (frame.acked.every((ack) => ack.ok)) {
+          const { state, desired } = frame;
           state.applied = desired;
           state.clean = true;
+          frame.settled = true;
         }
+      }
+      if (synced.every((frame) => frame.settled)) {
         resolve(true);
       } else if (Date.now() - started > 2000) {
-        for (const { state } of synced) state.clean = false;
+        for (const frame of synced) {
+          if (!frame.settled) frame.state.clean = false;
+        }
         resolve(false);
       } else {
         setTimeout(check, 120);
