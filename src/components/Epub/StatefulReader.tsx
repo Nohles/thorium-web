@@ -387,6 +387,21 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
   const interactionRef = useRef(interactions);
   interactionRef.current = interactions;
 
+  // One shared, cancellable position handler: navigator position reports
+  // arrive in bursts, and only the latest one needs storing. A new debounce
+  // per call would delay every report without coalescing any of them.
+  const positionHandlerRef = useRef({ setLocalData, updatePublicationNavigationState });
+  positionHandlerRef.current = { setLocalData, updatePublicationNavigationState };
+  const latestLocatorRef = useRef<Locator | null>(null);
+  const handlePositionChanged = useMemo(() => debounce(() => {
+    const locator = latestLocatorRef.current;
+    if (!locator) return;
+    positionHandlerRef.current.setLocalData(locator);
+    positionHandlerRef.current.updatePublicationNavigationState();
+  }, 250), []);
+  // Leaving the reader still stores the last reported position.
+  useEffect(() => () => handlePositionChanged.flush(), [handlePositionChanged]);
+
   const { decorations } = interactions;
 
   const mergeContentProtection = (
@@ -426,12 +441,8 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
       updateCurrentTocEntry(item);
     },
     positionChanged: async function (locator: Locator): Promise<void> {
-      const debouncedHandleProgression = debounce(
-        async () => {
-          setLocalData(locator);
-          updatePublicationNavigationState();
-        }, 250);
-      debouncedHandleProgression();
+      latestLocatorRef.current = locator;
+      handlePositionChanged();
     },
     tap: function (_e: FrameClickEvent): boolean {
       const { decorations: currentDecorations, onDecorationActivated: activate } = interactionRef.current;
@@ -552,7 +563,7 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
         }
       }
     },
-  }), [navLayout, setLocalData, dispatch, handleTap, handleClick, cache, preferences.affordances.scroll, isScrollStart, isScrollEnd, updatePublicationNavigationState, moveTo, goProgression, zoomIn, zoomOut, profile, handleFullscreen, getFocusedDockableKey, currentLocator, getCframes, updateAdjacentItems, clearAdjacentItems, updateCurrentTocEntry, clearCurrentTocEntry]);
+  }), [navLayout, handlePositionChanged, dispatch, handleTap, handleClick, cache, preferences.affordances.scroll, isScrollStart, isScrollEnd, updatePublicationNavigationState, moveTo, goProgression, zoomIn, zoomOut, profile, handleFullscreen, getFocusedDockableKey, currentLocator, getCframes, updateAdjacentItems, clearAdjacentItems, updateCurrentTocEntry, clearCurrentTocEntry]);
   
   const initialPosition = useMemo(() => {
     return resolveInitialPosition(getLocalData(), positionsList);
