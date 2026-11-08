@@ -1,0 +1,252 @@
+.bar {
+  container-type: inline-size;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--th-layout-spacing, 0.75rem);
+  padding: 0.625rem 1rem calc(0.625rem + env(safe-area-inset-bottom, 0px));
+  /* The same surface as the reader's header and footer bars. */
+  background: color-mix(in srgb, var(--th-theme-background) 97%, var(--th-theme-text));
+  color: var(--th-theme-text);
+  border-top: 1px solid color-mix(in srgb, var(--th-theme-text) 12%, transparent);
+}
+
+.timeline {
+  position: absolute;
+  inset: -8px 0 auto;
+  height: 16px;
+}
+
+.slider,
+.track {
+  height: 16px;
+}
+
+.track {
+  position: relative;
+  cursor: pointer;
+}
+
+.track::before {
+  content: "";
+  position: absolute;
+  inset: 50% 0 auto;
+  height: 2px;
+  transform: translateY(-50%);
+  background: color-mix(in srgb, var(--th-theme-subdue) 35%, transparent);
+}
+
+.track:hover::before {
+  height: 4px;
+}
+
+.played {
+  position: absolute;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+  background: var(--th-theme-text);
+  pointer-events: none;
+}
+
+.track:hover .played {
+  height: 4px;
+}
+
+.thumb {
+  top: 50%;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: var(--th-theme-text);
+  opacity: 0;
+}
+
+.track:hover .thumb,
+.thumb[data-dragging],
+.thumb[data-focus-visible] {
+  opacity: 1;
+}
+
+.thumb[data-focus-visible] {
+  outline: 2px solid var(--th-theme-focus);
+  outline-offset: 2px;
+}
+
+.tick {
+  top: 50%;
+  width: 1px;
+  height: 8px;
+  transform: translateY(-50%);
+  background: var(--th-theme-text);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.hiddenTime {
+  display: none;
+}
+
+.notice {
+  position: absolute;
+  bottom: calc(100% + 0.5rem);
+  left: 1rem;
+  max-width: min(32rem, calc(100% - 2rem));
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--th-theme-subdue);
+  border-radius: var(--th-layout-radius, 6px);
+  background: var(--th-theme-background);
+  font-size: 0.875rem;
+}
+
+.start,
+.end {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  min-width: 0;
+}
+
+.start {
+  gap: 0.625rem;
+}
+
+.end {
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
+.center {
+  display: flex;
+  flex: none;
+  --audio-icon-base: var(--th-icon-size, 24px);
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cover {
+  flex: none;
+  width: 1.75rem;
+  height: 2.5rem;
+  border-radius: 2px;
+  object-fit: cover;
+}
+
+.text {
+  min-width: 0;
+}
+
+.title,
+.metaText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.title {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+
+.status {
+  flex: none;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: var(--th-theme-subdue);
+}
+
+.status[data-tone="ok"] {
+  background: #3a9d5d;
+}
+
+.status[data-tone="limited"] {
+  background: #d29a2d;
+}
+
+.status[data-tone="error"] {
+  background: #d4483b;
+}
+
+.center .skip {
+  --th-icon-size: calc(var(--audio-icon-base) * 1.5);
+  position: relative;
+  padding: calc(var(--th-icon-size) * (1 / 8));
+}
+
+.mirrored {
+  transform: scaleX(-1);
+}
+
+.skipSeconds {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding-top: 3px;
+  font-size: 0.5rem;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.center .playPause {
+  --th-icon-size: calc(var(--audio-icon-base) * 1.5);
+  padding: calc(var(--th-icon-size) * (1 / 8));
+}
+
+.playPause[data-busy] {
+  opacity: 0.7;
+}
+
+.textAction {
+  min-width: 2.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.volumePopover {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--th-theme-subdue);
+  border-radius: var(--th-layout-radius, 6px);
+  background: var(--th-theme-background);
+}
+
+.volumeDialog {
+  outline: none;
+}
+
+.end [aria-pressed="false"] {
+  opacity: 0.55;
+}
+
+@container (max-width: 40rem) {
+  .hideCompact,
+  .cover {
+    display: none;
+  }
+
+  .start {
+    flex: 1 1 auto;
+  }
+
+  .end {
+    flex: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .thumb {
+    transition: opacity 120ms ease;
+  }
+}
