@@ -215,6 +215,17 @@
   font-variant-numeric: tabular-nums;
 }
 
+.volumePopover {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--th-theme-subdue);
+  border-radius: var(--th-layout-radius, 6px);
+  background: var(--th-theme-background);
+}
+
+.volumeDialog {
+  outline: none;
+}
+
 .end [aria-pressed="false"] {
   opacity: 0.55;
 }

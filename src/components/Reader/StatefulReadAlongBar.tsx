@@ -1,22 +1,32 @@
 "use client";
 
-import { ComponentType, ReactNode, SVGProps } from "react";
+import { ComponentType, ReactNode, SVGProps, useRef, useState } from "react";
 
 import classNames from "classnames";
+
+import { Dialog, Popover } from "react-aria-components";
 
 import PauseIcon from "../Audio/controls/assets/icons/pause.svg";
 import PlayIcon from "../Audio/controls/assets/icons/play_arrow.svg";
 import ReplayIcon from "../Audio/controls/assets/icons/replay.svg";
+import VolumeUpIcon from "../Audio/actions/Volume/assets/icons/volume_up.svg";
+import VolumeDownIcon from "../Audio/actions/Volume/assets/icons/volume_down.svg";
+import VolumeMuteIcon from "../Audio/actions/Volume/assets/icons/volume_mute.svg";
+import VolumeOffIcon from "../Audio/actions/Volume/assets/icons/volume_off.svg";
 import CloseIcon from "@/core/Components/Buttons/assets/icons/close.svg";
 
 import readerSharedUI from "../assets/styles/thorium-web.button.module.css";
 import audioStyles from "../Audio/controls/assets/styles/thorium-web.audioPlayback.module.css";
+import volumeStyles from "../Audio/actions/Volume/assets/styles/thorium-web.volume.module.css";
 import styles from "../assets/styles/thorium-web.readAlongBar.module.css";
 
 import { StatefulActionIcon } from "../Actions/Triggers/StatefulActionIcon";
 import { ThAudioProgress, TimelineSegment } from "@/core/Components/Audio/ThAudioProgress";
+import { ThSlider } from "@/core/Components/Settings/ThSlider";
 
 import { useI18n } from "@/i18n/useI18n";
+
+import { isIOSish } from "@/core/Helpers/getPlatform";
 
 export interface ReadAlongBarAction {
   id: string;
@@ -35,6 +45,13 @@ export interface ReadAlongBarSkip {
   seconds: number;
   label: string;
   onPress: () => void;
+}
+
+export interface ReadAlongBarVolume {
+  /** From 0 to 1. */
+  value: number;
+  label: string;
+  onChange: (value: number) => void;
 }
 
 export interface StatefulReadAlongBarProps {
@@ -56,6 +73,8 @@ export interface StatefulReadAlongBarProps {
   onSeek: (seconds: number) => void;
   skipBackward: ReadAlongBarSkip;
   skipForward: ReadAlongBarSkip;
+  /** Left out where the browser controls the volume, such as iOS. */
+  volume?: ReadAlongBarVolume;
   actions?: ReadAlongBarAction[];
   /** Ends listening; the reader stays open where it is. */
   close: { label: string; onPress: () => void };
@@ -64,6 +83,63 @@ export interface StatefulReadAlongBarProps {
   /** Rendered inside the bar, for controls that position themselves. */
   children?: ReactNode;
 }
+
+const VOLUME_RANGE = [0, 1];
+const VOLUME_STEP = 0.05;
+
+const volumeIcon = (value: number) => {
+  if (value === 0) return VolumeOffIcon;
+  if (value <= 1 / 3) return VolumeMuteIcon;
+  if (value <= 2 / 3) return VolumeDownIcon;
+  return VolumeUpIcon;
+};
+
+/** A button that opens into a slider, like the audiobook player's volume. */
+const ReadAlongVolume = ({ value, label, onChange }: ReadAlongBarVolume) => {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const VolumeIcon = volumeIcon(value);
+
+  return (
+    <>
+      <StatefulActionIcon
+        ref={ triggerRef }
+        className={ classNames(readerSharedUI.icon, styles.hideCompact) }
+        aria-label={ label }
+        aria-expanded={ isOpen }
+        tooltipLabel={ label }
+        placement="top"
+        onPress={ () => setIsOpen((open) => !open) }
+      >
+        <VolumeIcon aria-hidden="true" focusable="false" />
+      </StatefulActionIcon>
+      <Popover
+        triggerRef={ triggerRef }
+        placement="top"
+        className={ styles.volumePopover }
+        isOpen={ isOpen }
+        onOpenChange={ setIsOpen }
+      >
+        <Dialog aria-label={ label } className={ styles.volumeDialog }>
+          <ThSlider
+            aria-label={ label }
+            className={ volumeStyles.slider }
+            orientation="vertical"
+            range={ VOLUME_RANGE }
+            step={ VOLUME_STEP }
+            value={ value }
+            onChange={ (next) => onChange(Array.isArray(next) ? next[0] : next) }
+            compounds={{
+              track: { className: volumeStyles.sliderTrack },
+              thumb: { className: volumeStyles.sliderThumb, autoFocus: true },
+              output: { style: () => ({ display: "none" }) },
+            }}
+          />
+        </Dialog>
+      </Popover>
+    </>
+  );
+};
 
 /**
  * Audio controls for a publication read with narration. Pass it as the reader's
@@ -86,6 +162,7 @@ export const StatefulReadAlongBar = ({
   onSeek,
   skipBackward,
   skipForward,
+  volume,
   actions,
   close,
   notice,
@@ -172,6 +249,7 @@ export const StatefulReadAlongBar = ({
       </div>
 
       <div className={ styles.end }>
+        { volume && !isIOSish() ? <ReadAlongVolume { ...volume } /> : null }
         { actions?.map(({ id, label: actionLabel, onPress, Icon, text, isActive, hideWhenCompact }) => (
           <StatefulActionIcon
             key={ id }
