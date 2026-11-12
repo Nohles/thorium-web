@@ -1,5 +1,5 @@
 import { describe, expect, spyOn, test } from "bun:test";
-import { pushDecorationsToFrames, type ReaderDecorationInput } from "./ReaderInteractions";
+import { decorationFrameStateKey, pushDecorationsToFrames, type ReaderDecorationInput } from "./ReaderInteractions";
 
 const decoration = (id: string, href: string): ReaderDecorationInput => ({
   id,
@@ -83,5 +83,36 @@ describe("decoration sync across pooled chapter frames", () => {
     expect(await pushWithTimeout(navigator, decorations)).toBe(false);
     expect(await pushWithTimeout(navigator, decorations)).toBe(false);
     expect(visible.requests.map(request => request.action)).toEqual(["add"]);
+  });
+});
+
+describe("decorationFrameStateKey", () => {
+  test("stays the same while the same frames are live", () => {
+    const navigator = { pool: { pool: new Map([["a.xhtml", frame(() => true)], ["b.xhtml", frame(() => true)]]) } };
+    expect(decorationFrameStateKey(navigator)).toBe(decorationFrameStateKey(navigator));
+  });
+
+  test("changes when a frame is replaced at the same href", () => {
+    const pool = new Map([["a.xhtml", frame(() => true)]]);
+    const navigator = { pool: { pool } };
+    const before = decorationFrameStateKey(navigator);
+    pool.set("a.xhtml", frame(() => true));
+    expect(decorationFrameStateKey(navigator)).not.toBe(before);
+  });
+
+  test("changes when a frame gains its channel or another frame joins", () => {
+    const loading: { msg?: ReturnType<typeof frame>["msg"] } = {};
+    const pool = new Map<string, { msg?: ReturnType<typeof frame>["msg"] }>([["a.xhtml", loading]]);
+    const navigator = { pool: { pool } };
+    const empty = decorationFrameStateKey(navigator);
+    loading.msg = frame(() => true).msg;
+    const ready = decorationFrameStateKey(navigator);
+    expect(ready).not.toBe(empty);
+    pool.set("b.xhtml", frame(() => true));
+    expect(decorationFrameStateKey(navigator)).not.toBe(ready);
+  });
+
+  test("is empty without a navigator", () => {
+    expect(decorationFrameStateKey(null)).toBe("");
   });
 });
