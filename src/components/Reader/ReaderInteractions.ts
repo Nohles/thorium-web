@@ -145,6 +145,31 @@ export const decorationFrameTargetsFromNavigator = (
   return null;
 };
 
+const frameChannelIds = new WeakMap<object, number>();
+let nextFrameChannelId = 1;
+
+/**
+ * A short key naming the live frames and their comms channels. It changes when
+ * a frame is added, removed, gains its channel, or is replaced by a new frame
+ * at the same href, which are the moments decorations must be pushed again.
+ * Comparing it is cheap enough to do on every poll.
+ */
+export const decorationFrameStateKey = (navigator: unknown): string => {
+  const targets = decorationFrameTargetsFromNavigator(navigator);
+  if (!targets) return "";
+  return targets
+    .map((target) => {
+      if (!target.msg) return `${target.href ?? ""}:-`;
+      let id = frameChannelIds.get(target.msg);
+      if (id === undefined) {
+        id = nextFrameChannelId++;
+        frameChannelIds.set(target.msg, id);
+      }
+      return `${target.href ?? ""}:${id}`;
+    })
+    .join("|");
+};
+
 /**
  * Fill in a missing listener only after Readium exposes the frame in its
  * current viewport. Setting FrameComms.listener synchronously flushes buffered

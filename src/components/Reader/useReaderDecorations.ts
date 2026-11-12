@@ -11,7 +11,7 @@ import {
 } from "@readium/navigator";
 import { Locator } from "@readium/shared";
 import {
-  decorationFrameTargetsFromNavigator,
+  decorationFrameStateKey,
   ensureNavigatorFrameListeners,
   pushDecorationsToFrames,
   setDecorationGroupActivatable,
@@ -23,6 +23,12 @@ import type {
 
 const ACTIVATION_GROUP = "reader-decoration-activations";
 const ACTIVATION_REGISTRY_HREF = "reader-decoration-activation-registry";
+/**
+ * How often the frame set is checked. A check compares one short key and does
+ * nothing else unless a frame appeared or the decorations changed, so it can
+ * run often enough that a new chapter is decorated without a visible wait.
+ */
+const FRAME_POLL_MS = 150;
 
 interface NativeDecorationNavigator {
   applyDecorations(decorations: Decoration[], group: string): void;
@@ -87,6 +93,8 @@ interface UseReaderDecorationsProps {
  *
  * Pushes are diffed against per-frame state, so re-running with identical
  * content is a no-op and genuine changes never flash (no clear+re-add-all).
+ * Both effects key on the decorations' content, not the array's identity: a
+ * refetch that returns the same decorations must not tear anything down.
  */
 export function useReaderDecorations({
   getNavigator,
@@ -97,6 +105,12 @@ export function useReaderDecorations({
     () => JSON.stringify(decorations ?? []),
     [decorations],
   );
+  // A counter stands in for the signature in poll keys, so an idle poll never
+  // builds or compares a string the size of every decoration.
+  const contentRef = useRef({ signature, version: 0 });
+  if (contentRef.current.signature !== signature) {
+    contentRef.current = { signature, version: contentRef.current.version + 1 };
+  }
   const lastGoodKeyRef = useRef<string | null>(null);
   const inFlightRef = useRef(false);
 
@@ -105,19 +119,16 @@ export function useReaderDecorations({
   const activationRef = useRef(onDecorationActivated);
   activationRef.current = onDecorationActivated;
   const nativeActivationEnabled = Boolean(onDecorationActivated);
+  const hasDecorations = decorations !== undefined;
 
   useEffect(() => {
-    if (!getNavigator || decorations === undefined) return;
+    if (!getNavigator || !hasDecorations) return;
     let disposed = false;
 
     const tick = async () => {
       if (inFlightRef.current || disposed) return;
       const navigator = getNavigator();
-      const targets = decorationFrameTargetsFromNavigator(navigator);
-      const stateKey = JSON.stringify([
-        signature,
-        targets?.map((target) => [target.href, Boolean(target.msg)]) ?? null,
-      ]);
+      const stateKey = `${contentRef.current.version}#${decorationFrameStateKey(navigator)}`;
       if (stateKey === lastGoodKeyRef.current) return;
       inFlightRef.current = true;
       try {
@@ -133,19 +144,18 @@ export function useReaderDecorations({
     };
 
     void tick();
-    const interval = setInterval(() => void tick(), 600);
+    const interval = setInterval(() => void tick(), FRAME_POLL_MS);
     return () => {
       disposed = true;
       clearInterval(interval);
     };
-  }, [getNavigator, decorations, signature]);
+  }, [getNavigator, hasDecorations, signature]);
 
   // Remove decorations from live frames only when the hook stops rendering
   // them or unmounts — not on every incidental effect re-run, which used to
   // wipe and repaint the highlights on each parent render.
   const getNavigatorRef = useRef(getNavigator);
   getNavigatorRef.current = getNavigator;
-  const hasDecorations = decorations !== undefined;
   useEffect(() => {
     return () => {
       if (!hasDecorations) return;
@@ -155,11 +165,14 @@ export function useReaderDecorations({
   }, [hasDecorations]);
 
   useEffect(() => {
-    if (!getNavigator || decorations === undefined || !nativeActivationEnabled) {
+    if (!getNavigator || !hasDecorations || !nativeActivationEnabled) {
       return;
     }
+    const current = decorationsRef.current ?? [];
     let disposed = false;
     let activeNavigator: NativeDecorationNavigator | null = null;
+    let syncedKey: string | null = null;
+    let syncing = false;
     const observer: DecorationObserver = {
       onDecorationActivated: (event: OnDecorationActivatedEvent) => {
         const original = nativeDecorationsById.get(event.decoration.id);
@@ -170,14 +183,14 @@ export function useReaderDecorations({
         return true;
       },
     };
-    const nativeDecorations = decorations
+    const nativeDecorations = current
       .map(activationDecoration)
       .filter((item): item is Decoration => item !== null);
     const nativeDecorationsById = new Map(
       nativeDecorations.map((decoration) => [decoration.id, decoration]),
     );
     const activatableIds = new Set(nativeDecorationsById.keys());
-    const activatableDecorations = decorations.filter((decoration) =>
+    const activatableDecorations = current.filter((decoration) =>
       activatableIds.has(decoration.id),
     );
     // Readium's observer resolves events through its internal decoration map.
@@ -208,6 +221,7 @@ export function useReaderDecorations({
         activationOnly: true,
       });
       activeNavigator = null;
+      syncedKey = null;
     };
     const tick = () => {
       if (disposed) return;
@@ -223,6 +237,10 @@ export function useReaderDecorations({
         navigator.applyDecorations(registryDecorations, ACTIVATION_GROUP);
       }
       ensureNavigatorFrameListeners(navigator);
+      // Nothing to send while the same frames hold what was last acknowledged.
+      const frameKey = decorationFrameStateKey(navigator);
+      if (syncing || frameKey === syncedKey) return;
+      syncing = true;
       void pushDecorationsToFrames(
         navigator,
         activatableDecorations,
@@ -231,7 +249,10 @@ export function useReaderDecorations({
           activationOnly: true,
         },
       ).then((synced) => {
-        if (synced && !disposed && navigator === activeNavigator) {
+        syncing = false;
+        if (disposed || navigator !== activeNavigator) return;
+        syncedKey = synced ? frameKey : null;
+        if (synced) {
           // The frame creates a decoration group on its first `decorate`
           // message. The navigator may not expose that pooled frame through
           // its current viewport yet, so enable activation on the same direct
@@ -246,11 +267,11 @@ export function useReaderDecorations({
     };
 
     tick();
-    const interval = setInterval(tick, 600);
+    const interval = setInterval(tick, FRAME_POLL_MS);
     return () => {
       disposed = true;
       clearInterval(interval);
       disconnect();
     };
-  }, [decorations, getNavigator, nativeActivationEnabled, signature]);
+  }, [getNavigator, hasDecorations, nativeActivationEnabled, signature]);
 }
