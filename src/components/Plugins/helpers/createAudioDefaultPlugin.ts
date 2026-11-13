@@ -12,6 +12,7 @@ import { StatefulAudioSkipBackwardInterval } from "../../Audio/Settings/Stateful
 import { StatefulAudioSkipForwardInterval } from "../../Audio/Settings/StatefulAudioSkipForwardInterval";
 import { StatefulAudioSkipInterval } from "../../Audio/Settings/StatefulAudioSkipInterval";
 import { StatefulAudioAutoPlay } from "../../Audio/Settings/StatefulAudioAutoPlay";
+import { StatefulAudioProgressScope } from "../../Audio/Settings/StatefulAudioProgressScope";
 import { StatefulTheme } from "../../Settings/StatefulTheme";
 
 import { StatefulAudioVolumeTrigger } from "../../Audio/actions/Volume/StatefulAudioVolumeTrigger";
@@ -29,7 +30,7 @@ export const createAudioDefaultPlugin = (): ThPlugin => {
     id: "audio-core",
     name: "Audio Core Components",
     description: "Default components for Thorium Web Audio StatefulReader",
-    version: "1.5.49",
+    version: "1.5.50",
     components: {
       actions: {
         [ThActionsKeys.settings]: {
@@ -68,6 +69,9 @@ export const createAudioDefaultPlugin = (): ThPlugin => {
         },
         [ThAudioKeys.autoPlay]: {
           Comp: StatefulAudioAutoPlay
+        },
+        [ThAudioKeys.progressScope]: {
+          Comp: StatefulAudioProgressScope
         }
       }
     }

@@ -1,5 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+import { AudioProgressScope, defaultAudioProgressScope } from "@/components/Audio/controls/progressScope";
+
 export interface AudioSettingsState {
   volume: number;
   playbackRate: number;
@@ -10,6 +12,8 @@ export interface AudioSettingsState {
   pollInterval: number;
   autoPlay: boolean;
   enableMediaSession: boolean;
+  /** What the progress bar spans. Settings saved before it existed lack it. */
+  progressScope?: AudioProgressScope;
 }
 
 const initialState: AudioSettingsState = {
@@ -22,6 +26,7 @@ const initialState: AudioSettingsState = {
   pollInterval: 1000,
   autoPlay: true,
   enableMediaSession: true,
+  progressScope: defaultAudioProgressScope,
 };
 
 export const audioSettingsSlice = createSlice({
@@ -55,6 +60,9 @@ export const audioSettingsSlice = createSlice({
     setEnableMediaSession: (state, action) => {
       state.enableMediaSession = action.payload;
     },
+    setProgressScope: (state, action: { payload: AudioProgressScope }) => {
+      state.progressScope = action.payload;
+    },
   },
 });
 
@@ -68,6 +76,7 @@ export const {
   setPollInterval,
   setAutoPlay,
   setEnableMediaSession,
+  setProgressScope,
 } = audioSettingsSlice.actions;
 
 export default audioSettingsSlice.reducer;

@@ -5,7 +5,7 @@
   grid-template-areas:
     "chapter chapter chapter"
     "progress progress progress"
-    "elapsed . remaining";
+    "elapsed summary remaining";
   grid-template-columns: 1fr 1fr 1fr;
   align-items: center;
   gap: 0.5rem;
@@ -73,7 +73,16 @@
 
 .slider[data-disabled] .current,
 .slider[data-disabled] .elapsed,
-.slider[data-disabled] .remaining {
+.slider[data-disabled] .summary {
+  grid-area: summary;
+  justify-self: center;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--th-theme-text) 72%, transparent);
+}
+
+.remaining {
   color: var(--th-theme-disable);
 }
 
@@ -125,13 +134,24 @@
 
 .elapsed {
   grid-area: elapsed;
+  font-variant-numeric: tabular-nums;
   justify-self: start;
   font-size: 0.875rem;
   color: var(--th-theme-text);
 }
 
+.summary {
+  grid-area: summary;
+  justify-self: center;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--th-theme-text) 72%, transparent);
+}
+
 .remaining {
   grid-area: remaining;
+  font-variant-numeric: tabular-nums;
   justify-self: end;
   font-size: 0.875rem;
   color: var(--th-theme-text);

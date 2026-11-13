@@ -166,7 +166,7 @@ export const StatefulReaderWrapper = ({ profile, plugins, isLoading, loader, pre
           adapter={ preferences?.adapter as ThAudioPreferencesAdapter<any> | undefined }
         >
           <ThI18nProvider { ...i18nOptions }>
-            <StatefulAudioContent { ...props } coverUrl={ coverUrl } externalLoading={ isLoading ?? false } loader={ loader } />
+            <StatefulAudioContent { ...props } coverUrl={ coverUrl } plugins={ resolvedPlugins } externalLoading={ isLoading ?? false } loader={ loader } />
           </ThI18nProvider>
         </ThAudioPreferencesProvider>
       </ReaderNavigationProvider>
@@ -197,12 +197,14 @@ interface AudioContentProps {
   localDataKey: string | null;
   positionStorage?: PositionStorage;
   coverUrl?: string;
+  /** Host plugins; the player falls back to its defaults without them. */
+  plugins?: any[];
   externalLoading: boolean;
   /** Host-owned loading surface, threaded through to the built-in one by default. */
   loader?: ReactNode;
 }
 
-const StatefulAudioContent = ({ publication, localDataKey, positionStorage, coverUrl, externalLoading, loader }: AudioContentProps) => {
+const StatefulAudioContent = ({ publication, localDataKey, positionStorage, coverUrl, plugins, externalLoading, loader }: AudioContentProps) => {
   const { preferences } = useAudioPreferences();
   const themeObject = useAppSelector(state => state.theming?.theme ?? {});
   const dispatch = useAppDispatch();
@@ -239,7 +241,7 @@ const StatefulAudioContent = ({ publication, localDataKey, positionStorage, cove
       {/* The player chunk is lazy. A cold open would otherwise blank the
           whole viewport while it arrives. */}
       <Suspense fallback={ loader ?? <DefaultLoaderScreen /> }>
-        <StatefulPlayer publication={ publication } localDataKey={ localDataKey } positionStorage={ positionStorage } coverUrl={ coverBlobUrl } containerRefSetter={ setContainerRef } />
+        <StatefulPlayer publication={ publication } localDataKey={ localDataKey } plugins={ plugins } positionStorage={ positionStorage } coverUrl={ coverBlobUrl } containerRefSetter={ setContainerRef } />
       </Suspense>
     </StatefulLoader>
   );

@@ -36,6 +36,8 @@ export interface ThAudioProgressProps {
   hoverLabel?: string;
   onHoverProgression?: (progression: number | null) => void;
   segments?: TimelineSegment[];
+  /** A short line between the two times, such as the time left in the book. */
+  summary?: string;
   compounds?: {
     wrapper?: React.HTMLAttributes<HTMLDivElement>;
     current?: React.HTMLAttributes<HTMLDivElement>;
@@ -44,6 +46,7 @@ export interface ThAudioProgressProps {
     thumb?: WithRef<SliderThumbProps, HTMLDivElement>;
     elapsedTime?: React.HTMLAttributes<HTMLSpanElement>;
     remainingTime?: React.HTMLAttributes<HTMLSpanElement>;
+    summary?: React.HTMLAttributes<HTMLSpanElement>;
     seekableRange?: React.HTMLAttributes<HTMLDivElement>;
     fragmentTick?: React.HTMLAttributes<HTMLDivElement>;
     tooltip?: WithRef<PositionProps & React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
@@ -62,6 +65,7 @@ export const ThAudioProgress = ({
   hoverLabel,
   onHoverProgression,
   segments,
+  summary,
   compounds
 }: ThAudioProgressProps) => {
   const anchorRef = useRef<HTMLSpanElement>(null);
@@ -201,7 +205,8 @@ export const ThAudioProgress = ({
         </OverlayContainer>
       ) }
       <span { ...compounds?.elapsedTime } aria-hidden="true">{ defaultElapsedTime }</span>
-      <span { ...compounds?.remainingTime } aria-hidden="true">{ defaultRemainingTime }</span>
+      { summary && <span { ...compounds?.summary }>{ summary }</span> }
+      <span { ...compounds?.remainingTime } aria-hidden="true">-{ defaultRemainingTime }</span>
     </div>
   );
 };

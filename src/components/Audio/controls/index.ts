@@ -7,3 +7,4 @@ export * from "./StatefulSkipBackwardButton";
 export * from "./StatefulSkipForwardButton";
 export * from "./StatefulAudioPlaybackControls";
 export * from "./StatefulAudioProgressBar";
+export * from "./progressScope";
