@@ -144,6 +144,7 @@ export const defaultAudioPreferences: ThAudioPreferences<AudioDefaultKeys> =
     settings: {
       order: [
         ThAudioKeys.theme,
+        ThAudioKeys.progressScope,
         ThAudioKeys.skipBackwardInterval,
         ThAudioKeys.skipForwardInterval,
         ThAudioKeys.autoPlay

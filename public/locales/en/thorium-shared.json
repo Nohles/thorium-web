@@ -121,9 +121,15 @@
             },
             "preferences": {
                 "audio": {
+                    "progressScope": {
+                        "book": "Book",
+                        "chapter": "Chapter",
+                        "title": "Progress bar"
+                    },
                     "skipBackwardInterval": "Skip backward interval",
                     "skipForwardInterval": "Skip forward interval",
                     "skipInterval": "Skip interval",
+                    "timeLeft": "{{ time }} left",
                     "title": "Audio Settings",
                     "volume": "Volume"
                 },

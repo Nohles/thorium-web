@@ -20,6 +20,7 @@ export enum ThAudioKeys {
   skipInterval = "skipInterval",
   autoPlay = "autoPlay",
   sleepTimer = "sleepTimer",
+  progressScope = "progressScope",
 }
 
 export enum ThSettingsTimerVariant {

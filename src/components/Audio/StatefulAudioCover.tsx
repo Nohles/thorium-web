@@ -22,10 +22,12 @@ export function StatefulAudioCover({ ref, coverUrl, title }: StatefulAudioCoverP
   const isTrackReady = useAppSelector(state => state.player.isTrackReady);
   const isStalled = useAppSelector(state => state.player.isStalled);
 
+  const isPaused = useAppSelector(state => state.player.status) !== "playing";
+
   const showSyncOverlay = !isTrackReady || isStalled;
 
   return (
-    <figure ref={ ref } className={ styles.audioCoverSection }>
+    <figure ref={ ref } className={ styles.audioCoverSection } data-paused={ isPaused && !showSyncOverlay ? "" : undefined }>
       { coverUrl ? (
         <img
           src={ proxyUrl(coverUrl) }

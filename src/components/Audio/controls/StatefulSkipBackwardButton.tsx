@@ -5,6 +5,7 @@ import Replay5Icon from "./assets/icons/replay_5.svg";
 import Replay10Icon from "./assets/icons/replay_10.svg";
 import Replay30Icon from "./assets/icons/replay_30.svg";
 
+import { SkipIntervalGlyph } from "./SkipIntervalGlyph";
 import { StatefulActionIcon } from "../../Actions/Triggers/StatefulActionIcon";
 import audioStyles from "./assets/styles/thorium-web.audioPlayback.module.css";
 
@@ -23,7 +24,7 @@ export const StatefulSkipBackwardButton = ({ isDisabled }: { isDisabled?: boolea
   const { skipBackward } = useNavigator().media;
   const skipBackwardInterval = useAppSelector(state => state.audioSettings.skipBackwardInterval);
 
-  const Icon = replayIconMap[skipBackwardInterval] ?? ReplayIcon;
+  const Icon = replayIconMap[skipBackwardInterval];
 
   return (
     <StatefulActionIcon
@@ -33,7 +34,11 @@ export const StatefulSkipBackwardButton = ({ isDisabled }: { isDisabled?: boolea
       tooltipLabel={ t("reader.playback.actions.skipBackward.descriptive") }
       className={ audioStyles.audioSkipBackwardButton }
     >
-      <Icon aria-hidden="true" focusable="false" />
+      { Icon
+        ? <Icon aria-hidden="true" focusable="false" />
+        : skipBackwardInterval > 0
+          ? <SkipIntervalGlyph direction="backward" seconds={ skipBackwardInterval } />
+          : <ReplayIcon aria-hidden="true" focusable="false" /> }
     </StatefulActionIcon>
   );
 };

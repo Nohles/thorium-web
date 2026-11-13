@@ -5,6 +5,7 @@ import Forward5Icon from "./assets/icons/forward_5.svg";
 import Forward10Icon from "./assets/icons/forward_10.svg";
 import Forward30Icon from "./assets/icons/forward_30.svg";
 
+import { SkipIntervalGlyph } from "./SkipIntervalGlyph";
 import { StatefulActionIcon } from "../../Actions/Triggers/StatefulActionIcon";
 import audioStyles from "./assets/styles/thorium-web.audioPlayback.module.css";
 
@@ -23,7 +24,7 @@ export const StatefulSkipForwardButton = ({ isDisabled }: { isDisabled?: boolean
   const { skipForward } = useNavigator().media;
   const skipForwardInterval = useAppSelector(state => state.audioSettings.skipForwardInterval);
 
-  const Icon = forwardIconMap[skipForwardInterval] ?? ForwardIcon;
+  const Icon = forwardIconMap[skipForwardInterval];
 
   return (
     <StatefulActionIcon
@@ -33,7 +34,11 @@ export const StatefulSkipForwardButton = ({ isDisabled }: { isDisabled?: boolean
       tooltipLabel={ t("reader.playback.actions.skipForward.descriptive") }
       className={ audioStyles.audioSkipForwardButton }
     >
-      <Icon aria-hidden="true" focusable="false" />
+      { Icon
+        ? <Icon aria-hidden="true" focusable="false" />
+        : skipForwardInterval > 0
+          ? <SkipIntervalGlyph direction="forward" seconds={ skipForwardInterval } />
+          : <ForwardIcon aria-hidden="true" focusable="false" /> }
     </StatefulActionIcon>
   );
 };
