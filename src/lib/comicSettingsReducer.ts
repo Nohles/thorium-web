@@ -71,6 +71,12 @@ export interface ComicSettings {
   tapZonePreview: boolean;
   /** When true and the manifest TOC defines multiple segments, navigation stays within the current chapter until explicit next/previous chapter. */
   comicChapterBoundaries: boolean;
+  /** Double page: show each chapter's first page (the cover) on its own. */
+  spreadCoverAlone: boolean;
+  /** Double page: flip the first-page choice for this publication when pairs come out wrong. */
+  spreadShift: boolean;
+  /** Double page: keep two pages side by side when the reader is taller than wide. */
+  doublePageInPortrait: boolean;
 }
 
 export const defaultComicSettings: ComicSettings = {
@@ -95,13 +101,17 @@ export const defaultComicSettings: ComicSettings = {
   readingModePreview: true,
   tapZonePreview: false,
   comicChapterBoundaries: true,
+  spreadCoverAlone: true,
+  spreadShift: false,
+  doublePageInPortrait: false,
 };
 
 /**
  * Settings that follow the publication rather than the reader: a manga and a
- * western comic need different reading directions. Everything else is shared.
+ * western comic need different reading directions, and spread pairing that is
+ * off by one is a property of one scan. Everything else is shared.
  */
-export const COMIC_PUBLICATION_SETTING_KEYS = ["direction"] as const;
+export const COMIC_PUBLICATION_SETTING_KEYS = ["direction", "spreadShift"] as const;
 
 export type ComicPublicationSettingKey = (typeof COMIC_PUBLICATION_SETTING_KEYS)[number];
 

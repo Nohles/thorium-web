@@ -30,6 +30,7 @@ export interface ThSettingsRadioPref<T extends string> {
 
 export enum ThSettingsKeys {
   comicChapterBoundaries = "comicChapterBoundaries",
+  comicDoublePageInPortrait = "comicDoublePageInPortrait",
   columns = "columns",
   comicOverlayMode = "comicOverlayMode",
   comicPageGap = "comicPageGap",
@@ -42,6 +43,8 @@ export enum ThSettingsKeys {
   comicScaleType = "comicScaleType",
   comicScrollAmountPercent = "comicScrollAmountPercent",
   comicShowPageNumber = "comicShowPageNumber",
+  comicSpreadCoverAlone = "comicSpreadCoverAlone",
+  comicSpreadShift = "comicSpreadShift",
   comicStaticNavigation = "comicStaticNavigation",
   comicStretchSmallPages = "comicStretchSmallPages",
   comicTapZones = "comicTapZones",

@@ -50,7 +50,7 @@ describe("comicSettingsReducer", () => {
       empty(),
       initComicSettings({ key: "manga", defaults: { direction: ComicReadingDirection.rtl } })
     );
-    assert.deepEqual(state.byKey.manga, { direction: ComicReadingDirection.rtl });
+    assert.deepEqual(state.byKey.manga, { direction: ComicReadingDirection.rtl, spreadShift: false });
     assert.deepEqual(resolveComicSettings(state, "manga"), {
       ...defaultComicSettings,
       direction: ComicReadingDirection.rtl,
@@ -81,7 +81,24 @@ describe("comicSettingsReducer", () => {
 
     const state = reducer(legacy, setComicActiveKey("old"));
     assert.equal(state.global?.scaleType, ComicScaleType.fitWidth);
-    assert.deepEqual(state.byKey.old, { direction: ComicReadingDirection.rtl });
+    assert.deepEqual(state.byKey.old, { direction: ComicReadingDirection.rtl, spreadShift: false });
     assert.equal(resolveComicSettings(state, "old").direction, ComicReadingDirection.rtl);
+  });
+});
+
+describe("comicSettingsReducer spread settings", () => {
+  test("spread shift follows the publication; cover and portrait settings are shared", () => {
+    let state = reducer(
+      reducer(undefined, { type: "init" }),
+      updateComicSettings({
+        key: "volume-1",
+        patch: { spreadShift: true, spreadCoverAlone: false, doublePageInPortrait: true },
+      })
+    );
+    state = reducer(state, setComicActiveKey("volume-2"));
+    assert.equal(resolveComicSettings(state, "volume-1").spreadShift, true);
+    assert.equal(resolveComicSettings(state, "volume-2").spreadShift, false);
+    assert.equal(resolveComicSettings(state, "volume-2").spreadCoverAlone, false);
+    assert.equal(resolveComicSettings(state, "volume-2").doublePageInPortrait, true);
   });
 });

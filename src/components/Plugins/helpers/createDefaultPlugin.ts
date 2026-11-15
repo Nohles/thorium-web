@@ -39,6 +39,9 @@ import {
   StatefulComicReadingMode,
   StatefulComicScaleType,
   StatefulComicScrollAmountPercent,
+  StatefulComicDoublePageInPortrait,
+  StatefulComicSpreadCoverAlone,
+  StatefulComicSpreadShift,
   StatefulComicStretchSmallPages,
   StatefulComicTapZones,
   StatefulComicTapZonePreview,
@@ -51,7 +54,7 @@ export const createDefaultPlugin = (): ThPlugin => {
     id: "core",
     name: "Core Components",
     description: "Default components for Thorium Web Epub StatefulReader",
-    version: "1.5.50",
+    version: "1.5.51",
     components: {
       actions: {
         [ThActionsKeys.fullscreen]: {
@@ -185,6 +188,15 @@ export const createDefaultPlugin = (): ThPlugin => {
         },
         [ThSettingsKeys.comicTapZonePreview]: {
           Comp: StatefulComicTapZonePreview
+        },
+        [ThSettingsKeys.comicSpreadCoverAlone]: {
+          Comp: StatefulComicSpreadCoverAlone
+        },
+        [ThSettingsKeys.comicSpreadShift]: {
+          Comp: StatefulComicSpreadShift
+        },
+        [ThSettingsKeys.comicDoublePageInPortrait]: {
+          Comp: StatefulComicDoublePageInPortrait
         },
       }
     }
