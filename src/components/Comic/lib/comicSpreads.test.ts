@@ -5,6 +5,7 @@ import { Link } from "@readium/shared";
 import {
   backwardSpreadStep,
   buildComicSpreads,
+  comicSpreadHint,
   type ComicSpreadPage,
   forwardSpreadStep,
   isStandaloneComicPage,
@@ -105,5 +106,41 @@ describe("spread steps", () => {
   test("unknown pages step by one", () => {
     assert.equal(forwardSpreadStep(layout, 99), 1);
     assert.equal(backwardSpreadStep(layout, 99), 1);
+  });
+});
+
+describe("server spread hints", () => {
+  /** "p" = marked pair, "a" = marked alone, "W" = stored two-page spread. */
+  const hinted = (pattern: string): ComicSpreadPage[] =>
+    [...pattern].map((kind, index) => ({
+      index,
+      standalone: kind === "W",
+      hint: kind === "a" ? "alone" : kind === "W" ? undefined : "pair",
+    }));
+
+  test("reads the mark from a manifest link", () => {
+    assert.equal(comicSpreadHint(Link.deserialize({ href: "a", properties: { readerSpread: "alone" } })!), "alone");
+    assert.equal(comicSpreadHint(Link.deserialize({ href: "a", properties: { readerSpread: "pair" } })!), "pair");
+    assert.equal(comicSpreadHint(new Link({ href: "a" })), undefined);
+  });
+
+  test("pairs from the first page when the server says so, whatever the cover setting", () => {
+    assert.deepEqual(buildComicSpreads(hinted("pppppp"), { coverAlone: true, shift: false }).spreads, [[0, 1], [2, 3], [4, 5]]);
+  });
+
+  test("restarts pairing after a page marked alone", () => {
+    assert.deepEqual(
+      buildComicSpreads(hinted("apppapp"), { coverAlone: false, shift: false }).spreads,
+      [[0], [1, 2], [3], [4], [5, 6]]
+    );
+  });
+
+  test("ignores the wide-page rule and keeps wide pages alone", () => {
+    assert.deepEqual(buildComicSpreads(hinted("pppWpp"), { coverAlone: true, shift: false }).spreads, [[0, 1], [2], [3], [4, 5]]);
+  });
+
+  test("shift flips the first page either way", () => {
+    assert.deepEqual(buildComicSpreads(hinted("pppp"), { coverAlone: true, shift: true }).spreads, [[0], [1, 2], [3]]);
+    assert.deepEqual(buildComicSpreads(hinted("appp"), { coverAlone: true, shift: true }).spreads, [[0, 1], [2, 3]]);
   });
 });

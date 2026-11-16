@@ -17,6 +17,7 @@ import {
   buildComicSpreads,
   type ComicSpreadLayout,
   forwardSpreadStep,
+  comicSpreadHint,
   isStandaloneComicPage,
 } from "../lib/comicSpreads";
 
@@ -47,7 +48,11 @@ export const buildSpreadLayout = (
   chapterSegments: ComicChapterSegment[]
 ): ComicSpreadLayout =>
   buildComicSpreads(
-    pages.map((page) => ({ index: page.index, standalone: isStandaloneComicPage(page.link) })),
+    pages.map((page) => ({
+      index: page.index,
+      standalone: isStandaloneComicPage(page.link),
+      hint: comicSpreadHint(page.link),
+    })),
     {
       coverAlone: settings.spreadCoverAlone,
       shift: settings.spreadShift,

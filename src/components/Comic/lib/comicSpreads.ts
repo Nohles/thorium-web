@@ -15,6 +15,11 @@ import type { Link } from "@readium/shared";
  *   proves the opposite: a printed spread sits on a left/right pair, so the
  *   pages before it must pair up evenly.
  * - `shift` flips that first-page choice, for books the rules get wrong.
+ *
+ * A server that has analysed the pages can mark each one `readerSpread:
+ * "alone"` or `"pair"`. A chapter with those marks follows them instead of the
+ * cover and wide-page rules: a page marked alone shows alone and pairing
+ * restarts after it. `shift` still flips the chapter's first page.
  */
 
 export type ComicSpreadPage = {
@@ -22,7 +27,11 @@ export type ComicSpreadPage = {
   index: number;
   /** True when the page must show alone (a stored two-page spread). */
   standalone: boolean;
+  /** The server's pairing for this page, when it has one. */
+  hint?: ComicSpreadHint;
 };
+
+export type ComicSpreadHint = "alone" | "pair";
 
 export type ComicSpreadOptions = {
   coverAlone: boolean;
@@ -52,6 +61,15 @@ export const isStandaloneComicPage = (link: Pick<Link, "width" | "height" | "pro
     height > 0 &&
     width / height > WIDE_PAGE_MIN_RATIO
   );
+};
+
+/** The `readerSpread` mark a server put on the page link, if any. */
+export const comicSpreadHint = (link: Pick<Link, "properties">): ComicSpreadHint | undefined => {
+  const properties = link.properties as
+    | { otherProperties?: Record<string, unknown>; readerSpread?: unknown }
+    | undefined;
+  const value = properties?.otherProperties?.readerSpread ?? properties?.readerSpread;
+  return value === "alone" || value === "pair" ? value : undefined;
 };
 
 const splitIntoChapters = (pages: ComicSpreadPage[], chapterStarts: Set<number>): ComicSpreadPage[][] => {
@@ -102,11 +120,28 @@ const pairChapter = (chapter: ComicSpreadPage[], leadAlone: boolean, out: number
   flush();
 };
 
+/** Follows the server's marks; `shift` flips whether the first page shows alone. */
+const pairHintedChapter = (chapter: ComicSpreadPage[], shift: boolean, out: number[][]) => {
+  const pages = chapter.map((page) => ({ ...page, standalone: page.standalone || page.hint === "alone" }));
+  const first = pages[0]!;
+  const firstHintedAlone = !chapter[0]!.standalone && first.standalone;
+  if (shift && firstHintedAlone) {
+    pages[0] = { ...first, standalone: false };
+    pairChapter(pages, false, out);
+    return;
+  }
+  pairChapter(pages, shift && !first.standalone, out);
+};
+
 export const buildComicSpreads = (pages: ComicSpreadPage[], options: ComicSpreadOptions): ComicSpreadLayout => {
   const chapterStarts = new Set(options.chapterStarts ?? []);
   const spreads: number[][] = [];
 
   for (const chapter of splitIntoChapters(pages, chapterStarts)) {
+    if (chapter.some((page) => page.hint)) {
+      pairHintedChapter(chapter, options.shift, spreads);
+      continue;
+    }
     const leadAlone = leadsAlone(chapter, options.coverAlone) !== options.shift;
     pairChapter(chapter, leadAlone, spreads);
   }
