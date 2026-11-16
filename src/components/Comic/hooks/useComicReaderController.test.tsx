@@ -147,3 +147,25 @@ test("double-page mode saves the final spread's last page and restores to its fi
     }
   }
 });
+
+test("Auto shows the host's chosen mode, single page without one", async () => {
+  const { getEffectiveReadingMode } = await import("./useComicReaderController");
+  assert.equal(getEffectiveReadingMode(ComicReadingMode.default), ComicReadingMode.singlePage);
+  assert.equal(
+    getEffectiveReadingMode(ComicReadingMode.default, { autoReadingMode: ComicReadingMode.webtoon }),
+    ComicReadingMode.webtoon,
+  );
+  // An upright screen still drops Auto's double page to one page.
+  assert.equal(
+    getEffectiveReadingMode(ComicReadingMode.default, {
+      autoReadingMode: ComicReadingMode.doublePage,
+      isPortrait: true,
+      doublePageInPortrait: false,
+    }),
+    ComicReadingMode.singlePage,
+  );
+  assert.equal(
+    getEffectiveReadingMode(ComicReadingMode.singlePage, { autoReadingMode: ComicReadingMode.webtoon }),
+    ComicReadingMode.singlePage,
+  );
+});

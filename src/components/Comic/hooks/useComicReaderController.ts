@@ -31,9 +31,21 @@ export type ComicPage = {
 
 export const getEffectiveReadingMode = (
   mode: ComicReadingMode,
-  { isPortrait = false, doublePageInPortrait = true }: { isPortrait?: boolean; doublePageInPortrait?: boolean } = {}
+  {
+    isPortrait = false,
+    doublePageInPortrait = true,
+    autoReadingMode,
+  }: {
+    isPortrait?: boolean;
+    doublePageInPortrait?: boolean;
+    /** What the host's Auto picks for this publication; single page when unset. */
+    autoReadingMode?: ComicReadingMode;
+  } = {}
 ): ComicReadingMode => {
-  const effective = mode === ComicReadingMode.default ? ComicReadingMode.singlePage : mode;
+  const auto = autoReadingMode && autoReadingMode !== ComicReadingMode.default
+    ? autoReadingMode
+    : ComicReadingMode.singlePage;
+  const effective = mode === ComicReadingMode.default ? auto : mode;
   // Two pages side by side on an upright screen are too small to read.
   if (effective === ComicReadingMode.doublePage && isPortrait && !doublePageInPortrait) {
     return ComicReadingMode.singlePage;
@@ -73,6 +85,7 @@ export const useComicReaderController = ({
   chapterSegments,
   chapterBoundariesEnabled,
   isPortrait = false,
+  autoReadingMode,
 }: {
   pages: ComicPage[];
   settings: typeof defaultComicSettings;
@@ -81,10 +94,12 @@ export const useComicReaderController = ({
   chapterSegments: ComicChapterSegment[];
   chapterBoundariesEnabled: boolean;
   isPortrait?: boolean;
+  autoReadingMode?: ComicReadingMode;
 }) => {
   const mode = getEffectiveReadingMode(settings.readingMode, {
     isPortrait,
     doublePageInPortrait: settings.doublePageInPortrait,
+    autoReadingMode,
   });
   const scaleType = settings.scaleType;
   const direction = settings.direction;

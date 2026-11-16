@@ -63,7 +63,7 @@ import { useComicSettings } from "./hooks/useComicSettings";
 import { useComicKeyboardShortcuts } from "./hooks/useComicKeyboardShortcuts";
 import { useComicKeyboardPeripherals } from "./hooks/useComicKeyboardPeripherals";
 import { resolveTapAction } from "./hooks/useComicTapNavigation";
-import { ComicPage, useComicReaderController } from "./hooks/useComicReaderController";
+import { ComicPage, getEffectiveReadingMode, useComicReaderController } from "./hooks/useComicReaderController";
 import {
   buildComicChapterTocTree,
   buildComicTimeline,
@@ -267,7 +267,8 @@ const findArchivePageInPages = (
           normalizeComparableHref(page.archive.pageHref) === normalizeComparableHref(identity.pageHref)))
   );
 
-const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }: StatefulReaderProps) => {
+const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage, comicAutoReadingMode: autoMode }: StatefulReaderProps) => {
+  const comicAutoReadingMode = autoMode as ComicReadingMode | undefined;
   const { preferences } = usePreferences();
   const { t } = useI18n();
   const { direction: uiDirection } = useLocale();
@@ -521,10 +522,11 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   const chapterModeActive =
     merged.comicChapterBoundaries &&
     (isArchiveSeries ? archiveChapters.length >= 2 : hasMultiChapterStructure(chapterSegments));
+  const chosenMode = getEffectiveReadingMode(merged.readingMode, { autoReadingMode: comicAutoReadingMode });
   const isScrollMode =
-    merged.readingMode === ComicReadingMode.continuousVertical ||
-    merged.readingMode === ComicReadingMode.continuousHorizontal ||
-    merged.readingMode === ComicReadingMode.webtoon;
+    chosenMode === ComicReadingMode.continuousVertical ||
+    chosenMode === ComicReadingMode.continuousHorizontal ||
+    chosenMode === ComicReadingMode.webtoon;
 
   const persistComicPosition = useCallback(
     (index: number) => {
@@ -601,6 +603,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     chapterSegments,
     chapterBoundariesEnabled: merged.comicChapterBoundaries,
     isPortrait,
+    autoReadingMode: comicAutoReadingMode,
   });
 
   useEffect(() => {
