@@ -579,6 +579,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     cursorIndex,
     isRestoringPosition,
     setCursorIndex,
+    spreadStartAt,
     canGoPrev,
     canGoNext,
     goPrev,
@@ -604,8 +605,10 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
 
   useEffect(() => {
     if (typeof storedPosition !== "number") return;
-    setCursorIndex((prev) => (prev === storedPosition ? prev : storedPosition));
-  }, [storedPosition, setCursorIndex]);
+    // Saved progress names the spread's last page; stay on the spread's first.
+    const target = spreadStartAt(storedPosition);
+    setCursorIndex((prev) => (spreadStartAt(prev) === target ? prev : target));
+  }, [storedPosition, setCursorIndex, spreadStartAt]);
 
   // Remap during render, not in an effect: a commit with the stale index mounts the
   // previous chapter, whose scroll sync and neighbor prefetch then walk the reader

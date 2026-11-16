@@ -116,6 +116,19 @@ export const useComicReaderController = ({
     },
     [spreadLayout]
   );
+  /**
+   * The last page of the spread holding `index`. Saved progress records this
+   * page, so a finished final spread counts its second page as read.
+   */
+  const spreadEndAt = useCallback(
+    (index: number) => {
+      if (!spreadLayout) return index;
+      const spreadIndex = spreadLayout.spreadIndexByPage.get(index);
+      const spread = spreadIndex === undefined ? undefined : spreadLayout.spreads[spreadIndex];
+      return spread?.[spread.length - 1] ?? index;
+    },
+    [spreadLayout]
+  );
   const usesScrollBoundaries = isScrollReadingMode(mode);
 
   const useChapterBounds =
@@ -129,12 +142,13 @@ export const useComicReaderController = ({
     [chapterSegments, useChapterBounds]
   );
 
+  // Saved progress points at a spread's last page; the cursor sits on its first.
   const initialIndex = useMemo(() => {
     if (typeof savedPosition === "number" && savedPosition >= 0 && savedPosition < pages.length) {
-      return savedPosition;
+      return spreadStartAt(savedPosition);
     }
     return 0;
-  }, [pages.length, savedPosition]);
+  }, [pages.length, savedPosition, spreadStartAt]);
 
   const [cursorIndex, setCursorIndex] = useState(initialIndex);
   const [initialPositionApplied, setInitialPositionApplied] = useState(
@@ -148,16 +162,17 @@ export const useComicReaderController = ({
     typeof savedPosition === "number" && savedPosition >= 0 && savedPosition < pages.length;
   if (isRestoringPosition) {
     setInitialPositionApplied(true);
-    setCursorIndex(savedPosition);
+    setCursorIndex(spreadStartAt(savedPosition));
   }
 
+  const persistIndex = spreadEndAt(cursorIndex);
   useEffect(() => {
     if (skipInitialPersistRef.current) {
       skipInitialPersistRef.current = false;
       return;
     }
-    onPersistPosition(cursorIndex);
-  }, [cursorIndex, onPersistPosition]);
+    onPersistPosition(persistIndex);
+  }, [persistIndex, onPersistPosition]);
 
   const step = forwardStepAt(cursorIndex);
   const backStep = backwardStepAt(cursorIndex);
@@ -258,6 +273,7 @@ export const useComicReaderController = ({
     cursorIndex,
     isRestoringPosition,
     setCursorIndex,
+    spreadStartAt,
     canGoPrev,
     canGoNext,
     goPrev,
