@@ -11,7 +11,10 @@ export interface ComicNavigatorBind {
   links: Link[];
   cursorIndex: number;
   setCursorIndex: (index: number) => void;
+  /** Pages to the next spread's start (1 outside double-page mode). */
   step: number;
+  /** Pages back to the previous spread's start; defaults to `step`. */
+  backStep?: number;
   onMissingLink?: (link: Link) => Promise<boolean> | boolean;
 }
 
@@ -94,7 +97,7 @@ export const useComicNavigator = () => {
   const previousLocator = useCallback((): Locator | null => {
     const b = bindStore.current;
     if (!b) return null;
-    const idx = b.cursorIndex - b.step;
+    const idx = b.cursorIndex - (b.backStep ?? b.step);
     if (idx < 0) return null;
     return locatorAtIndex(idx);
   }, [locatorAtIndex]);
@@ -113,7 +116,7 @@ export const useComicNavigator = () => {
       callback(false);
       return;
     }
-    const next = Math.max(0, b.cursorIndex - b.step);
+    const next = Math.max(0, b.cursorIndex - (b.backStep ?? b.step));
     if (next === b.cursorIndex) {
       callback(false);
       return;
@@ -128,7 +131,9 @@ export const useComicNavigator = () => {
       callback(false);
       return;
     }
-    const next = Math.min(b.links.length - 1, b.cursorIndex + b.step);
+    const target = b.cursorIndex + b.step;
+    // Past the last spread there is nothing further to show.
+    const next = target <= b.links.length - 1 ? target : b.cursorIndex;
     if (next === b.cursorIndex) {
       callback(false);
       return;

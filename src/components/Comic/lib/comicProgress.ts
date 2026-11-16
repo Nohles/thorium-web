@@ -2,6 +2,7 @@
 
 import { ComicReadingDirection, ComicReadingMode } from "@/lib/comicSettingsReducer";
 import { ComicPage } from "../hooks/useComicReaderController";
+import type { ComicSpreadLayout } from "./comicSpreads";
 
 export type ComicPageLoadState = "idle" | "loading" | "loaded" | "error";
 
@@ -25,6 +26,8 @@ type BuildComicProgressItemsArgs = {
   pageLoadStates: Record<number, ComicPageLoadState>;
   /** When set, progress labels use 1-based indices within the current chapter (reading-order index minus offset). */
   progressLabelOffset?: number;
+  /** Double-page pairing; without it pages pair two by two. */
+  spreadLayout?: ComicSpreadLayout | null;
 };
 
 const isPageLoaded = (pageLoadStates: Record<number, ComicPageLoadState>, pageIndex: number) =>
@@ -48,21 +51,26 @@ export const buildComicProgressItems = ({
   cursorIndex,
   pageLoadStates,
   progressLabelOffset,
+  spreadLayout,
 }: BuildComicProgressItemsArgs): ComicProgressItem[] => {
   if (pages.length === 0) return [];
 
   if (mode === ComicReadingMode.doublePage) {
     const items: ComicProgressItem[] = [];
-    for (let arrayStart = 0; arrayStart < pages.length; arrayStart += 2) {
-      const slice = pages.slice(arrayStart, Math.min(arrayStart + 2, pages.length));
-      const pageIndices = slice.map((page) => page.index);
+    const visible = new Set(pages.map((page) => page.index));
+    const spreads =
+      spreadLayout?.spreads.filter((spread) => spread.every((index) => visible.has(index))) ??
+      pages.reduce<number[][]>((out, page, position) => {
+        if (position % 2 === 0) out.push([page.index]);
+        else out[out.length - 1]!.push(page.index);
+        return out;
+      }, []);
+    for (const pageIndices of spreads) {
       const loadedCount = pageIndices.filter((pageIndex) => isPageLoaded(pageLoadStates, pageIndex)).length;
       const isCurrent = pageIndices.includes(cursorIndex);
       const firstGlobal = pageIndices[0] ?? 0;
-      const targetIndex =
-        direction === ComicReadingDirection.rtl
-          ? (pageIndices[pageIndices.length - 1] ?? firstGlobal)
-          : firstGlobal;
+      // The cursor always sits on a spread's first page in reading order.
+      const targetIndex = firstGlobal;
       items.push({
         id: `spread-${firstGlobal}`,
         type: "spread",

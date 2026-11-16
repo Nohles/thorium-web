@@ -12,6 +12,14 @@ import {
   getSegmentIndex,
   hasMultiChapterStructure,
 } from "../lib/comicChapters";
+import {
+  backwardSpreadStep,
+  buildComicSpreads,
+  type ComicSpreadLayout,
+  forwardSpreadStep,
+  comicSpreadHint,
+  isStandaloneComicPage,
+} from "../lib/comicSpreads";
 
 export type ComicPage = {
   index: number;
@@ -21,8 +29,48 @@ export type ComicPage = {
   archive?: ComicArchivePageIdentity;
 };
 
-export const getEffectiveReadingMode = (mode: ComicReadingMode): ComicReadingMode =>
-  mode === ComicReadingMode.default ? ComicReadingMode.singlePage : mode;
+export const getEffectiveReadingMode = (
+  mode: ComicReadingMode,
+  {
+    isPortrait = false,
+    doublePageInPortrait = true,
+    autoReadingMode,
+  }: {
+    isPortrait?: boolean;
+    doublePageInPortrait?: boolean;
+    /** What the host's Auto picks for this publication; single page when unset. */
+    autoReadingMode?: ComicReadingMode;
+  } = {}
+): ComicReadingMode => {
+  const auto = autoReadingMode && autoReadingMode !== ComicReadingMode.default
+    ? autoReadingMode
+    : ComicReadingMode.singlePage;
+  const effective = mode === ComicReadingMode.default ? auto : mode;
+  // Two pages side by side on an upright screen are too small to read.
+  if (effective === ComicReadingMode.doublePage && isPortrait && !doublePageInPortrait) {
+    return ComicReadingMode.singlePage;
+  }
+  return effective;
+};
+
+/** Pairs the pages for double-page mode; chapter starts come from the segments. */
+export const buildSpreadLayout = (
+  pages: ComicPage[],
+  settings: Pick<typeof defaultComicSettings, "spreadCoverAlone" | "spreadShift">,
+  chapterSegments: ComicChapterSegment[]
+): ComicSpreadLayout =>
+  buildComicSpreads(
+    pages.map((page) => ({
+      index: page.index,
+      standalone: isStandaloneComicPage(page.link),
+      hint: comicSpreadHint(page.link),
+    })),
+    {
+      coverAlone: settings.spreadCoverAlone,
+      shift: settings.spreadShift,
+      chapterStarts: chapterSegments.map((segment) => segment.startIndex),
+    }
+  );
 
 const isScrollReadingMode = (mode: ComicReadingMode): boolean =>
   mode === ComicReadingMode.continuousVertical ||
@@ -36,6 +84,8 @@ export const useComicReaderController = ({
   onPersistPosition,
   chapterSegments,
   chapterBoundariesEnabled,
+  isPortrait = false,
+  autoReadingMode,
 }: {
   pages: ComicPage[];
   settings: typeof defaultComicSettings;
@@ -43,11 +93,57 @@ export const useComicReaderController = ({
   onPersistPosition: (index: number) => void;
   chapterSegments: ComicChapterSegment[];
   chapterBoundariesEnabled: boolean;
+  isPortrait?: boolean;
+  autoReadingMode?: ComicReadingMode;
 }) => {
-  const mode = getEffectiveReadingMode(settings.readingMode);
+  const mode = getEffectiveReadingMode(settings.readingMode, {
+    isPortrait,
+    doublePageInPortrait: settings.doublePageInPortrait,
+    autoReadingMode,
+  });
   const scaleType = settings.scaleType;
   const direction = settings.direction;
-  const step = mode === ComicReadingMode.doublePage ? 2 : 1;
+  const spreadLayout = useMemo(
+    () =>
+      mode === ComicReadingMode.doublePage
+        ? buildSpreadLayout(
+            pages,
+            { spreadCoverAlone: settings.spreadCoverAlone, spreadShift: settings.spreadShift },
+            chapterSegments
+          )
+        : null,
+    [chapterSegments, mode, pages, settings.spreadCoverAlone, settings.spreadShift]
+  );
+  const forwardStepAt = useCallback(
+    (index: number) => (spreadLayout ? forwardSpreadStep(spreadLayout, index) : 1),
+    [spreadLayout]
+  );
+  const backwardStepAt = useCallback(
+    (index: number) => (spreadLayout ? backwardSpreadStep(spreadLayout, index) : 1),
+    [spreadLayout]
+  );
+  /** The first page of the spread holding `index`, so landing on a chapter's end shows its last spread whole. */
+  const spreadStartAt = useCallback(
+    (index: number) => {
+      if (!spreadLayout) return index;
+      const spreadIndex = spreadLayout.spreadIndexByPage.get(index);
+      return spreadIndex === undefined ? index : (spreadLayout.spreads[spreadIndex]?.[0] ?? index);
+    },
+    [spreadLayout]
+  );
+  /**
+   * The last page of the spread holding `index`. Saved progress records this
+   * page, so a finished final spread counts its second page as read.
+   */
+  const spreadEndAt = useCallback(
+    (index: number) => {
+      if (!spreadLayout) return index;
+      const spreadIndex = spreadLayout.spreadIndexByPage.get(index);
+      const spread = spreadIndex === undefined ? undefined : spreadLayout.spreads[spreadIndex];
+      return spread?.[spread.length - 1] ?? index;
+    },
+    [spreadLayout]
+  );
   const usesScrollBoundaries = isScrollReadingMode(mode);
 
   const useChapterBounds =
@@ -61,12 +157,13 @@ export const useComicReaderController = ({
     [chapterSegments, useChapterBounds]
   );
 
+  // Saved progress points at a spread's last page; the cursor sits on its first.
   const initialIndex = useMemo(() => {
     if (typeof savedPosition === "number" && savedPosition >= 0 && savedPosition < pages.length) {
-      return savedPosition;
+      return spreadStartAt(savedPosition);
     }
     return 0;
-  }, [pages.length, savedPosition]);
+  }, [pages.length, savedPosition, spreadStartAt]);
 
   const [cursorIndex, setCursorIndex] = useState(initialIndex);
   const [initialPositionApplied, setInitialPositionApplied] = useState(
@@ -80,17 +177,20 @@ export const useComicReaderController = ({
     typeof savedPosition === "number" && savedPosition >= 0 && savedPosition < pages.length;
   if (isRestoringPosition) {
     setInitialPositionApplied(true);
-    setCursorIndex(savedPosition);
+    setCursorIndex(spreadStartAt(savedPosition));
   }
 
+  const persistIndex = spreadEndAt(cursorIndex);
   useEffect(() => {
     if (skipInitialPersistRef.current) {
       skipInitialPersistRef.current = false;
       return;
     }
-    onPersistPosition(cursorIndex);
-  }, [cursorIndex, onPersistPosition]);
+    onPersistPosition(persistIndex);
+  }, [persistIndex, onPersistPosition]);
 
+  const step = forwardStepAt(cursorIndex);
+  const backStep = backwardStepAt(cursorIndex);
   const activeSeg = segmentForCursor(cursorIndex);
   const segmentIndex = useMemo(
     () => (useChapterBounds ? getSegmentIndex(chapterSegments, cursorIndex) : -1),
@@ -101,11 +201,11 @@ export const useComicReaderController = ({
     if (pages.length === 0) return false;
     if (useChapterBounds && activeSeg) {
       return usesScrollBoundaries
-        ? canRetreatWithinSegment(cursorIndex, activeSeg, step)
-        : canRetreatWithinSegment(cursorIndex, activeSeg, step) || segmentIndex > 0;
+        ? canRetreatWithinSegment(cursorIndex, activeSeg, backStep)
+        : canRetreatWithinSegment(cursorIndex, activeSeg, backStep) || segmentIndex > 0;
     }
     return cursorIndex > 0;
-  }, [activeSeg, cursorIndex, pages.length, segmentIndex, step, useChapterBounds, usesScrollBoundaries]);
+  }, [activeSeg, backStep, cursorIndex, pages.length, segmentIndex, useChapterBounds, usesScrollBoundaries]);
 
   const canGoNext = useMemo(() => {
     if (pages.length === 0) return false;
@@ -114,36 +214,39 @@ export const useComicReaderController = ({
         ? canAdvanceWithinSegment(cursorIndex, activeSeg, step)
         : canAdvanceWithinSegment(cursorIndex, activeSeg, step) || segmentIndex < chapterSegments.length - 1;
     }
-    return cursorIndex < pages.length - 1;
+    return cursorIndex + step <= pages.length - 1;
   }, [activeSeg, chapterSegments.length, cursorIndex, pages.length, segmentIndex, step, useChapterBounds, usesScrollBoundaries]);
 
   const goPrev = useCallback(() => {
     setCursorIndex((i) => {
       const seg = segmentForCursor(i);
       if (useChapterBounds && seg) {
-        if (!usesScrollBoundaries && !canRetreatWithinSegment(i, seg, step)) {
+        const back = backwardStepAt(i);
+        if (!usesScrollBoundaries && !canRetreatWithinSegment(i, seg, back)) {
           const si = getSegmentIndex(chapterSegments, i);
-          return si > 0 ? (chapterSegments[si - 1]?.endIndex ?? i) : i;
+          return si > 0 ? spreadStartAt(chapterSegments[si - 1]?.endIndex ?? i) : i;
         }
-        return Math.max(seg.startIndex, i - step);
+        return Math.max(seg.startIndex, i - back);
       }
-      return Math.max(0, i - step);
+      return Math.max(0, i - backwardStepAt(i));
     });
-  }, [chapterSegments, segmentForCursor, step, useChapterBounds, usesScrollBoundaries]);
+  }, [backwardStepAt, chapterSegments, segmentForCursor, spreadStartAt, useChapterBounds, usesScrollBoundaries]);
 
   const goNext = useCallback(() => {
     setCursorIndex((i) => {
       const seg = segmentForCursor(i);
       if (useChapterBounds && seg) {
-        if (!usesScrollBoundaries && !canAdvanceWithinSegment(i, seg, step)) {
+        const forward = forwardStepAt(i);
+        if (!usesScrollBoundaries && !canAdvanceWithinSegment(i, seg, forward)) {
           const si = getSegmentIndex(chapterSegments, i);
           return si >= 0 && si < chapterSegments.length - 1 ? (chapterSegments[si + 1]?.startIndex ?? i) : i;
         }
-        return Math.min(seg.endIndex, i + step);
+        return Math.min(seg.endIndex, i + forward);
       }
-      return Math.min(pages.length - 1, i + step);
+      const forward = forwardStepAt(i);
+      return i + forward <= pages.length - 1 ? i + forward : i;
     });
-  }, [chapterSegments, pages.length, segmentForCursor, step, useChapterBounds, usesScrollBoundaries]);
+  }, [chapterSegments, forwardStepAt, pages.length, segmentForCursor, useChapterBounds, usesScrollBoundaries]);
 
   const hasNextChapter = useMemo(
     () => useChapterBounds && segmentIndex >= 0 && segmentIndex < chapterSegments.length - 1,
@@ -169,9 +272,9 @@ export const useComicReaderController = ({
       if (!useChapterBounds) return i;
       const si = getSegmentIndex(chapterSegments, i);
       if (si <= 0) return i;
-      return chapterSegments[si - 1]?.endIndex ?? i;
+      return spreadStartAt(chapterSegments[si - 1]?.endIndex ?? i);
     });
-  }, [chapterSegments, useChapterBounds]);
+  }, [chapterSegments, spreadStartAt, useChapterBounds]);
 
   const progress = pages.length <= 1 ? 0 : Math.round((cursorIndex / (pages.length - 1)) * 100);
 
@@ -180,9 +283,12 @@ export const useComicReaderController = ({
     direction,
     scaleType,
     step,
+    backStep,
+    spreadLayout,
     cursorIndex,
     isRestoringPosition,
     setCursorIndex,
+    spreadStartAt,
     canGoPrev,
     canGoNext,
     goPrev,

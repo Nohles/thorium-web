@@ -7,4 +7,5 @@ export * from "./StatefulComicReadingDirection";
 export * from "./StatefulComicTapZones";
 export * from "./StatefulComicScaleType";
 export * from "./StatefulComicAdvancedSettings";
+export * from "./StatefulComicSpreads";
 

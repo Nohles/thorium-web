@@ -41,6 +41,7 @@ import {
   getComicPageWarmupOrder,
 } from "../lib/comicPageLoadWindow";
 import { type ComicScrollEdge, getComicScrollEdge } from "../lib/comicScrollEdge";
+import { type ComicSpreadLayout, getSpreadForPage } from "../lib/comicSpreads";
 import { ComicPageWarmer, warmComicHttpImage } from "../lib/comicPageWarmer";
 import {
   acquireComicImageMount,
@@ -1198,6 +1199,8 @@ const alignScrollerToPage = (
 export type ComicReaderViewportProps = {
   publication: Publication;
   pages: ComicPage[];
+  /** Double-page pairing for the whole publication. */
+  spreadLayout?: ComicSpreadLayout | null;
   mode: ComicReadingMode;
   direction: ComicReadingDirection;
   scaleType: ComicScaleType;
@@ -1223,6 +1226,7 @@ export type ComicReaderViewportProps = {
 export const ComicReaderViewport = ({
   publication,
   pages,
+  spreadLayout,
   mode,
   direction,
   scaleType,
@@ -1604,16 +1608,21 @@ export const ComicReaderViewport = ({
 
   const pagePos = useMemo(() => pages.findIndex((p) => p.index === cursorIndex), [pages, cursorIndex]);
   const current = pagePos >= 0 ? pages[pagePos] : undefined;
-  const prevPage = pagePos > 0 ? pages[pagePos - 1] : undefined;
   const nextPage = pagePos >= 0 && pagePos < pages.length - 1 ? pages[pagePos + 1] : undefined;
+  /** The spread holding the cursor, left to right on screen. */
   const doublePages = useMemo((): ComicPage[] => {
     if (mode !== ComicReadingMode.doublePage) return [];
-    return direction === ComicReadingDirection.rtl
-      ? [current, prevPage].filter((p): p is ComicPage => p != null)
+    const spread = spreadLayout ? getSpreadForPage(spreadLayout, cursorIndex) : undefined;
+    const inReadingOrder = spread
+      ? spread
+          .map((index) => pages.find((page) => page.index === index))
+          .filter((p): p is ComicPage => p != null)
       : [current, nextPage].filter((p): p is ComicPage => p != null);
-  }, [current, direction, mode, nextPage, prevPage]);
+    return direction === ComicReadingDirection.rtl ? [...inReadingOrder].reverse() : inReadingOrder;
+  }, [current, cursorIndex, direction, mode, nextPage, pages, spreadLayout]);
 
-  const isOriginalDouble = mode === ComicReadingMode.doublePage && scaleType === ComicScaleType.originalSize;
+  const isOriginalDouble =
+    mode === ComicReadingMode.doublePage && scaleType === ComicScaleType.originalSize && doublePages.length > 1;
   const setBoundaryRef = useCallback(
     (kind: ComicBoundaryPageKind) => (el: HTMLDivElement | null) => {
       if (el) boundaryRefs.current.set(kind, el);
@@ -1732,7 +1741,9 @@ export const ComicReaderViewport = ({
                 widthLimitPercent={widthLimitPercent}
                 layoutMode="viewportBound"
                 isDoublePageCell={isOriginalDouble}
-                horizontalAlignment={isOriginalDouble ? undefined : pagePosition === 0 ? "end" : "start"}
+                horizontalAlignment={
+                  isOriginalDouble || doublePages.length < 2 ? undefined : pagePosition === 0 ? "end" : "start"
+                }
                 shouldLoad
                 onPageLoadStateChange={onPageLoadStateChange}
               />

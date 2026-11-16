@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { act, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { JSDOM } from "jsdom";
 import { Link } from "@readium/shared";
-import { defaultComicSettings } from "@/lib/comicSettingsReducer";
+import { ComicReadingMode, defaultComicSettings } from "@/lib/comicSettingsReducer";
 import { findClosestArchivePageIndex, remapCursorToSamePage } from "../lib/comicCursorAnchor";
 import { useComicReaderController, type ComicPage } from "./useComicReaderController";
 
@@ -97,3 +97,75 @@ for (const firstChapter of [6, 5]) {
     });
   }
 }
+
+test("double-page mode saves the final spread's last page and restores to its first", async () => {
+  const dom = new JSDOM("<!doctype html><html><body></body></html>", { url: "https://reader.test" });
+  const globals = { window: dom.window, document: dom.window.document, IS_REACT_ACT_ENVIRONMENT: true };
+  const descriptors = new Map(Object.keys(globals).map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
+  Object.entries(globals).forEach(([key, value]) => Object.defineProperty(globalThis, key, { value, configurable: true, writable: true }));
+  const { createRoot } = await import("react-dom/client");
+  const container = document.createElement("div");
+  document.body.append(container);
+  const root = createRoot(container);
+  const pages: ComicPage[] = Array.from({ length: 52 }, (_, index) => ({
+    index,
+    href: `${index}.png`,
+    link: new Link({ href: `${index}.png` }),
+    title: `Page ${index}`,
+  }));
+  const settings = { ...defaultComicSettings, readingMode: ComicReadingMode.doublePage, spreadCoverAlone: false, spreadShift: false };
+  const writes: number[] = [];
+  let controls: { goNext: () => void; canGoNext: boolean; setCursorIndex: (index: number) => void } | null = null;
+
+  function Reader({ savedPosition }: { savedPosition?: number }) {
+    const persist = useCallback((index: number) => { writes.push(index); }, []);
+    const controller = useComicReaderController({
+      pages, settings, savedPosition, onPersistPosition: persist, chapterSegments: [], chapterBoundariesEnabled: false,
+    });
+    controls = controller;
+    return <output>{controller.cursorIndex}</output>;
+  }
+
+  try {
+    await act(async () => root.render(<Reader />));
+    await act(async () => controls!.setCursorIndex(48));
+    await act(async () => controls!.goNext());
+    assert.equal(container.textContent, "50");
+    assert.equal(controls!.canGoNext, false);
+    assert.equal(writes.at(-1), 51);
+    await act(async () => root.unmount());
+
+    const restoredRoot = createRoot(container);
+    await act(async () => restoredRoot.render(<Reader savedPosition={51} />));
+    assert.equal(container.textContent, "50");
+    await act(async () => restoredRoot.unmount());
+  } finally {
+    dom.window.close();
+    for (const [key, descriptor] of descriptors) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+      else Reflect.deleteProperty(globalThis, key);
+    }
+  }
+});
+
+test("Auto shows the host's chosen mode, single page without one", async () => {
+  const { getEffectiveReadingMode } = await import("./useComicReaderController");
+  assert.equal(getEffectiveReadingMode(ComicReadingMode.default), ComicReadingMode.singlePage);
+  assert.equal(
+    getEffectiveReadingMode(ComicReadingMode.default, { autoReadingMode: ComicReadingMode.webtoon }),
+    ComicReadingMode.webtoon,
+  );
+  // An upright screen still drops Auto's double page to one page.
+  assert.equal(
+    getEffectiveReadingMode(ComicReadingMode.default, {
+      autoReadingMode: ComicReadingMode.doublePage,
+      isPortrait: true,
+      doublePageInPortrait: false,
+    }),
+    ComicReadingMode.singlePage,
+  );
+  assert.equal(
+    getEffectiveReadingMode(ComicReadingMode.singlePage, { autoReadingMode: ComicReadingMode.webtoon }),
+    ComicReadingMode.singlePage,
+  );
+});

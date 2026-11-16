@@ -119,6 +119,11 @@
         "continuousHorizontal": "Continuous horizontal",
         "webtoon": "Webtoon"
       },
+      "spreads": {
+        "coverAlone": "Show first page alone",
+        "shift": "Shift pages by one",
+        "inPortrait": "Two pages when upright"
+      },
       "chapterBoundaries": {
         "label": "Navigate by manifest chapters (TOC)",
         "nextChapter": "Next chapter",

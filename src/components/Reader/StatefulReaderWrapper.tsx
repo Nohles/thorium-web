@@ -1,3 +1,4 @@
+import type { ComicReadingMode } from "@/lib/comicSettingsReducer";
 import { lazy, Suspense, useState, useEffect, useMemo, type ReactNode } from "react";
 
 import { Publication, Locator } from "@readium/shared";
@@ -67,6 +68,8 @@ export interface StatefulReaderProps extends ReaderInteractionProps {
   containerRefSetter?: (el: Element | null) => void;
   /** @deprecated Use ReaderInteractionProps directly. */
   dictionary?: DictionaryReaderCallbacks;
+  /** Comics: the mode the reading-mode setting's Auto option shows. */
+  comicAutoReadingMode?: `${ComicReadingMode}`;
 }
 
 export type ThPluginFactory = () => ThPlugin[] | Promise<ThPlugin[]>;
@@ -111,6 +114,12 @@ export interface ReaderComponentProps<
     : never;
   /** @deprecated Use ReaderInteractionProps directly. */
   dictionary?: DictionaryReaderCallbacks;
+  /**
+   * Comics: the mode the reading-mode setting's Auto option shows, chosen by
+   * the host (for example from its own analysis of the publication). Omit to
+   * have Auto show single pages.
+   */
+  comicAutoReadingMode?: `${ComicReadingMode}`;
 }
 
 // ─── Outer wrapper — selects provider based on profile ────────────────────────
@@ -259,9 +268,10 @@ interface ReaderContentProps extends ReaderInteractionProps {
   dictionary?: DictionaryReaderCallbacks;
   /** Host-owned loading surface, reused for the lazy reader chunk's fallback. */
   loader?: ReactNode;
+  comicAutoReadingMode?: `${ComicReadingMode}`;
 }
 
-const StatefulReaderContent = ({ profile, publication, plugins, coverUrl, dictionary, loader, ...props }: ReaderContentProps) => {
+const StatefulReaderContent = ({ profile, publication, plugins, coverUrl, dictionary, loader, comicAutoReadingMode, ...props }: ReaderContentProps) => {
   const { preferences, resolveFontLanguage } = usePreferences();
   const themeObject = useAppSelector(state => state.theming?.theme ?? {});
   const customThemes = useAppSelector(state => state.theming.customThemes);
@@ -324,7 +334,7 @@ const StatefulReaderContent = ({ profile, publication, plugins, coverUrl, dictio
     case "epub":
       return <Suspense fallback={ suspenseFallback }><StatefulEpubReader publication={ publication } { ...props } plugins={ plugins } containerRefSetter={ setContainerRef } dictionary={ dictionary } /></Suspense>;
     case "comic":
-      return <Suspense fallback={ suspenseFallback }><StatefulComicReader publication={ publication } { ...props } plugins={ plugins } /></Suspense>;
+      return <Suspense fallback={ suspenseFallback }><StatefulComicReader publication={ publication } { ...props } plugins={ plugins } comicAutoReadingMode={ comicAutoReadingMode } /></Suspense>;
     case "webPub":
     default:
       return <Suspense fallback={ suspenseFallback }><StatefulWebPubReader publication={ publication } { ...props } plugins={ plugins } containerRefSetter={ setContainerRef } dictionary={ dictionary } /></Suspense>;

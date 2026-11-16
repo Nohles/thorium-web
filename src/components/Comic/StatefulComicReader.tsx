@@ -63,7 +63,7 @@ import { useComicSettings } from "./hooks/useComicSettings";
 import { useComicKeyboardShortcuts } from "./hooks/useComicKeyboardShortcuts";
 import { useComicKeyboardPeripherals } from "./hooks/useComicKeyboardPeripherals";
 import { resolveTapAction } from "./hooks/useComicTapNavigation";
-import { ComicPage, useComicReaderController } from "./hooks/useComicReaderController";
+import { ComicPage, getEffectiveReadingMode, useComicReaderController } from "./hooks/useComicReaderController";
 import {
   buildComicChapterTocTree,
   buildComicTimeline,
@@ -71,6 +71,8 @@ import {
   buildComicTocTreeFromLinks,
 } from "./buildComicTimeline";
 import { buildComicProgressItems, ComicPageLoadState } from "./lib/comicProgress";
+import { getSpreadForPage } from "./lib/comicSpreads";
+import { useIsPortrait } from "./hooks/useIsPortrait";
 import { findClosestArchivePageIndex, remapCursorToSamePage } from "./lib/comicCursorAnchor";
 import {
   buildComicChapterSegments,
@@ -140,6 +142,8 @@ const getChapterImages = (
         // eventual page height without decoding the image first.
         ...(link.width && link.width > 0 ? { width: link.width } : null),
         ...(link.height && link.height > 0 ? { height: link.height } : null),
+        // Keeps `page: center`, which marks a stored two-page spread.
+        ...(link.properties ? { properties: link.properties } : null),
       });
       const index = startIndex + pageIndexInChapter;
       return {
@@ -263,7 +267,8 @@ const findArchivePageInPages = (
           normalizeComparableHref(page.archive.pageHref) === normalizeComparableHref(identity.pageHref)))
   );
 
-const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }: StatefulReaderProps) => {
+const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage, comicAutoReadingMode: autoMode }: StatefulReaderProps) => {
+  const comicAutoReadingMode = autoMode as ComicReadingMode | undefined;
   const { preferences } = usePreferences();
   const { t } = useI18n();
   const { direction: uiDirection } = useLocale();
@@ -277,6 +282,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   const [activeBoundaryPage, setActiveBoundaryPage] = useState<"prev" | "next" | null>(null);
 
   const comicNavigator = useComicNavigator();
+  const isPortrait = useIsPortrait();
   const getFocusedDockableKey = useFocusedDockableKey();
   const onFullscreenChange = useCallback(
     (isFullscreen: boolean) => {
@@ -516,10 +522,11 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   const chapterModeActive =
     merged.comicChapterBoundaries &&
     (isArchiveSeries ? archiveChapters.length >= 2 : hasMultiChapterStructure(chapterSegments));
+  const chosenMode = getEffectiveReadingMode(merged.readingMode, { autoReadingMode: comicAutoReadingMode });
   const isScrollMode =
-    merged.readingMode === ComicReadingMode.continuousVertical ||
-    merged.readingMode === ComicReadingMode.continuousHorizontal ||
-    merged.readingMode === ComicReadingMode.webtoon;
+    chosenMode === ComicReadingMode.continuousVertical ||
+    chosenMode === ComicReadingMode.continuousHorizontal ||
+    chosenMode === ComicReadingMode.webtoon;
 
   const persistComicPosition = useCallback(
     (index: number) => {
@@ -569,9 +576,12 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     direction,
     scaleType,
     step,
+    backStep,
+    spreadLayout,
     cursorIndex,
     isRestoringPosition,
     setCursorIndex,
+    spreadStartAt,
     canGoPrev,
     canGoNext,
     goPrev,
@@ -592,12 +602,16 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     onPersistPosition: persistComicPosition,
     chapterSegments,
     chapterBoundariesEnabled: merged.comicChapterBoundaries,
+    isPortrait,
+    autoReadingMode: comicAutoReadingMode,
   });
 
   useEffect(() => {
     if (typeof storedPosition !== "number") return;
-    setCursorIndex((prev) => (prev === storedPosition ? prev : storedPosition));
-  }, [storedPosition, setCursorIndex]);
+    // Saved progress names the spread's last page; stay on the spread's first.
+    const target = spreadStartAt(storedPosition);
+    setCursorIndex((prev) => (spreadStartAt(prev) === target ? prev : target));
+  }, [storedPosition, setCursorIndex, spreadStartAt]);
 
   // Remap during render, not in an effect: a commit with the stale index mounts the
   // previous chapter, whose scroll sync and neighbor prefetch then walk the reader
@@ -666,7 +680,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
   const atLastInSegment =
     !!activeSegment && isAtLastNavigablePositionInSegment(cursorIndex, activeSegment, step);
   const atFirstInSegment =
-    !!activeSegment && isAtFirstNavigablePositionInSegment(cursorIndex, activeSegment, step);
+    !!activeSegment && isAtFirstNavigablePositionInSegment(cursorIndex, activeSegment, backStep);
 
   const scrollBoundaryPages = useMemo(
     () => {
@@ -755,6 +769,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
       cursorIndex,
       setCursorIndex,
       step,
+      backStep,
       onMissingLink: async (link) => {
         if (!isArchiveSeries) return false;
         const chapterIndex = archiveChapters.findIndex((chapter) => normalizeHref(chapter.href) === normalizeHref(link.href));
@@ -767,7 +782,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
         return true;
       },
     });
-  }, [archiveChapters, comicNavigator, isArchiveSeries, loadChapter, publication, allPages, cursorIndex, setCursorIndex, step]);
+  }, [archiveChapters, backStep, comicNavigator, isArchiveSeries, loadChapter, publication, allPages, cursorIndex, setCursorIndex, step]);
 
   const pageTocTree = useMemo(() => buildComicTocTree(publication, allPages), [publication, allPages]);
   const chapterTocTree = useMemo(() => {
@@ -805,7 +820,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
       if (seg) {
         const si = getSegmentIndex(chapterSegments, cursorIndex);
         dispatch(
-          setPublicationStart(si === 0 && !canRetreatWithinSegment(cursorIndex, seg, step))
+          setPublicationStart(si === 0 && !canRetreatWithinSegment(cursorIndex, seg, backStep))
         );
         dispatch(
           setPublicationEnd(
@@ -823,6 +838,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
     }
   }, [
     allPages,
+    backStep,
     chapterModeActive,
     chapterSegments,
     cursorIndex,
@@ -961,7 +977,9 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
         case NavPeripheralType.moveEnd:
           navigate(() => {
             const last = viewportPages[viewportPages.length - 1];
-            if (last) setCursorIndex(Math.max(viewportPages[0]?.index ?? 0, last.index - (step - 1)));
+            if (!last) return;
+            const lastSpread = spreadLayout ? getSpreadForPage(spreadLayout, last.index) : undefined;
+            setCursorIndex(lastSpread?.[0] ?? last.index);
           });
           return;
       }
@@ -1005,7 +1023,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
       handlePrev,
       profile,
       setCursorIndex,
-      step,
+      spreadLayout,
       toggleMenu,
       viewportPages,
     ]
@@ -1122,8 +1140,9 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
         cursorIndex,
         pageLoadStates,
         progressLabelOffset: progressChapterSegment?.startIndex,
+        spreadLayout,
       }),
-    [cursorIndex, direction, mode, pageLoadStates, progressChapterSegment?.startIndex, viewportPages]
+    [cursorIndex, direction, mode, pageLoadStates, progressChapterSegment?.startIndex, spreadLayout, viewportPages]
   );
 
   const tapZonePreviewCells = useMemo(() => {
@@ -1182,6 +1201,7 @@ const StatefulComicReaderInner = ({ publication, localDataKey, positionStorage }
                 <ComicReaderViewport
                   publication={publication}
                   pages={viewportPages}
+                  spreadLayout={spreadLayout}
                   mode={mode}
                   direction={direction}
                   scaleType={scaleType}
