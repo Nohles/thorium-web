@@ -46,6 +46,15 @@ export const getSetReaderWidth = (
 export const isWidthDrivenScaleMode = (scaleType: ComicScaleType): boolean =>
   scaleType === ComicScaleType.fitWidth || scaleType === ComicScaleType.fitScreen;
 
+/**
+ * In the vertical scroll list, only Fit width draws the image at the full frame
+ * width. Fit screen draws it at its natural width (capped to the frame), so the
+ * frame must not take the full-width aspect-ratio height, or a narrow page sits
+ * centered in a frame far taller than the image.
+ */
+export const fillsPageFrameWidth = (scaleType: ComicScaleType): boolean =>
+  scaleType === ComicScaleType.fitWidth;
+
 export const isHeightDrivenScaleMode = (scaleType: ComicScaleType): boolean =>
   scaleType === ComicScaleType.fitHeight;
 
