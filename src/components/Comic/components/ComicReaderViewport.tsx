@@ -28,6 +28,7 @@ import {
   getImagePlaceholderStyling,
   getPageWidthFraction,
   getReaderImageStyling,
+  fillsPageFrameWidth,
   isWidthDrivenScaleMode,
   stretchAllowedForScale,
 } from "@/components/Comic/lib/comicReaderLayout";
@@ -705,13 +706,12 @@ const getComicImagePlaceholderHeight = ({
   const ratio = dimensions.width / dimensions.height;
   if (!Number.isFinite(ratio) || ratio <= 0) return undefined;
 
-  const isWidthDriven = isWidthDrivenScaleMode(scaleType);
   const shouldStretch =
-    !isWidthDriven &&
+    !isWidthDrivenScaleMode(scaleType) &&
     stretchSmallPages &&
     stretchAllowedForScale(scaleType) &&
     dimensions.width < frameWidth;
-  const renderedWidth = isWidthDriven || shouldStretch
+  const renderedWidth = fillsPageFrameWidth(scaleType) || shouldStretch
     ? frameWidth
     : Math.min(dimensions.width, frameWidth);
   let renderedHeight = renderedWidth / ratio;
@@ -960,7 +960,7 @@ const ComicImage = memo(function ComicImage({
       isDoublePageCell,
       horizontalAlignment
     ),
-    ...(layoutMode === "verticalStack" && isWidthDrivenScaleMode(scaleType) && imageDimensions
+    ...(layoutMode === "verticalStack" && fillsPageFrameWidth(scaleType) && imageDimensions
       ? { aspectRatio: imageDimensions.width / imageDimensions.height }
       : {}),
   };
