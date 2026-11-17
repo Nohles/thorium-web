@@ -1,7 +1,12 @@
-# Branch allowed for `pnpm publish` / `pnpm publish:verdaccio` (pnpm git-checks)
-publishBranch: ComicReader
+# Publish merged releases from the integration branch.
+publishBranch: develop
 
 ignoreScripts: true
+
+# All Readium consumers must share the patched model classes, including
+# upstream packages whose dependency still pins the original stable version.
+overrides:
+  "@readium/shared": "2.8.0-nohles.1"
 
 manage-package-manager-versions: true
 

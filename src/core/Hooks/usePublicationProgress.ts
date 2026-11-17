@@ -3,6 +3,7 @@ import { useEffect, useMemo } from "react";
 import { Locator, Publication, Timeline, TimelineItem } from "@readium/shared";
 import { SerializedLocator } from "@/helpers/serializePositions";
 import { resolveChapterTitle } from "@/helpers/timelineFallback";
+import { publicationPositionEntries } from "@/helpers/publicationPositions";
 
 export interface ProgressionDetails {
   totalItems?: number;
@@ -18,10 +19,6 @@ export interface ProgressionDetails {
 export interface Progress {
   title?: string;
   progression?: ProgressionDetails;
-}
-
-interface PositionEntry {
-  positionRange?: [number, number?];
 }
 
 export const usePublicationProgress = ({
@@ -43,28 +40,10 @@ export const usePublicationProgress = ({
 }): Progress => {
   // Per-href position range table, derived once from positionsList — kept fully
   // decoupled from chapter/TOC resolution, which now comes from the real Timeline.
-  const positionEntries = useMemo(() => {
-    const entries: { [href: string]: PositionEntry } = {};
-    if (!positionsList?.length) return entries;
-
-    const readingOrder = publication?.readingOrder?.items || [];
-    for (const item of readingOrder) {
-      const positions = positionsList
-        .filter(p => p.href === item.href)
-        .sort((a, b) => (a.locations?.position || 0) - (b.locations?.position || 0));
-
-      if (positions.length === 0) continue;
-
-      const start = positions[0].locations;
-      const end = positions.length > 1 ? positions[positions.length - 1].locations : start;
-
-      entries[item.href] = {
-        positionRange: start?.position !== undefined ? [start.position, end?.position] : undefined
-      };
-    }
-
-    return entries;
-  }, [publication, positionsList]);
+  const positionEntries = useMemo(
+    () => publicationPositionEntries(publication?.readingOrder?.items || [], positionsList),
+    [publication, positionsList]
+  );
 
   const navigatorTimeline = getNavigatorTimeline();
 
@@ -79,7 +58,7 @@ export const usePublicationProgress = ({
     : undefined;
 
   const progress: Progress = useMemo(() => {
-    const positionRange = currentHref ? positionEntries[currentHref]?.positionRange : undefined;
+    const positionRange = currentHref ? positionEntries.get(currentHref)?.positionRange : undefined;
     const endPosition = positionRange?.[1];
     const currentPosition = currentPositions?.[0];
 

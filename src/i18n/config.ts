@@ -25,12 +25,16 @@ export const DEFAULT_CONFIG: InitOptions = {
   returnEmptyString: false
 };
 
+let pendingInitialization: ReturnType<typeof i18n.init> | undefined;
+
 export const initI18n = async (options: Partial<InitOptions> = {}) => {
   if (i18n.isInitialized) {
     return i18n;
   }
 
-  return i18n
+  if (pendingInitialization) return pendingInitialization;
+
+  const initialization = i18n
     .use(Backend)
     .use(LanguageDetector)
     .use(initReactI18next)
@@ -38,6 +42,12 @@ export const initI18n = async (options: Partial<InitOptions> = {}) => {
       ...DEFAULT_CONFIG,
       ...options
     });
+  pendingInitialization = initialization;
+  try {
+    return await initialization;
+  } finally {
+    if (pendingInitialization === initialization) pendingInitialization = undefined;
+  }
 };
 
 export { i18n };

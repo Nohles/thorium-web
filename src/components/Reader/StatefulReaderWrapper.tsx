@@ -48,9 +48,9 @@ export type {
   ReaderTextSelection,
 } from "./DictionaryReaderAdapter";
 
-const StatefulEpubReader = lazy(() => import("@/components/Epub").then(mod => ({ default: mod.StatefulReader })));
-const StatefulWebPubReader = lazy(() => import("@/components/WebPub").then(mod => ({ default: mod.ExperimentalWebPubStatefulReader })));
-const StatefulPlayer = lazy(() => import("@/components/Audio").then(mod => ({ default: mod.StatefulPlayer })));
+const StatefulEpubReader = lazy(() => import("@/components/Epub/StatefulReader").then(mod => ({ default: mod.StatefulReader })));
+const StatefulWebPubReader = lazy(() => import("@/components/WebPub/StatefulReader").then(mod => ({ default: mod.ExperimentalWebPubStatefulReader })));
+const StatefulPlayer = lazy(() => import("@/components/Audio/StatefulPlayer").then(mod => ({ default: mod.StatefulPlayer })));
 
 const StatefulComicReader = lazy(() => import("@/components/Comic/StatefulComicReader").then(mod => ({ default: mod.StatefulComicReader })));
 

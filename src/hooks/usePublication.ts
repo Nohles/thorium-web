@@ -262,21 +262,8 @@ export const usePublication = ({
     setHasDisplayTransformabilityState(displayTransformability);
     dispatch(setHasDisplayTransformability(displayTransformability));
 
-    // Positions list (only for epub)
-    if (profile === "epub" && publication) {
-      const fetchPositions = async () => {
-        try {
-          const positionsList = await publication.positionsFromManifest();
-          const deserializedPositionsList = serializePositions(positionsList);
-          dispatch(setPositionsList(deserializedPositionsList ?? []));
-        } catch (error) {
-          console.error("Failed to fetch positions:", error);
-          dispatch(setPositionsList([]));
-        }
-      };
-
-      fetchPositions();
-    }
+    // EPUB positions were loaded before setPublication above. Reloading them
+    // here duplicates the request, parsing and the large Redux update.
   }, [publication, profile, dispatch]);
 
   // Call onError callback when error changes

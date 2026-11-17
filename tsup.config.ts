@@ -16,6 +16,11 @@ export default defineConfig({
     "src/components/WebPub/index.ts",
     "src/components/Comic/index.ts",
     "src/components/Reader/index.ts",
+    // Keep shared reader hosts separate from the format implementations they
+    // load. Otherwise shared icons and controls can pull a whole player into
+    // the host's prebundled chunk before the consuming app can tree-shake it.
+    "src/components/Reader/StatefulReaderWrapper.tsx",
+    "src/components/Reader/StatefulReadAlongBar.tsx",
     "src/i18n/index.ts",
     "src/lib/index.ts",
     "src/preferences/index.ts",
