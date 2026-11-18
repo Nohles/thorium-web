@@ -183,6 +183,14 @@
   padding: calc(var(--th-icon-size) * (1 / 8));
 }
 
+.center .chapterSkip {
+  opacity: 0.75;
+}
+
+.center .chapterSkip[data-disabled] {
+  opacity: 0.35;
+}
+
 .mirrored {
   transform: scaleX(-1);
 }
@@ -228,6 +236,13 @@
 
 .end [aria-pressed="false"] {
   opacity: 0.55;
+}
+
+/* Chapter buttons go first, before the other controls give way. */
+@container (max-width: 52rem) {
+  .chapterSkip {
+    display: none;
+  }
 }
 
 @container (max-width: 40rem) {

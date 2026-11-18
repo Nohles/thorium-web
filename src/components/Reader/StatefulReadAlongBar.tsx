@@ -9,6 +9,8 @@ import { Dialog, Popover } from "react-aria-components";
 import PauseIcon from "../Audio/controls/assets/icons/pause.svg";
 import PlayIcon from "../Audio/controls/assets/icons/play_arrow.svg";
 import ReplayIcon from "../Audio/controls/assets/icons/replay.svg";
+import SkipPreviousIcon from "../Audio/controls/assets/icons/skip_previous.svg";
+import SkipNextIcon from "../Audio/controls/assets/icons/skip_next.svg";
 import VolumeUpIcon from "../Audio/actions/Volume/assets/icons/volume_up.svg";
 import VolumeDownIcon from "../Audio/actions/Volume/assets/icons/volume_down.svg";
 import VolumeMuteIcon from "../Audio/actions/Volume/assets/icons/volume_mute.svg";
@@ -47,6 +49,12 @@ export interface ReadAlongBarSkip {
   onPress: () => void;
 }
 
+export interface ReadAlongBarChapterSkip {
+  label: string;
+  onPress: () => void;
+  isDisabled?: boolean;
+}
+
 export interface ReadAlongBarVolume {
   /** From 0 to 1. */
   value: number;
@@ -73,6 +81,12 @@ export interface StatefulReadAlongBarProps {
   onSeek: (seconds: number) => void;
   skipBackward: ReadAlongBarSkip;
   skipForward: ReadAlongBarSkip;
+  /**
+   * Chapter buttons on either side of the skips. They are the first controls
+   * dropped as the bar narrows.
+   */
+  previousChapter?: ReadAlongBarChapterSkip;
+  nextChapter?: ReadAlongBarChapterSkip;
   /** Left out where the browser controls the volume, such as iOS. */
   volume?: ReadAlongBarVolume;
   actions?: ReadAlongBarAction[];
@@ -162,6 +176,8 @@ export const StatefulReadAlongBar = ({
   onSeek,
   skipBackward,
   skipForward,
+  previousChapter,
+  nextChapter,
   volume,
   actions,
   close,
@@ -184,6 +200,23 @@ export const StatefulReadAlongBar = ({
       <span className={ styles.skipSeconds } aria-hidden="true">{ skip.seconds }</span>
     </StatefulActionIcon>
   );
+
+  const chapterButton = (chapter: ReadAlongBarChapterSkip | undefined, direction: "previous" | "next") => {
+    if (!chapter) return null;
+    const Icon = direction === "previous" ? SkipPreviousIcon : SkipNextIcon;
+    return (
+      <StatefulActionIcon
+        className={ classNames(readerSharedUI.icon, styles.chapterSkip) }
+        aria-label={ chapter.label }
+        tooltipLabel={ chapter.label }
+        placement="top"
+        isDisabled={ isLoading || chapter.isDisabled }
+        onPress={ chapter.onPress }
+      >
+        <Icon aria-hidden="true" focusable="false" />
+      </StatefulActionIcon>
+    );
+  };
 
   return (
     <div className={ styles.bar } role="region" aria-label={ label }>
@@ -230,6 +263,7 @@ export const StatefulReadAlongBar = ({
       </div>
 
       <div className={ styles.center }>
+        { chapterButton(previousChapter, "previous") }
         { skipButton(skipBackward, "back") }
         <StatefulActionIcon
           className={ classNames(readerSharedUI.icon, audioStyles.audioPlayPauseButton, styles.playPause) }
@@ -246,6 +280,7 @@ export const StatefulReadAlongBar = ({
             : <PlayIcon aria-hidden="true" focusable="false" /> }
         </StatefulActionIcon>
         { skipButton(skipForward, "forward", styles.hideCompact) }
+        { chapterButton(nextChapter, "next") }
       </div>
 
       <div className={ styles.end }>
