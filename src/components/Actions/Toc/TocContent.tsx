@@ -1,6 +1,6 @@
 "use client";
 
-import { CSSProperties, FocusEvent, RefObject, useCallback, useEffect, useMemo, useRef } from "react";
+import { CSSProperties, FocusEvent, RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   Button,
@@ -40,10 +40,18 @@ export interface TocContentProps {
   };
 }
 
-// Matches the min-height of .treeItem; rows that wrap are measured once rendered.
+// Matches the min-height of .treeItem. Replaced by the measured height once rows render.
 const ESTIMATED_ROW_HEIGHT = 40;
 // Upper bound for centering the current entry while the sheet opens and rows are measured.
 const MAX_SCROLL_SETTLE_MS = 1500;
+
+// Median height of the rendered rows, so a few wrapped titles don't skew it
+const measureRowHeight = (tree: HTMLElement): number | null => {
+  const heights = Array.from(tree.querySelectorAll<HTMLElement>("[role='row']"), row => row.getBoundingClientRect().height)
+    .filter(height => height > 0)
+    .sort((a, b) => a - b);
+  return heights.length ? heights[Math.floor(heights.length / 2)] : null;
+};
 
 const getScrollParent = (element: HTMLElement | null): HTMLElement | null => {
   let parent = element?.parentElement ?? null;
@@ -75,7 +83,13 @@ export const TocContent = ({
   // so only the rows in view are rendered. The sheet stays the scroll container:
   // React Aria's Virtualizer follows ancestor scrolling.
   const layout = useMemo(() => new ListLayout(), []);
-  const layoutOptions = useMemo(() => ({ estimatedRowHeight: ESTIMATED_ROW_HEIGHT }), []);
+  // Rows above the rendered window are placed at the estimated height, so when real rows are
+  // taller or shorter (fonts, display scaling), every scroll moves the current entry's layout
+  // position. Use the measured height so positions hold still while the entry is centered.
+  const [estimatedRowHeight, setEstimatedRowHeight] = useState(ESTIMATED_ROW_HEIGHT);
+  const estimatedRowHeightRef = useRef(estimatedRowHeight);
+  estimatedRowHeightRef.current = estimatedRowHeight;
+  const layoutOptions = useMemo(() => ({ estimatedRowHeight }), [estimatedRowHeight]);
 
   // Center the current entry when the TOC opens. Rows outside the rendered window can't be
   // relied on: React Aria keeps the selected row mounted but draws it at a stale position
@@ -95,7 +109,6 @@ export const TocContent = ({
     let frame = 0;
     let isFirstCheck = true;
     let stableFrames = 0;
-    let lastTarget: number | null = null;
     let scroller: HTMLElement | null = null;
 
     // Don't fight the user once they start scrolling or navigating
@@ -116,6 +129,15 @@ export const TocContent = ({
     const step = () => {
       const tree = treeRef?.current ?? null;
       setScroller(getScrollParent(tree));
+
+      const measuredRowHeight = tree ? measureRowHeight(tree) : null;
+      if (measuredRowHeight && Math.abs(measuredRowHeight - estimatedRowHeightRef.current) > 0.5) {
+        estimatedRowHeightRef.current = measuredRowHeight;
+        setEstimatedRowHeight(measuredRowHeight);
+        frame = requestAnimationFrame(step);
+        return;
+      }
+
       const rect = layout.getLayoutInfo(tocEntry)?.rect;
 
       if (tree && scroller && rect) {
@@ -130,13 +152,18 @@ export const TocContent = ({
         }
         isFirstCheck = false;
 
+        // Wrapped titles can still shift the target by a few pixels per scroll, and chasing
+        // them exactly flips between two positions every frame. Ignore offsets under a row.
         const target = Math.round(rowTop - (scroller.clientHeight - rect.height) / 2);
-        if (Math.abs(scroller.scrollTop - target) > 1) scroller.scrollTop = target;
+        const tolerance = Math.max(rect.height, ESTIMATED_ROW_HEIGHT);
+        const needsScroll = Math.abs(scroller.scrollTop - target) > tolerance;
+        if (needsScroll) scroller.scrollTop = target;
 
         const row = tree.querySelector<HTMLElement>("[role='row'][data-selected]");
-        const isDrawnInPlace = !!row && Math.abs(row.getBoundingClientRect().top - treeRect.top - rect.y) < 1;
-        stableFrames = target === lastTarget && isDrawnInPlace ? stableFrames + 1 : 0;
-        lastTarget = target;
+        const rowRect = row?.getBoundingClientRect();
+        const scrollerRect = scroller.getBoundingClientRect();
+        const isDrawnInView = !!rowRect && rowRect.top >= scrollerRect.top && rowRect.bottom <= scrollerRect.bottom;
+        stableFrames = !needsScroll && isDrawnInView ? stableFrames + 1 : 0;
         if (stableFrames >= 3) {
           stop();
           return;
