@@ -45,9 +45,78 @@ export interface ReaderTextSelectedEvent {
   resourceHref?: string;
 }
 
+/** The block of text (usually a paragraph) under a context-menu pointer. */
+export interface ReaderContextMenuParagraph {
+  text: string;
+  /** Readium locator whose text highlight is the block's text. */
+  locator?: Locator;
+  /** Host-document viewport coordinates. */
+  rect: { x: number; y: number; width: number; height: number };
+  frameSrc: string;
+  resourceHref?: string;
+}
+
 export interface ReaderContextMenuEvent {
   point: { x: number; y: number };
+  /**
+   * The user's selection, or the word under the pointer when nothing was
+   * selected. `selectionSource` tells the two apart.
+   */
   selection?: ReaderTextSelectedEvent;
+  selectionSource?: "selection" | "word";
+  /** The block of text under the pointer, when there is one. */
+  paragraph?: ReaderContextMenuParagraph;
+  /** Decorations under the pointer, tightest first. */
+  decorations?: ReaderDecorationActivatedEvent[];
+}
+
+export interface ContextMenuToEventOptions {
+  decorations?: readonly ReaderDecorationInput[];
+  navigatorFrames?: readonly unknown[];
+}
+
+const CONTEXT_MENU_DECORATION_LIMIT = 4;
+
+/** How long after a right or middle press a decoration activation is ignored. */
+const SECONDARY_POINTER_WINDOW_MS = 800;
+
+/**
+ * Readium activates decorations on any pointer button's release, so a
+ * right-click on a highlight would also "click" it and close the context
+ * menu it opened. This watches the reader frames for non-primary presses.
+ */
+export function createSecondaryPointerGuard() {
+  const watched = new WeakSet<Document>();
+  let lastSecondaryAt = Number.NEGATIVE_INFINITY;
+  const record = (event: MouseEvent) => {
+    if (event.type === "contextmenu" || event.button !== 0) lastSecondaryAt = performance.now();
+  };
+  return {
+    /** Starts watching any frames not seen yet. Safe to call often. */
+    watch(frames: readonly unknown[] | undefined) {
+      for (const frame of frames ?? []) {
+        let doc: Document | undefined;
+        try {
+          doc = (frame as { window?: Window } | null)?.window?.document;
+        } catch {
+          // A destroyed frame can throw from its window getter.
+        }
+        if (!doc || watched.has(doc)) continue;
+        watched.add(doc);
+        for (const type of ["pointerdown", "pointerup", "contextmenu"] as const) {
+          doc.addEventListener(type, record, true);
+        }
+      }
+    },
+    /** Records a secondary press reported another way (a context menu message). */
+    noteSecondaryPress() {
+      lastSecondaryAt = performance.now();
+    },
+    /** True right after a right or middle press in a watched frame. */
+    secondaryPressedRecently() {
+      return performance.now() - lastSecondaryAt < SECONDARY_POINTER_WINDOW_MS;
+    },
+  };
 }
 
 export interface ReaderDecorationActivatedEvent {
@@ -334,6 +403,7 @@ export function contextMenuToEvent(
   container: HTMLElement | null | undefined,
   event: ContextMenuEvent,
   currentLocatorOrResourceHref?: Locator | string,
+  options: ContextMenuToEventOptions = {},
 ): ReaderContextMenuEvent | null {
   const currentLocator = typeof currentLocatorOrResourceHref === "string"
     ? undefined
@@ -422,11 +492,89 @@ export function contextMenuToEvent(
       };
     }
   }
+  const wnd = frame?.contentWindow ?? null;
+  const paragraph = wnd
+    ? paragraphAtPoint(wnd, event.clientX, event.clientY, offset, currentLocator, event.targetFrameSrc, resourceHref)
+    : undefined;
+  const decorations = wnd
+    ? decorationsAtPoint(container, wnd, event, options)
+    : [];
   return {
     point: { x: event.clientX + offset.left, y: event.clientY + offset.top },
     selection,
+    ...(selection ? { selectionSource: event.selectedText ? "selection" as const : "word" as const } : {}),
+    ...(paragraph ? { paragraph } : {}),
+    ...(decorations.length > 0 ? { decorations } : {}),
   };
 }
+
+const PARAGRAPH_TEXT_LIMIT = 20_000;
+
+const paragraphAtPoint = (
+  wnd: Window,
+  x: number,
+  y: number,
+  offset: DOMRect,
+  currentLocator: Locator | undefined,
+  frameSrc: string,
+  resourceHref: string | undefined,
+): ReaderContextMenuParagraph | undefined => {
+  const caret = caretRangeAt(wnd, x, y);
+  if (!caret?.startContainer) return undefined;
+  const block = blockAncestor(caret.startContainer);
+  if (!block || block === wnd.document.body || block === wnd.document.documentElement) {
+    return undefined;
+  }
+  const text = (block.textContent ?? "").trim();
+  if (!text || text.length > PARAGRAPH_TEXT_LIMIT) return undefined;
+  const box = block.getBoundingClientRect();
+  const locator = currentLocator
+    ? new Locator({
+        href: currentLocator.href,
+        type: currentLocator.type,
+        title: currentLocator.title,
+        locations: currentLocator.locations,
+        text: new LocatorText({ highlight: text }),
+      })
+    : undefined;
+  return {
+    text,
+    locator,
+    rect: {
+      x: box.x + offset.left,
+      y: box.y + offset.top,
+      width: box.width,
+      height: box.height,
+    },
+    frameSrc,
+    resourceHref: locator?.href ?? resourceHref,
+  };
+};
+
+const decorationsAtPoint = (
+  container: HTMLElement | null | undefined,
+  wnd: Window,
+  event: ContextMenuEvent,
+  options: ContextMenuToEventOptions,
+): ReaderDecorationActivatedEvent[] => {
+  let remaining = options.decorations ?? [];
+  if (remaining.length === 0) return [];
+  // Activation takes device pixels, as Readium reports clicks.
+  const dpr = wnd.devicePixelRatio || 1;
+  const click = {
+    x: event.clientX * dpr,
+    y: event.clientY * dpr,
+    targetFrameSrc: event.targetFrameSrc,
+  } as unknown as FrameClickEvent;
+  const hits: ReaderDecorationActivatedEvent[] = [];
+  while (remaining.length > 0 && hits.length < CONTEXT_MENU_DECORATION_LIMIT) {
+    const hit = resolveDecorationActivation(click, container, remaining, options.navigatorFrames);
+    if (!hit) break;
+    hits.push(hit);
+    remaining = remaining.filter((decoration) => decoration.id !== hit.id);
+  }
+  return hits;
+};
 
 const isWordCharacter = (value: string | undefined) =>
   value ? /[\p{L}\p{N}\p{M}]/u.test(value) : false;

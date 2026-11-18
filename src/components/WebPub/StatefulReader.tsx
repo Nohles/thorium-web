@@ -77,6 +77,7 @@ import { resolveContentProtectionConfig } from "@/preferences/models/protection"
 import { NavPeripheralType, fromActionPeripheralType, fromDockingPeripheralType } from "@/helpers/peripherals";
 import {
   contextMenuToEvent,
+  createSecondaryPointerGuard,
   readiumDecorationActivationToEvent,
   resolveDecorationActivation,
   textSelectionToEvent,
@@ -234,6 +235,8 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
   const { zoomIn, zoomOut } = useZoomCallbacks(webPubNavigator);
 
   const interactionRef = useRef(interactions);
+  // Created once: it remembers right-clicks across renders.
+  const [secondaryPointer] = useState(createSecondaryPointerGuard);
   interactionRef.current = interactions;
 
   const { decorations } = interactions;
@@ -263,6 +266,7 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
       updateCurrentTocEntry(item);
     },
     positionChanged: async function (locator: Locator): Promise<void> {
+      secondaryPointer.watch(getCframes());
       setLocalData(locator);
 
       if (canGoBackward()) {
@@ -279,7 +283,7 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     },
     tap: function (_e: FrameClickEvent): boolean {
       const { decorations: currentDecorations, onDecorationActivated: activate } = interactionRef.current;
-      if (activate && currentDecorations) {
+      if (activate && currentDecorations && !secondaryPointer.secondaryPressedRecently()) {
         const activation = resolveDecorationActivation(_e, container.current, currentDecorations, getCframes(), "tap");
         if (activation) {
           activate(activation);
@@ -291,7 +295,7 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     },
     click: function (_e: FrameClickEvent): boolean {
       const { decorations: currentDecorations, onDecorationActivated: activate } = interactionRef.current;
-      if (activate && currentDecorations) {
+      if (activate && currentDecorations && !secondaryPointer.secondaryPressedRecently()) {
         const activation = resolveDecorationActivation(_e, container.current, currentDecorations, getCframes(), "click");
         if (activation) {
           activate(activation);
@@ -327,9 +331,14 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     },
     contentProtection: function (_type: string, _data: SuspiciousActivityEvent): void {},
     contextMenu: function (data: ContextMenuEvent): void {
-      const { onContextMenu: handle } = interactionRef.current;
+      const { onContextMenu: handle, decorations: currentDecorations } = interactionRef.current;
+      secondaryPointer.noteSecondaryPress();
+      secondaryPointer.watch(getCframes());
       if (!handle) return;
-      const event = contextMenuToEvent(container.current, data, currentLocator());
+      const event = contextMenuToEvent(container.current, data, currentLocator(), {
+        decorations: currentDecorations,
+        navigatorFrames: getCframes(),
+      });
       if (event) handle(event);
     },
     peripheral: function (data): void {
@@ -400,6 +409,7 @@ const StatefulReaderInner = ({ publication, localDataKey, positionStorage, conta
     decorations,
     onDecorationActivated: interactions.onDecorationActivated
       ? (event) => {
+          if (secondaryPointer.secondaryPressedRecently()) return;
           interactions.onDecorationActivated?.(
             readiumDecorationActivationToEvent(
               event,
