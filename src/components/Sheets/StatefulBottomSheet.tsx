@@ -40,11 +40,13 @@ export const StatefulBottomSheet = ({
   id,
   heading,
   headerVariant,
-  className, 
+  className,
+  headerClassName,
+  bodyClassName,
   isOpen,
   onOpenChange, 
-    onClosePress,
-    onBackPress,
+  onClosePress,
+  onBackPress,
     children,
   resetFocus,
   focusWithinRef,
@@ -322,7 +324,7 @@ export const StatefulBottomSheet = ({
       >
         <ThContainerHeader
           label={ heading }
-          className={ sheetStyles.draggableHeader }
+          className={ classNames(sheetStyles.draggableHeader, headerClassName) }
           compounds={ {
             heading: {
               className: sheetStyles.heading
@@ -341,7 +343,7 @@ export const StatefulBottomSheet = ({
         </ThContainerHeader>
         <ThContainerBody 
           ref={ bottomSheetBodyRef }
-          className={ sheetStyles.body }
+          className={ classNames(sheetStyles.body, bodyClassName) }
         >
           { children }
         </ThContainerBody>

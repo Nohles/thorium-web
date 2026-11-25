@@ -26,6 +26,8 @@ export const StatefulDockedSheet = ({
     heading,
     headerVariant,
     className, 
+    headerClassName,
+    bodyClassName,
     isOpen,
     onClosePress,
     onBackPress,
@@ -89,7 +91,7 @@ export const StatefulDockedSheet = ({
       >
         <ThContainerHeader 
           ref={ dockedSheetHeaderRef }
-          className={ sheetStyles.header }
+          className={ classNames(sheetStyles.header, headerClassName) }
           label={ heading }
           compounds={{
             heading: {
@@ -109,7 +111,7 @@ export const StatefulDockedSheet = ({
         </ThContainerHeader>
         <ThContainerBody 
           ref={ dockedSheetBodyRef }
-          className={ sheetStyles.body }
+          className={ classNames(sheetStyles.body, bodyClassName) }
         >
           { children }
         </ThContainerBody>

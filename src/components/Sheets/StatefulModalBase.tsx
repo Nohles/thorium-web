@@ -26,6 +26,8 @@ export const StatefulModalBase = ({
     heading,
     headerVariant,
     className,
+    headerClassName,
+    bodyClassName,
     sheetClassName,
     dialogClassName,
     isOpen,
@@ -90,7 +92,7 @@ export const StatefulModalBase = ({
       >
         <ThContainerHeader
           ref={ sheetHeaderRef }
-          className={ sheetStyles.header }
+          className={ classNames(sheetStyles.header, headerClassName) }
           label={ heading }
           compounds={{
             heading: {
@@ -110,7 +112,7 @@ export const StatefulModalBase = ({
         </ThContainerHeader>
         <ThContainerBody
           ref={ sheetBodyRef }
-          className={ sheetStyles.body }
+          className={ classNames(sheetStyles.body, bodyClassName) }
         >
           { children }
         </ThContainerBody>

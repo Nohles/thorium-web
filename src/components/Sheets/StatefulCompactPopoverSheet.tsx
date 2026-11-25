@@ -22,6 +22,7 @@ export const StatefulCompactPopoverSheet = ({
     triggerRef,
     heading,
     className,
+    bodyClassName,
     isOpen,
     onOpenChange,
     placement,
@@ -75,7 +76,7 @@ export const StatefulCompactPopoverSheet = ({
         >
           <div
             ref={ popoverBodyRef }
-            className={ sheetStyles.body }
+            className={ classNames(sheetStyles.body, bodyClassName) }
           >
             { children }
           </div>
