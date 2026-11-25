@@ -10,6 +10,8 @@ export interface StatefulSheet {
   className?: string;
   underlayClassName?: string;
   headerClassName?: string;
+  /** Added to the sheet body, e.g. so content can drop its padding and run edge to edge. */
+  bodyClassName?: string;
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onClosePress: () => void;

@@ -29,6 +29,7 @@ export const StatefulPopoverSheet = ({
     headerVariant,
     className,
     headerClassName,
+    bodyClassName,
     isOpen,
     onOpenChange, 
     onClosePress,
@@ -118,7 +119,7 @@ export const StatefulPopoverSheet = ({
         </ThContainerHeader>
         <ThContainerBody
           ref={ popoverBodyRef }
-          className={ sheetStyles.body }
+          className={ classNames(sheetStyles.body, bodyClassName) }
         >
           { children }
         </ThContainerBody>

@@ -30,7 +30,7 @@ export const createAudioDefaultPlugin = (): ThPlugin => {
     id: "audio-core",
     name: "Audio Core Components",
     description: "Default components for Thorium Web Audio StatefulReader",
-    version: "1.5.56",
+    version: "1.5.57",
     components: {
       actions: {
         [ThActionsKeys.settings]: {
